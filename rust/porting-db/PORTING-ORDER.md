@@ -81,11 +81,11 @@ Shared SAS token primitives used by all services.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 3.1 | `src/common/authentication/IIPRange.ts` | `azurite-common/src/authentication/i_ip_range.rs` | ~20 | L | — | ⬜ |
-| 3.2 | `src/common/authentication/AccountSASPermissions.ts` | `azurite-common/src/authentication/account_sas_permissions.rs` | ~80 | M | — | ⬜ |
-| 3.3 | `src/common/authentication/AccountSASServices.ts` | `azurite-common/src/authentication/account_sas_services.rs` | ~40 | L | — | ⬜ |
-| 3.4 | `src/common/authentication/AccountSASResourceTypes.ts` | `azurite-common/src/authentication/account_sas_resource_types.rs` | ~40 | L | — | ⬜ |
-| 3.5 | `src/common/authentication/IAccountSASSignatureValues.ts` | `azurite-common/src/authentication/i_account_sas_signature_values.rs` | ~200 | H | 3.1-3.4 | ⬜ |
+| 3.1 | `src/common/authentication/IIPRange.ts` | `azurite-common/src/authentication/i_ip_range.rs` | ~20 | L | — | ✅ |
+| 3.2 | `src/common/authentication/AccountSASPermissions.ts` | `azurite-common/src/authentication/account_sas_permissions.rs` | ~80 | M | — | ✅ |
+| 3.3 | `src/common/authentication/AccountSASServices.ts` | `azurite-common/src/authentication/account_sas_services.rs` | ~40 | L | — | ✅ |
+| 3.4 | `src/common/authentication/AccountSASResourceTypes.ts` | `azurite-common/src/authentication/account_sas_resource_types.rs` | ~40 | L | — | ✅ |
+| 3.5 | `src/common/authentication/IAccountSASSignatureValues.ts` | `azurite-common/src/authentication/i_account_sas_signature_values.rs` | ~200 | H | 3.1-3.4 | ✅ |
 
 ---
 

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `authentication::i_ip_range`
 - Phase: `3.1`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IIPRange`
@@ -63,3 +63,8 @@ pub fn ip_range_to_string(ip_range: &IIPRange) -> String {
 - If TS adds validation, IPv6 normalization, or extra range fields, audit every SAS signature generator that reuses `ipRangeToString()`.
 - If local `IIPRange` and external `SasIPRange` diverge in TS, revisit the Rust adapter layer immediately.
 - If later phases start depending on ordering or canonicalization beyond simple concatenation, treat that as a behavioral change rather than a cosmetic refactor.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-common/src/authentication/i_ip_range.rs` with the TS-facing `ipRangeToString()` export plus a snake_case alias.
+- Derived `Serialize`/`Deserialize` on `IIPRange` and kept the formatter as pure string concatenation with no validation.
+- Reused by the Phase 3 account-SAS signature module through an explicit `SasIPRange` → `IIPRange` adapter.

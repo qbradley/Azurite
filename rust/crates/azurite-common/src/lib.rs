@@ -21,6 +21,13 @@ pub mod storage_error;
 pub mod utils;
 pub mod zero_bytes_stream;
 
+pub use authentication::{
+    generateAccountSASSignature, generate_account_sas_signature, AccountSASPermission,
+    AccountSASPermissions, AccountSASPermissionsOrString, AccountSASResourceType,
+    AccountSASResourceTypes, AccountSASResourceTypesOrString, AccountSASService,
+    AccountSASServices, AccountSASServicesOrString, DateOrString, IAccountSASSignatureValues,
+    IIPRange, SASProtocol, SASProtocolOrString, SasIPRange, SasIPRangeOrString,
+};
 pub use configuration_base::ConfigurationBase;
 pub use environment::Environment;
 pub use server_base::ServerBase;

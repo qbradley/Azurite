@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `authentication::i_account_sas_signature_values`
 - Phase: `3.5`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `SASProtocol`
@@ -132,3 +132,10 @@ pub struct IAccountSASSignatureValues {
 - If TS adds a new account SAS service version, prefer adding a new version-specific helper and updating the dispatcher threshold rather than mutating the existing 2015 or 2020 layouts in place.
 - If TS changes the account-SAS `ipRange` type from external `SasIPRange` to local `IIPRange` (or vice versa), update the Rust compatibility layer and the later service-SAS records together.
 - If `encryptionScope` rules evolve, confirm whether the change belongs only to newer versions or whether historical string-to-sign layouts also change.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-common/src/authentication/i_account_sas_signature_values.rs` with untagged serde enums to keep the TS `X | string` unions visible instead of collapsing them.
+- Kept the account-SAS `SasIPRange` boundary explicit with a separate compatibility struct that converts into local `IIPRange` only at serialization time.
+- Implemented the 2015-04-05 and 2020-12-06 string-to-sign layouts verbatim, including the trailing blank line and the newer `encryptionScope` field.
+- Added local HMAC-SHA256/base64 and truncated-ISO helpers in this Phase 3 module so the signature generator compiles before the full Phase 4 utilities port lands.
+- Validation: `cargo test -p azurite-common --lib && cargo check` succeeds from `rust/`.

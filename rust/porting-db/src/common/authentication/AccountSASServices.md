@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `authentication::account_sas_services`
 - Phase: `3.3`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `AccountSASService`
@@ -91,3 +91,8 @@ pub struct AccountSASServices {
 - If Azure adds new account-level services, update both the enum and the canonical serializer order intentionally; do not append blindly.
 - Any serializer-order change must be audited in `IAccountSASSignatureValues.ts`, because signature generation trusts the helper's exact byte order.
 - Later operation-permission tables depend on the one-character enum values directly, so changes here ripple into blob, queue, and table authentication phases.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-common/src/authentication/account_sas_services.rs` with explicit bool flags and `Display`/`toString()` support.
+- Preserved TS parse error text and the non-enum serialization order `btqf` exactly.
+- Derived serde on the enum/helper struct so later signature-value unions can stay structurally parallel to TS inputs.

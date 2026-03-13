@@ -46,3 +46,19 @@ Workspace status: ✅ `cargo check` passes, ✅ `cargo test` passes (9 active + 
 - **Faramir:** Phase 3 authentication analysis complete. 5 files analyzed; 3 critical fidelity constraints documented and decisions recorded. porting-db records updated.
 - **Samwise:** All systems operational. Three new decisions (D-008, D-009, D-010) recorded in `.squad/decisions.md` and ready for API governance review.
 
+### Phase 2 Persistence Parity Tests Activated (2026-03-13)
+- Added executable Rust parity coverage in `rust/crates/azurite-common/tests/common/phase2_persistence.rs` for `OperationQueue`, `MemoryExtentStore`, `FSExtentStore`, `LokiExtentMetadataStore`, `AllExtentsAsyncIterator`, `ZeroBytesStream`, and `Mutex`.
+- Replaced the old ignored Phase 2 placeholder by removing `extent_store_roundtrip_parity_pending_phase2` from `tests/common/pending.rs` and wiring the new module into `tests/common/mod.rs`.
+- Added `tempfile` as an `azurite-common` dev-dependency so filesystem parity tests can use `tempdir()` safely.
+- Verified `cd rust && cargo test --workspace` passes with the expanded suite; `phase1_common` now reports 36 passing tests with 3 remaining ignored placeholders.
+
+
+### Phase 2 Parity Tests Passing; Awaiting Phase 3 (2026-03-13 → 22:10)
+- **Status:** Phase 2 persistence parity tests ACTIVATED. 7 modules (OperationQueue, MemoryExtentStore, FSExtentStore, LokiExtentMetadataStore, AllExtentsAsyncIterator, ZeroBytesStream, Mutex) all passing.
+- **Cleanup:** Removed old placeholder tests; test suite clean at 36 active + 8 ignored.
+- **Metrics:** 44 total tests passing, 8 ignored, 38 porting-db records, 108 Rust source files.
+
+### Cross-Agent Status (2026-03-13 → 22:10)
+- **Aragorn:** Phase 3 translation COMPLETE. 5 auth files ported; tests passing. Account-SAS signing ready for Phase 4 utils consolidation.
+- **Faramir:** Phase 4 analysis COMPLETE. 11 files analyzed; fidelity hazards documented (D-002 awaiting approval).
+- **Samwise:** Phase 3 translated, Phase 4 analyzed. Overall baseline: 44 tests passing, 38 porting-db records, 108 Rust source files.

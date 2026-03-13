@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `authentication::account_sas_resource_types`
 - Phase: `3.4`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `AccountSASResourceType`
@@ -90,3 +90,8 @@ pub struct AccountSASResourceTypes {
 - Any new account-level resource type must update the enum, parser switch, canonical serializer order, and later blob/queue/table operation permission validators.
 - If the blob batch `AnyResourceType` sentinel changes semantics, update this record and the later blob `OperationAccountSASPermission` record together.
 - Any serializer-order change must be audited in `IAccountSASSignatureValues.ts`, because signature generation consumes this helper's exact byte sequence.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-common/src/authentication/account_sas_resource_types.rs` with the TS field names and canonical `sco` serializer order intact.
+- `AccountSASResourceType::Any` remains validation-only and is excluded from parse/display logic.
+- Preserved the TS duplicate-error wording quirk while adding serde string renames for later union handling.

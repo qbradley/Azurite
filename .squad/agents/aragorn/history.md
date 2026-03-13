@@ -68,3 +68,14 @@ Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in pla
 - **Faramir:** Phase 3 authentication analysis complete. 5 files analyzed; 3 critical fidelity constraints documented (sentinel enums, serialization order, IP range asymmetry). Ready for Phase 3 implementation.
 - **Boromir:** Phase 1 parity test coverage expanded. 26 active tests passing, 4 ignored placeholders for incomplete behavior. Workspace compiles cleanly; ready to unignore incrementally as Phase 3 translations complete.
 - **Samwise:** All systems operational. Ready for Phase 3 implementation review.
+
+### Phase 3 Common Authentication Ported (2026-03-13)
+- Ported `IIPRange`, `AccountSASPermissions`, `AccountSASServices`, `AccountSASResourceTypes`, and `IAccountSASSignatureValues` into `rust/crates/azurite-common/src/authentication/`.
+- Preserved the fidelity-sensitive rules Faramir flagged: validation-only `AnyPermission`/`AnyResourceType` sentinels, canonical account-SAS serialization order (`rwdxlacuptfiy`, `btqf`, `sco`), and the explicit `SasIPRange` → `IIPRange` adapter boundary.
+- Added local Phase 3 HMAC/date helpers inside `i_account_sas_signature_values.rs` so account-SAS signing compiles before the full Phase 4 `utils.rs` port lands.
+- Validation: `cargo test -p azurite-common --lib && cargo check` succeeds from `rust/`. Full `cargo test -p azurite-common` still hits pre-existing Phase 2 integration-test trait-import issues outside this authentication port.
+
+### Cross-Agent Status (2026-03-13 → 22:10)
+- **Faramir:** Phase 4 utilities/config analysis COMPLETE. 11 files analyzed; fidelity hazards documented (Telemetry instaceID typo, knownHosts redaction quirk, WinstonLoggerStrategy contextID tab default, Environment CLI arg duplication). Awaiting decision approval on quirk preservation vs normalization.
+- **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules (OperationQueue, FSExtentStore, LokiExtentStore, etc.) all passing. Old placeholders removed; test suite clean at 36 active + 8 ignored.
+- **Samwise:** Phase 3 translation complete, Phase 4 analysis ready. Overall: 44 tests passing, 38 porting-db records, 108 Rust source files.

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `authentication::account_sas_permissions`
 - Phase: `3.2`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `AccountSASPermission`
@@ -142,3 +142,8 @@ pub struct AccountSASPermissions {
 - If TS adds a new permission, update the enum, parser switch, canonical serializer order, and every later `OperationAccountSASPermission` table that relies on character membership.
 - If blob batch semantics around `AnyPermission` change, update both this record and the later blob authentication permission validator record together.
 - Any behavioral change in `toString()` must be audited in `IAccountSASSignatureValues.ts`, because the signature generator trusts this helper's canonical ordering.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-common/src/authentication/account_sas_permissions.rs` as a bool-field helper struct with TS field names preserved.
+- `AccountSASPermission::Any` remains a validation-only sentinel; `parse()` and `toString()` only accept and emit canonical one-character permissions in `rwdxlacuptfiy` order.
+- Added serde string renames on the enum and preserved TS `RangeError` text through `StorageError` messages.

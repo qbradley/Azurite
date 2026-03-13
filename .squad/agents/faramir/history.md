@@ -62,3 +62,27 @@ Aragorn has completed Phase 1 translation (15 files, porting-db updated). Boromi
 - **Boromir:** Phase 1 parity test coverage now at 26 active tests, 4 ignored placeholders. Workspace clean. Ready to unignore Phase 3 test placeholders incrementally.
 - **Samwise:** All systems operational. Three new decisions documented (D-008, D-009, D-010) ready for review before Phase 3 implementation starts.
 
+### Phase 4 TS analysis completed (2026-03-13)
+- Analyzed all 11 Phase 4 files and wrote records under `rust/porting-db/src/common/` plus `rust/porting-db/src/common/utils/`.
+- **Critical fidelity risks discovered:**
+  1. `Telemetry.ts` has two compatibility-sensitive quirks that are easy to “fix” accidentally: `GetRequestUri()` uses `hostname in knownHosts` (array-index check, so local-host redaction never triggers), and `GetInstanceID()` persists/read the misspelled JSON key `instaceID`. Both should stay explicit in the Rust plan unless the team approves divergence.
+  2. `Environment.ts` registers `--disableProductStyleUrl` twice and performs several validations lazily inside getters (`inMemoryPersistence()`, `debug()`), not at parse time. Rust CLI parsing should not silently normalize those behaviors without review.
+  3. `ServerBase.ts` and `Logger.ts` rely on process-global mutable lifecycle/state patterns: strict server status transitions with asymmetric failure handling (`afterStart()` can leave status `Running`, `afterClose()` can leave status `Closing`), plus a singleton logger whose strategy is swapped at runtime.
+- **TS patterns for Aragorn:**
+  - `WinstonLoggerStrategy` is a thin runtime-selected sink adapter; map it to a `tracing`/writer-backed strategy object, but preserve the literal output template and the odd default `contextID = "\t"`.
+  - `ConfigurationBase` does not parse CLI flags itself; it is a helper layer over already-parsed values, with PEM-vs-PFX precedence, permissive OAuth parsing (`basic` only), and `setExtentMemoryLimit()` mixing validation, logging, and global `SharedChunkStore` mutation.
+  - `AccountDataStore` polls `AZURITE_ACCOUNTS` every 60 seconds via `setInterval(...).unref()`, silently falling back to the default emulator account on parse failures. The parser grammar is `account:key1[:key2];...` with permissive trailing semicolons.
+  - `Telemetry.ts` is an all-static singleton with separate event/request clients, hard-coded Application Insights connection string, generated-context `instanceof` dispatch, and request properties assembled from headers/query/body length rather than a service-neutral abstraction.
+
+
+### Phase 4 Analysis Complete; Decisions Ready (2026-03-13 → 22:10)
+- **Status:** Phase 4 utilities/config analysis COMPLETE.
+- **Scope:** 11 modules — Constants, Utils, BufferStream, Logger, NoLoggerStrategy, WinstonLoggerStrategy, ConfigurationBase, ServerBase, AccountDataStore, Environment, Telemetry.
+- **Fidelity hazards documented:** Telemetry `instaceID` misspelling, knownHosts redaction never triggers, WinstonLoggerStrategy tab default, Environment CLI arg duplication.
+- **Decision:** D-002 (preserve observable Phase 4 quirks until explicit approval) recorded in `.squad/decisions/decisions.md`.
+- **Next:** Awaiting Gandalf/Samwise decision on quirk handling before Phase 4 implementation proceeds.
+
+### Cross-Agent Status (2026-03-13 → 22:10)
+- **Aragorn:** Phase 3 translation COMPLETE. 5 auth files ported; tests passing. Account-SAS signing ready for Phase 4 utils consolidation.
+- **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules all passing. Test suite clean.
+- **Samwise:** Phase 3 translated, Phase 4 analyzed. 44 tests passing, 38 porting-db records, 108 Rust source files.
