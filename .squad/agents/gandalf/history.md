@@ -46,3 +46,55 @@
 - Most impactful: axum for HTTP, tokio for async, composition over inheritance, custom in-memory store (not LokiJS clone)
 
 **VS Code Extension OUT OF SCOPE:** 14 VSC*.ts files + extension.ts — JS-only APIs, cannot port to Rust
+
+### 2026-03-13: Workspace Ready and Phase 1 Analysis Complete
+
+**Aragorn Status:** Rust workspace scaffold complete. Five-crate structure compiles. All Phase 0 tasks done. Ready to begin Phase 1 implementation.
+
+**Faramir Status:** Phase 1 TS analysis complete. All 15 common interface files analyzed. Critical fidelity concerns documented:
+- `IOperationQueue.operate<T>()` generics may require special Rust handling (trait object safety)
+- `IExtentMetadata` vs `IExtentMetadataStore` are intentionally distinct contracts — preserve separation in Rust
+- `contextID`/`contextId` naming inconsistencies must be preserved
+- `IEnvironment` and `IServerFactory` abstractions need careful translation to maintain TS semantics
+
+**Next Phase:** Aragorn proceeds with Phase 1 implementation using Faramir's analysis records. Watch for trait object boundaries and model distinctions per Faramir's fidelity concerns.
+
+
+**Decision Rationale:**
+- Per user directive: All Rust artifacts must live under `rust/` (except `.squad/` metadata)
+- Strategy docs (STRATEGY.md, PORTING-ORDER.md) are not production code but reference docs for the porting process
+- Decision: Move porting-db/ to rust/porting-db/ to maintain single-rooted `rust/` directory
+
+**Changes Applied:**
+- Created `rust/porting-db/` directory
+- Moved `porting-db/STRATEGY.md` → `rust/porting-db/STRATEGY.md` with all path references updated
+- Moved `porting-db/PORTING-ORDER.md` → `rust/porting-db/PORTING-ORDER.md` with all path references updated
+- Updated 4 internal references in STRATEGY.md (`porting-db/` → `rust/porting-db/`)
+- Template examples in §16 (Record Format) now reference correct paths
+
+**Directory Structure Implications:**
+```
+rust/
+├── Cargo.toml                          # Workspace root
+├── crates/                             # Service implementations
+│   ├── azurite/                        # Combined binary
+│   ├── azurite-common/                 # Shared library
+│   ├── azurite-blob/                   # Blob service
+│   ├── azurite-queue/                  # Queue service
+│   └── azurite-table/                  # Table service
+└── porting-db/                         # ⬅️ Strategy and per-file porting records
+    ├── STRATEGY.md                     # This Rust porting strategy
+    ├── PORTING-ORDER.md                # File-level porting order
+    ├── README.md                       # Porting-db documentation
+    └── src/                            # YAML records mirror TS structure
+        ├── common/
+        ├── blob/
+        ├── queue/
+        └── table/
+```
+
+**Why This Matters for Future Change Propagation:**
+- Single `rust/` root makes it clear all port artifacts are here
+- porting-db records stay close to Rust implementations (in same `rust/` subtree)
+- Easy for Aragorn/Faramir to reference strategy docs while implementing features
+- Clear boundary: TypeScript source in `/src`, Rust port in `/rust`

@@ -24,12 +24,12 @@ No TypeScript files — create Rust project infrastructure.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| 0.1 | Create `rust/Cargo.toml` workspace with 5 crates | ⬜ |
-| 0.2 | Create `rust/crates/azurite-common/Cargo.toml` | ⬜ |
-| 0.3 | Create `rust/crates/azurite-blob/Cargo.toml` | ⬜ |
-| 0.4 | Create `rust/crates/azurite-queue/Cargo.toml` | ⬜ |
-| 0.5 | Create `rust/crates/azurite-table/Cargo.toml` | ⬜ |
-| 0.6 | Create `rust/crates/azurite/Cargo.toml` (combined binary) | ⬜ |
+| 0.1 | Create `rust/Cargo.toml` workspace with 5 crates | ✅ |
+| 0.2 | Create `rust/crates/azurite-common/Cargo.toml` | ✅ |
+| 0.3 | Create `rust/crates/azurite-blob/Cargo.toml` | ✅ |
+| 0.4 | Create `rust/crates/azurite-queue/Cargo.toml` | ✅ |
+| 0.5 | Create `rust/crates/azurite-table/Cargo.toml` | ✅ |
+| 0.6 | Create `rust/crates/azurite/Cargo.toml` (combined binary) | ✅ |
 | 0.7 | Set up CI (cargo build, cargo test, cargo clippy) | ⬜ |
 | 0.8 | Create `.rustfmt.toml` with project formatting config | ⬜ |
 

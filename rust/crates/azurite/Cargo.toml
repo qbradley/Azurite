@@ -1,0 +1,15 @@
+[package]
+name = "azurite"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+azurite-blob = { path = "../azurite-blob" }
+azurite-queue = { path = "../azurite-queue" }
+azurite-table = { path = "../azurite-table" }
+clap.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

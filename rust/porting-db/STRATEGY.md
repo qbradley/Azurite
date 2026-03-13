@@ -967,10 +967,10 @@ Port the integration test suite from `tests/` using the Azure SDK Rust clients. 
 
 ### 16.1 Per-File Record Format
 
-Each TypeScript source file gets a YAML record in `porting-db/`. The path mirrors the source:
+Each TypeScript source file gets a YAML record in `rust/porting-db/`. The path mirrors the source:
 
 ```
-porting-db/
+rust/porting-db/
 ├── STRATEGY.md          # This document
 ├── PORTING-ORDER.md     # File-level porting order
 ├── README.md            # Porting-db documentation
@@ -994,7 +994,7 @@ porting-db/
 ### 16.2 Record Schema
 
 ```yaml
-# porting-db/src/blob/BlobServer.yaml
+# rust/porting-db/src/blob/BlobServer.yaml
 source:
   path: src/blob/BlobServer.ts
   lines: 245
@@ -1080,7 +1080,7 @@ propagation_notes: |
 |---|----------|-----------|------|
 | D-001 | Fidelity over idiom | User directive — foundational constraint | 2026-03-13 |
 | D-002 | Rust code in `rust/` subdirectory | User directive | 2026-03-13 |
-| D-003 | Porting database in `porting-db/` | User directive | 2026-03-13 |
+| D-003 | Porting database in `rust/porting-db/` | User directive | 2026-03-13 |
 | D-004 | Tokio as async runtime | Required by axum; ecosystem standard | 2026-03-13 |
 | D-005 | axum as HTTP framework (Express replacement) | Tower-based, async-native, strongest ecosystem | 2026-03-13 |
 | D-006 | No autorest re-generation for Rust | No Rust server generator; manual translation preserves structure | 2026-03-13 |

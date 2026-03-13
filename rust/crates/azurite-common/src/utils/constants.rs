@@ -1,0 +1,3 @@
+pub const DEFAULT_BLOB_PORT: u16 = 10000;
+pub const DEFAULT_QUEUE_PORT: u16 = 10001;
+pub const DEFAULT_TABLE_PORT: u16 = 10002;

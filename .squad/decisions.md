@@ -35,9 +35,25 @@
 **Why:** Required to guide implementation. All team members must review STRATEGY.md before starting work.
 **Governance:** 17-phase porting schedule. Per-file YAML records in `porting-db/src/` mirror TS source tree.
 
+## 2026-03-13: Rust Workspace Scaffold Rooted in `rust/`
+**By:** Aragorn (Rust Expert)
+**What:** Scaffolded the Rust port as a Cargo workspace rooted at `rust/`, with 5 service/library crates under `rust/crates/` and porting database under `rust/porting-db/`. Workspace members: azurite, azurite-common, azurite-blob, azurite-queue, azurite-table. Shared dependency versions centralized in `[workspace.dependencies]` at workspace root. Workspace compiles with `cargo check` from `rust/` directory. Phase 0 scaffolding complete.
+**Why:** Keeps every Rust artifact under single root, matches Gandalf's planned crate layout, facilitates future TS→Rust propagation. Service crates expose both lib.rs and service binary in main.rs to stay structurally parallel to TypeScript entry points.
+
+## 2026-03-13: Move porting-db/ to rust/porting-db/
+**By:** Gandalf (Lead Architect)
+**What:** Moved porting database from repository root to `rust/porting-db/`. All path references in STRATEGY.md and PORTING-ORDER.md updated (`porting-db/` → `rust/porting-db/`). Template examples in §16 (Record Format) now reference correct paths. New structure: rust/porting-db/ contains STRATEGY.md, PORTING-ORDER.md, README.md, and per-file YAML records under src/ mirroring TS structure.
+**Why:** All Rust artifacts (including documentation and porting records) live under single `rust/` root except `.squad/` team metadata. Improves directory hygiene, clarifies change propagation boundaries, makes porting database first-class artifact of Rust port rather than separate root-level artifact. When Aragorn implements Rust module, he can immediately reference strategy docs and per-file records without crossing TypeScript/Rust boundary.
+
+## 2026-03-13: Phase 1 Analysis Preserves Naming and Model Inconsistencies
+**By:** Faramir (TypeScript Expert)
+**What:** Decided to preserve TS source naming and model inconsistencies in Rust porting plan rather than normalizing them. Keep `contextID`/`contextId` differences documented. Treat `src/common/persistence/IExtentMetadata.ts` and `src/common/persistence/IExtentMetadataStore.ts` as distinct contracts with separate extent models (`persistencyId`/`LastModifyInMS` vs `locationId`/`lastModifiedInMS`). Do not collapse them without explicit compatibility layer.
+**Why:** These differences are real TypeScript source behavior, not noise. Normalizing in port would make future TS change propagation harder and could hide compatibility-sensitive behavior like Loki metadata field bridging. Preserves exact TS semantics for accurate long-term propagation.
+**Key Concerns Flagged:** (1) `IOperationQueue.operate<T>()` is generic and not object-safe as trait object in Rust — may need concrete implementation or non-object-safe trait pattern. (2) `IEnvironment` aggregates three service traits with overlapping method names, may push Rust port toward flattened config type for ergonomics while still preserving TS semantics. (3) `IServerFactory` abstraction narrower than current TS implementations — translation should preserve abstraction without assuming every factory directly implements it.
+
 ## Governance
 
-- All porting decisions must be recorded in `porting-db/`
+- All porting decisions must be recorded in `rust/porting-db/`
 - Architecture decisions require Gandalf's approval
 - API-facing changes require Samwise's approval
 - TS fidelity is reviewed by Faramir

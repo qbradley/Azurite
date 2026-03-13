@@ -8,9 +8,14 @@
 
 ## Learnings
 
-### Porting Strategy Available (2026-03-13)
-Gandalf has completed comprehensive porting strategy analysis. Review before starting API work:
-- **Read first:** `porting-db/STRATEGY.md` (1100 lines) — complete strategy with all architectural decisions
-- **Focus sections:** §12 (Authentication) and §13 (Middleware) for API correctness
-- **Key decisions:** D-005 (axum as Express replacement), D-007 (custom in-memory store)
-- **Role:** Validate API endpoint translation and middleware patterns
+### Workspace Ready and Phase 1 Analysis Complete (2026-03-13)
+**Aragorn Status:** Rust workspace scaffold complete and compiles. Five-crate structure ready. All Phase 0 tasks done.
+
+**Faramir Status:** Phase 1 TS analysis complete. All 15 common interface files analyzed with critical fidelity concerns documented:
+- `IOperationQueue.operate<T>()` generics may require special Rust handling (trait object safety)
+- `IExtentMetadata` vs `IExtentMetadataStore` are intentionally distinct contracts — preserve separation in Rust
+- `contextID`/`contextId` naming inconsistencies must be preserved
+- `IEnvironment` and `IServerFactory` abstractions need careful translation to maintain TS semantics
+
+**Next Phase:** API implementation can now reference both Aragorn's completed workspace structure and Faramir's fidelity constraints. Validate all endpoint and middleware translations against STRATEGY.md §12-13.
+

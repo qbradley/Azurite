@@ -8,9 +8,9 @@ When the TypeScript codebase receives bug fixes or new features, this database p
 
 ## Structure
 
-Each TS source file gets a corresponding `.md` file in this directory, mirroring the `src/` path structure.
+Each TypeScript source file gets a corresponding YAML record in this directory, mirroring the `src/` path structure.
 
-Example: `src/blob/BlobServer.ts` → `porting-db/src/blob/BlobServer.md`
+Example: `src/blob/BlobServer.ts` → `rust/porting-db/src/blob/BlobServer.yaml`
 
 ## Per-File Record Format
 
@@ -18,9 +18,9 @@ Each record should include:
 
 ### File Info
 - **TS Source:** `src/path/to/file.ts`
-- **Rust Target:** `rust/src/path/to/file.rs`
+- **Rust Target:** `rust/crates/path/to/file.rs`
 - **Status:** `not-started` | `analyzed` | `in-progress` | `ported` | `reviewed` | `approved`
-- **Last TS Commit:** (hash of the TS commit this port is based on)
+- **Last TS Commit:** hash of the TypeScript commit this port is based on
 
 ### Type Mappings
 Table of TS types → Rust types used in this file.
@@ -32,10 +32,10 @@ Table of TS functions → Rust functions, noting any structural changes.
 Numbered list of decisions made during porting, with rationale.
 
 ### Transformations
-Any non-trivial transformations required (e.g., callback → future, class hierarchy → trait).
+Any non-trivial transformations required, such as callback → future or class hierarchy → trait.
 
 ### Dependencies
-What this file imports/depends on, and the porting status of those dependencies.
+What this file imports or depends on, and the porting status of those dependencies.
 
 ### Notes for Future Changes
-Anything a future porter needs to know when updating this file from TS changes.
+Anything a future porter needs to know when updating this file from TypeScript changes.

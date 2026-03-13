@@ -8,9 +8,14 @@
 
 ## Learnings
 
-### Porting Strategy Available (2026-03-13)
-Gandalf has completed comprehensive porting strategy analysis. Review before starting test strategy:
-- **Read first:** `porting-db/STRATEGY.md` (1100 lines) — complete strategy with all architectural decisions
-- **Focus section:** §9 (Testing and Type Coverage) for test strategy
-- **Reference:** §14 (Rust equivalents table) for type coverage mapping
-- **Role:** Establish test patterns and validation framework per the porting strategy
+### Workspace Ready and Phase 1 Analysis Complete (2026-03-13)
+**Aragorn Status:** Rust workspace scaffold complete and compiles. Five-crate structure ready.
+
+**Faramir Status:** Phase 1 TS analysis complete. All 15 common interface files analyzed with critical fidelity concerns:
+- `IOperationQueue.operate<T>()` generics may require special Rust handling (trait object safety)
+- `IExtentMetadata` vs `IExtentMetadataStore` are intentionally distinct contracts — preserve separation in Rust
+- `contextID`/`contextId` naming inconsistencies must be preserved
+- `IEnvironment` and `IServerFactory` abstractions need careful translation
+
+**Next Phase:** Test framework can now build upon completed workspace and documented TS patterns from Phase 1 analysis. Reference STRATEGY.md §9 (Testing and Type Coverage) and §14 (Rust equivalents table) for type coverage mapping as Rust implementations proceed.
+
