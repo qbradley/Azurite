@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_logger_strategy`
 - Phase: `1.4`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `LogLevels`
@@ -69,3 +69,7 @@ pub trait LoggerStrategy: Send + Sync {
 ## Change propagation notes
 - New log levels require synchronized updates to the enum, the `Logger` adapter, and every strategy implementation.
 - If TS changes enum payload strings, verify formatter output and any tests or docs that rely on literal log level text.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_logger_strategy.rs` with a `LogLevels` enum and `ILoggerStrategy` trait.
+- Kept the lowercase string payloads behind `LogLevels::as_str()` so later logger strategies can emit the same text as the TypeScript enum.

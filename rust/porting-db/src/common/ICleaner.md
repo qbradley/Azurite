@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_cleaner`
 - Phase: `1.2`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `ICleaner`
@@ -38,3 +38,7 @@ pub trait Cleaner: Send + Sync {
 ## Change propagation notes
 - If parameters or return data are ever added to `clean()`, audit every `ICleaner` mixin and the server lifecycle hooks that call it.
 - Preserve the single-method shape so future TS diffs remain easy to compare.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_cleaner.rs` as an `ICleaner` trait.
+- No extra deviation beyond using `Result<(), StorageError>` for the async cleanup contract.

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_gc_manager`
 - Phase: `1.10`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IGCManager`
@@ -41,3 +41,7 @@ pub trait GcManager: Send + Sync {
 ## Change propagation notes
 - If TS adds state-query methods here, update all GC manager implementations and server lifecycle orchestration.
 - Re-check interactions with `IGCExtentProvider` and `IExtentStore` whenever GC startup sequencing changes.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_gc_manager.rs` as an async trait.
+- No extra deviation beyond the shared `StorageError` return contract.

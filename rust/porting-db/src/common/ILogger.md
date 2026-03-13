@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_logger`
 - Phase: `1.3`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `ILogger`
@@ -48,3 +48,7 @@ pub trait Logger: Send + Sync {
 ## Change propagation notes
 - Any added log level here must also be added to `LogLevels`, `Logger.ts`, and all logger strategies.
 - If the context field is renamed in TS, audit telemetry and persistence code for mixed casing assumptions.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_logger.rs` as a synchronous `ILogger` trait.
+- Preserved the mixed-case `contextID` parameter name in Rust so the logger-side naming inconsistency remains visible.

@@ -1,3 +1,5 @@
+pub type RequestListener = axum::Router;
+
 #[derive(Debug, Clone, Default)]
 pub struct ServerBase {
     pub is_started: bool,

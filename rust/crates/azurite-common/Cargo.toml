@@ -22,3 +22,9 @@ tokio.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+assert_matches.workspace = true
+pretty_assertions.workspace = true
+tokio.workspace = true
+tokio-test.workspace = true

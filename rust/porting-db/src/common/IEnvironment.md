@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_environment`
 - Phase: `1.11`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IEnvironment`
@@ -48,3 +48,7 @@ impl<T> Environment for T where T: BlobEnvironment + QueueEnvironment + TableEnv
 ## Change propagation notes
 - Any method added to one service-specific environment interface can affect this aggregate type immediately.
 - If TS ever stops sharing methods like `location()` or `debug()` across services, revisit the Rust aggregation strategy rather than assuming a single flattened config still fits.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_environment.rs` as a flattened `IEnvironment` trait covering the union of blob, queue, and table environment members.
+- Forced deviation: `azurite-common` cannot depend on the service crates that will eventually host `IBlobEnvironment`, `IQueueEnvironment`, and `ITableEnvironment`, so Phase 1 keeps one local aggregate trait plus `DebugValue` to model `string | boolean | undefined`.

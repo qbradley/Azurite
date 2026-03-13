@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_server_factory`
 - Phase: `1.8`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IServerFactory`
@@ -41,3 +41,7 @@ pub trait ServerFactory: Send + Sync {
 ## Change propagation notes
 - If TS aligns the interface with concrete factories by adding parameters, update both this record and all factory implementations.
 - Revisit the return strategy if `ServerBase` translation changes from trait-object friendly to concrete composition.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_server_factory.rs`.
+- Forced deviation: the Rust trait uses an associated `Server` type instead of a concrete `ServerBase` return because the common crate only has a placeholder `ServerBase` today and the TypeScript concrete factories are already narrower than the interface.

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_data_store`
 - Phase: `1.1`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IDataStore`
@@ -45,3 +45,7 @@ pub trait DataStore: Send + Sync {
 ## Change propagation notes
 - Any new lifecycle method here cascades into every storage and metadata trait in `src/common/`.
 - If state semantics change, re-check GC managers and datastore implementations that guard `init()` and `close()` with state tests.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_data_store.rs` as an `IDataStore` trait.
+- Kept the TypeScript method names (`init`, `isInitialized`, `close`, `isClosed`) in Rust with `#[allow(non_snake_case)]` to preserve diffability.

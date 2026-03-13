@@ -51,6 +51,24 @@
 **Why:** These differences are real TypeScript source behavior, not noise. Normalizing in port would make future TS change propagation harder and could hide compatibility-sensitive behavior like Loki metadata field bridging. Preserves exact TS semantics for accurate long-term propagation.
 **Key Concerns Flagged:** (1) `IOperationQueue.operate<T>()` is generic and not object-safe as trait object in Rust — may need concrete implementation or non-object-safe trait pattern. (2) `IEnvironment` aggregates three service traits with overlapping method names, may push Rust port toward flattened config type for ergonomics while still preserving TS semantics. (3) `IServerFactory` abstraction narrower than current TS implementations — translation should preserve abstraction without assuming every factory directly implements it.
 
+## 2026-03-13: Phase 1 IEnvironment Translation Pattern
+**By:** Aragorn (Rust Expert)
+**What:** Phase 1 ports `src/common/IEnvironment.ts` as a flattened local `IEnvironment` trait inside `azurite-common` instead of a Rust supertrait over `IBlobEnvironment`, `IQueueEnvironment`, and `ITableEnvironment`.
+**Why:** The Cargo workspace dependency direction is `azurite-{blob,queue,table} -> azurite-common`, so `azurite-common` cannot reference traits that will live in service crates without creating a cycle. Flattening the aggregate interface preserves the TypeScript-visible method surface while keeping the common crate buildable.
+**Follow-up:** When service-specific environment traits are ported, they should align their method signatures and either implement the flattened common trait directly or introduce adapter wrappers if a more literal hierarchy becomes practical.
+
+## 2026-03-13: Per-Crate Test Infrastructure With Ignored Placeholders
+**By:** Boromir (QA Expert)
+**What:** Rust parity tests organized in per-crate integration test trees mirroring the TypeScript suite:
+- `azurite-common/tests/common/`
+- `azurite-blob/tests/blob/`
+- `azurite-queue/tests/queue/`
+- `azurite-table/tests/table/`
+
+For modules not yet translated, placeholder tests are marked `#[ignore]` instead of documented only in prose.
+**Why:** Keeps Rust port aligned with TS suite structure, makes parity work discoverable, lets `cargo test` compile and verify pending suites as codebase evolves. Allows incremental replacement of ignored placeholders without workspace reorganization.
+**Impact:** Aragorn and future QA passes can expand parity test coverage incrementally as translations complete.
+
 ## Governance
 
 - All porting decisions must be recorded in `rust/porting-db/`

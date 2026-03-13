@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_account_data_store`
 - Phase: `1.6`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IAccountProperties`
@@ -54,3 +54,7 @@ pub trait AccountDataStore: DataStore + Cleaner + Send + Sync {
 ## Change propagation notes
 - If TS adds fields to `IAccountProperties`, audit every authenticator and SAS path that reads account keys.
 - If lookup becomes async later, revisit authentication call sites before changing the Rust trait surface.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_account_data_store.rs` with `IAccountProperties` and `IAccountDataStore`.
+- Kept `getAccount()` synchronous and Option-returning to match the TypeScript hot-path authentication usage.

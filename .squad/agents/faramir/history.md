@@ -24,3 +24,25 @@ Gandalf has completed comprehensive porting strategy analysis. Review before sta
 
 ### Phase 1 Analysis Complete: Workspace Ready (2026-03-13)
 Aragorn's workspace scaffold is complete and compiles. Gandalf has restructured porting-db to rust/porting-db/. Phase 1 records are now at `rust/porting-db/src/common/` and ready for Aragorn to reference. Trait object safety and model distinction concerns flagged above are critical for implementation fidelity.
+
+### Phase 2 TS analysis completed (2026-03-13)
+Analyzed all 7 Phase 2 files. Records updated/corrected under `rust/porting-db/src/common/` and `rust/porting-db/src/common/persistence/`. Key findings:
+
+**Critical fidelity risks discovered:**
+1. **`ZERO_EXTENT_ID` cross-crate dependency**: Both `FSExtentStore.ts` and `MemoryExtentStore.ts` (in `src/common/`) import `ZERO_EXTENT_ID = "*ZERO*"` from `src/blob/persistence/IBlobMetadataStore`. In Rust, `azurite-common` cannot depend on `azurite-blob`. This constant must be moved or replicated in `azurite-common` to break the circular dependency.
+2. **`LastModifyInMS` vs `lastModifiedInMS` field mismatch in `LokiExtentMetadata`**: `updateExtent()` writes `doc.LastModifyInMS = extent.lastModifiedInMS` and `listExtents()` queries `LastModifyInMS`. The stored/queried Loki field uses a different spelling than the `IExtentModel` interface field. Do not unify these in the Rust port without an explicit compatibility layer — the query logic depends on the exact field name.
+3. **Class name vs file name discrepancy**: The file `LokiExtentMetadataStore.ts` exports class `LokiExtentMetadata` (not `LokiExtentMetadataStore`). Preserve this asymmetry in Rust.
+
+**TS patterns for Aragorn:**
+- `OperationQueue`: EventEmitter-based concurrency with a private `execute()` that dequeues one op on each successful completion or error. Replace with `tokio::sync::Semaphore` for concurrency bounding; keep FIFO dequeue semantics.
+- `Mutex`: Static-class global key mutex. Uses `setImmediate()` to defer next waiter. Rust port needs `lazy_static!` global `KeyMutex` using `tokio::sync::oneshot` channels for per-waiter signaling (FIFO fairness preserved).
+- `ZeroBytesStream`: Node.js `Readable` with fixed 512-byte chunk pull model. Rust `AsyncRead` `poll_read()` is a direct structural match; write zeros directly to caller's buffer without extra allocation.
+- `MemoryExtentStore`: `MemoryExtentChunkStore` has a two-level map (`categoryName → IExtentCategoryChunks`, where `IExtentCategoryChunks` wraps a per-id map + category total size). The global `SharedChunkStore` singleton holds all in-memory extent data. Must use `lazy_static!` with `Arc<RwLock<...>>` for thread safety.
+- `FSExtentStore`: 677-line class with `IAppendExtent` pool (one per `locationId × maxConcurrency`), two operation queues (append/read), file descriptor caching per extent, and manual `fdatasync` after each write. Most complex Phase 2 file.
+- `AllExtentsAsyncIterator`: Snapshot-time pagination iterator. Captures `new Date()` at construction; all `listExtents()` calls use this time. Rust must preserve the immutable snapshot; translate to `futures::stream::Stream`.
+
+**Line count discrepancy pattern:** All pre-existing records had line counts off by 1 (showing N+1 instead of N). Corrected in this pass. Use `wc -l` counts going forward.
+
+### Phase 1 & 2 Complete; Test Infrastructure Ready (2026-03-13)
+Aragorn has completed Phase 1 translation (15 files, porting-db updated). Boromir has set up test infrastructure with 9 active tests and 9 ignored placeholders. Both agents report SUCCESS. Workspace compiles, tests pass. Ready for Phase 2 translation guided by these fidelity risks.
+

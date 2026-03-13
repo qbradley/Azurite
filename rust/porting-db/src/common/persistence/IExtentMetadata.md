@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::i_extent_metadata`
 - Phase: `1.12`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IExtentModel`
@@ -75,3 +75,7 @@ pub trait ExtentMetadata: DataStore + Send + Sync {
 ## Change propagation notes
 - If TS deletes this legacy interface in favor of `IExtentMetadataStore`, record the removal explicitly instead of silently merging the records.
 - Any field rename here must be compared against Loki metadata serialization, which still stores `LastModifyInMS` today.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/persistence/i_extent_metadata.rs` as the legacy extent metadata contract.
+- Kept the legacy `persistencyId` / `LastModifyInMS` field spellings in Rust and chose `i64` for millisecond timestamps to align with future `chrono` usage.

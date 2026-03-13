@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::i_extent_metadata_store`
 - Phase: `1.14`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IExtentModel`
@@ -77,3 +77,7 @@ pub trait ExtentMetadataStore: GcExtentProvider + DataStore + Cleaner + Send + S
 ## Change propagation notes
 - Any field rename must be audited across both SQL and Loki implementations and compared against the legacy `IExtentMetadata` record.
 - If TS changes the pagination tuple or iterator batching strategy, update GC manager expectations at the same time.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/persistence/i_extent_metadata_store.rs` as the newer extent metadata store contract.
+- Kept this `IExtentModel` separate from the legacy one and chose `i64` for `lastModifiedInMS` so the Loki bridging mismatch stays explicit.

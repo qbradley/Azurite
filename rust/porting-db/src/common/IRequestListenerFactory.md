@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_request_listener_factory`
 - Phase: `1.7`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IRequestListenerFactory`
@@ -45,3 +45,7 @@ pub trait RequestListenerFactory: Send + Sync {
 ## Change propagation notes
 - If `RequestListener` gains parameters or async setup in TS, update this record together with `ServerBase` and all service-specific factories.
 - Future listener middleware additions should remain behind the factory method instead of leaking into server construction.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_request_listener_factory.rs`.
+- Forced deviation: `RequestListener` is currently aliased to `axum::Router` in `server_base.rs` because the Phase 1 common crate does not yet have a direct Rust equivalent for the raw Node request callback.

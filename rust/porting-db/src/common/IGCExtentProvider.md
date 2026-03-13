@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `i_gc_extent_provider`
 - Phase: `1.9`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IGCExtentProvider extends IDataStore`
@@ -42,3 +42,7 @@ pub trait GcExtentProvider: DataStore + Send + Sync {
 ## Change propagation notes
 - If the batch item type changes, re-check both GC managers and `IExtentMetadataStore` implementations.
 - If TS changes from iterator to callback/event style, revisit every GC scanning loop before altering the Rust API.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/i_gc_extent_provider.rs` with `BoxStream` batches.
+- Kept batched `Vec<String>` streaming rather than collapsing to one extent ID per item.

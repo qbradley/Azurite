@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::i_operation_queue`
 - Phase: `1.15`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IOperationQueue`
@@ -51,3 +51,7 @@ pub trait OperationQueue: Send + Sync {
 ## Change propagation notes
 - If TS widens `operate()` to accept cancellation, priority, or metadata, revisit both the trait shape and the concrete scheduler implementation.
 - Any change to the callback contract affects `FSExtentStore`, which relies on queued read/write serialization.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/persistence/i_operation_queue.rs` as a generic async trait.
+- Forced deviation remains intentional: the generic `operate<T>()` method is not object-safe, so the Phase 1 port keeps it for concrete `OperationQueue` implementations rather than forcing a boxed trait-object abstraction.

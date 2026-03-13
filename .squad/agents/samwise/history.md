@@ -8,14 +8,15 @@
 
 ## Learnings
 
-### Workspace Ready and Phase 1 Analysis Complete (2026-03-13)
-**Aragorn Status:** Rust workspace scaffold complete and compiles. Five-crate structure ready. All Phase 0 tasks done.
+### Workspace Ready; Phase 1 Complete; Test Infrastructure Operational (2026-03-13)
+**Aragorn Status:** Phase 1 Rust translation complete. All 15 common interfaces translated to `rust/crates/azurite-common/src/`. Porting-db records updated. IEnvironment flattened to local trait pattern (crate-graph safe). Workspace compiles.
 
-**Faramir Status:** Phase 1 TS analysis complete. All 15 common interface files analyzed with critical fidelity concerns documented:
-- `IOperationQueue.operate<T>()` generics may require special Rust handling (trait object safety)
-- `IExtentMetadata` vs `IExtentMetadataStore` are intentionally distinct contracts — preserve separation in Rust
-- `contextID`/`contextId` naming inconsistencies must be preserved
-- `IEnvironment` and `IServerFactory` abstractions need careful translation to maintain TS semantics
+**Faramir Status:** Phase 1 & 2 TS analysis complete. Phase 2 fidelity risks flagged:
+- `ZERO_EXTENT_ID` circular dependency (must move constant from `src/blob/` to `src/common/`)
+- `LastModifyInMS` vs `lastModifiedInMS` field casing mismatch (Loki query depends on exact spelling)
+- File/class name asymmetries (preserve in Rust)
 
-**Next Phase:** API implementation can now reference both Aragorn's completed workspace structure and Faramir's fidelity constraints. Validate all endpoint and middleware translations against STRATEGY.md §12-13.
+**Boromir Status:** Test infrastructure deployed. 9 active Phase 1 parity tests passing. 9 ignored placeholders ready for Phase 2 modules. Per-crate test structure mirrors TS suite. `cargo test` green.
+
+**Next Phase:** All systems ready for Phase 2 interface translation. Aragorn will use Faramir's fidelity risks to guide implementation. Boromir will expand tests incrementally.
 

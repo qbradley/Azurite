@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `models`
 - Phase: `1.5`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `OAuthLevel`
@@ -50,3 +50,7 @@ impl std::str::FromStr for OAuthLevel {
 ## Change propagation notes
 - Any new enum member must be audited through `ConfigurationBase`, all request listener factories, and service token authenticators.
 - If the TS project changes CLI strings without changing enum members, update the Rust string parser but keep enum names aligned with TS.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/models.rs` with `OAuthLevel::BASIC` preserved.
+- Added `FromStr` using the shared common `StorageError::invalid_header_value()` helper so configuration parsing already matches the planned call sites.

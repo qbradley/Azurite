@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::i_extent_store`
 - Phase: `1.13`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IExtentChunk`
@@ -100,3 +100,7 @@ pub trait ExtentStore: DataStore + Cleaner + Send + Sync {
 ## Change propagation notes
 - Any change to extent chunk shape or stream semantics affects blob handlers, queue handlers, and both GC managers.
 - If TS changes `deleteExtents()` to accept a different iterable contract, revisit object-safety choices in the Rust trait surface.
+
+## Rust port notes
+- Ported to `rust/crates/azurite-common/src/persistence/i_extent_store.rs` with `ReadableStream`, `ExtentDataInput`, and `StoreDestinationArray`.
+- Forced deviation: `IStoreDestinationConfigure` is public in Rust so the exported `StoreDestinationArray` alias is usable, and `Iterable<string>` is modeled as `Vec<String>` at the trait boundary to avoid object-safety friction.

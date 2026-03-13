@@ -37,3 +37,24 @@ Faramir has analyzed all 15 Phase 1 files (common interfaces and shared types). 
 - **Interface aggregation complexity:** `IEnvironment` aggregates three service traits with overlapping method names. May push toward flattened config type in Rust for ergonomics, but preserve TS semantics.
 - **Factory abstraction:** `IServerFactory` is narrower than concrete factory implementations. Preserve abstraction without assuming every TS factory directly implements it.
 - **Generic boundaries:** Watch for boxed stream/iterator boundaries when translating async lifecycles.
+
+### Phase 1 Common Interfaces Ported (2026-03-13)
+- Ported all 15 Phase 1 common interface records into `rust/crates/azurite-common/src/`, keeping TypeScript-facing names and module correspondence wherever Rust would allow it.
+- Introduced a shared `StorageError` placeholder in `azurite-common` so the new async traits can compile before the per-service error layers land.
+- Flattened `IEnvironment` into a local aggregate trait for Phase 1 because `azurite-common` cannot depend on future blob/queue/table environment traits without inverting the crate graph.
+
+### Phase 1 Complete; Phase 2 Fidelity Risks from Faramir (2026-03-13)
+Faramir's Phase 2 analysis is complete. **Critical implementation notes for Phase 2:**
+1. **`ZERO_EXTENT_ID` circular dependency**: Both `FSExtentStore.ts` and `MemoryExtentStore.ts` import `ZERO_EXTENT_ID = "*ZERO*"` from `src/blob/persistence/IBlobMetadataStore`. In Rust, `azurite-common` cannot depend on `azurite-blob`. Move or replicate this constant in `azurite-common` to break the cycle.
+2. **`LastModifyInMS` vs `lastModifiedInMS` field mismatch**: Loki stores field `LastModifyInMS` but `IExtentModel` interface uses `lastModifiedInMS` (different casing). Do NOT unify these in Rust — the query logic depends on exact field name.
+3. **Class name vs file name asymmetry**: File `LokiExtentMetadataStore.ts` exports class `LokiExtentMetadata` (not the file name). Preserve this asymmetry.
+
+**Phase 2 TS patterns:**
+- `OperationQueue`: EventEmitter-based FIFO with dequeue on success/error → use `tokio::sync::Semaphore` with FIFO semantics
+- `Mutex`: Static-class global key mutex → `lazy_static!` + `tokio::sync::oneshot` channels for FIFO fairness
+- `ZeroBytesStream`: Node.js `Readable` 512-byte chunks → Rust `AsyncRead` `poll_read()` writing zeros directly
+- `MemoryExtentStore`: Two-level map with `SharedChunkStore` singleton → `lazy_static!` + `Arc<RwLock<...>>`
+- `FSExtentStore`: Complex 677-line class with `IAppendExtent` pool, two operation queues, FD caching, `fdatasync` per write
+- `AllExtentsAsyncIterator`: Snapshot-time pagination → preserve immutable snapshot, translate to `futures::stream::Stream`
+
+Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in place. Tests will expand as Phase 2 translations complete.
