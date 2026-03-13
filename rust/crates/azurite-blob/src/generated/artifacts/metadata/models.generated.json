@@ -1,0 +1,658 @@
+{
+  "interfaces": [
+    "KeyInfo",
+    "UserDelegationKey",
+    "StorageError",
+    "AccessPolicy",
+    "BlobPropertiesInternal",
+    "BlobMetadata",
+    "BlobTag",
+    "BlobTags",
+    "BlobItemInternal",
+    "BlobFlatListSegment",
+    "ListBlobsFlatSegmentResponse",
+    "BlobPrefix",
+    "BlobHierarchyListSegment",
+    "ListBlobsHierarchySegmentResponse",
+    "BlobName",
+    "Block",
+    "BlockList",
+    "BlockLookupList",
+    "ContainerProperties",
+    "ContainerItem",
+    "DelimitedTextConfiguration",
+    "JsonTextConfiguration",
+    "ArrowField",
+    "ArrowConfiguration",
+    "ListContainersSegmentResponse",
+    "CorsRule",
+    "FilterBlobItem",
+    "FilterBlobSegment",
+    "GeoReplication",
+    "RetentionPolicy",
+    "Logging",
+    "Metrics",
+    "PageRange",
+    "ClearRange",
+    "PageList",
+    "QueryFormat",
+    "QuerySerialization",
+    "QueryRequest",
+    "SignedIdentifier",
+    "StaticWebsite",
+    "StorageServiceProperties",
+    "StorageServiceStats",
+    "ContainerCpkScopeInfo",
+    "LeaseAccessConditions",
+    "ModifiedAccessConditions",
+    "CpkInfo",
+    "BlobHTTPHeaders",
+    "CpkScopeInfo",
+    "SourceModifiedAccessConditions",
+    "SequenceNumberAccessConditions",
+    "AppendPositionAccessConditions",
+    "AzuriteServerBlobOptions",
+    "ServiceSetPropertiesOptionalParams",
+    "ServiceGetPropertiesOptionalParams",
+    "ServiceGetStatisticsOptionalParams",
+    "ServiceListContainersSegmentOptionalParams",
+    "ServiceGetUserDelegationKeyOptionalParams",
+    "ServiceSubmitBatchOptionalParams",
+    "ServiceFilterBlobsOptionalParams",
+    "ContainerCreateOptionalParams",
+    "ContainerGetPropertiesOptionalParams",
+    "ContainerGetPropertiesWithHeadOptionalParams",
+    "ContainerDeleteMethodOptionalParams",
+    "ContainerSetMetadataOptionalParams",
+    "ContainerGetAccessPolicyOptionalParams",
+    "ContainerSetAccessPolicyOptionalParams",
+    "ContainerRestoreOptionalParams",
+    "ContainerSubmitBatchOptionalParams",
+    "ContainerFilterBlobsOptionalParams",
+    "ContainerAcquireLeaseOptionalParams",
+    "ContainerReleaseLeaseOptionalParams",
+    "ContainerRenewLeaseOptionalParams",
+    "ContainerBreakLeaseOptionalParams",
+    "ContainerChangeLeaseOptionalParams",
+    "ContainerListBlobFlatSegmentOptionalParams",
+    "ContainerListBlobHierarchySegmentOptionalParams",
+    "BlobDownloadOptionalParams",
+    "BlobGetPropertiesOptionalParams",
+    "BlobDeleteMethodOptionalParams",
+    "BlobUndeleteOptionalParams",
+    "BlobSetExpiryOptionalParams",
+    "BlobSetHTTPHeadersOptionalParams",
+    "BlobSetImmutabilityPolicyOptionalParams",
+    "BlobDeleteImmutabilityPolicyOptionalParams",
+    "BlobSetLegalHoldOptionalParams",
+    "BlobSetMetadataOptionalParams",
+    "BlobAcquireLeaseOptionalParams",
+    "BlobReleaseLeaseOptionalParams",
+    "BlobRenewLeaseOptionalParams",
+    "BlobChangeLeaseOptionalParams",
+    "BlobBreakLeaseOptionalParams",
+    "BlobCreateSnapshotOptionalParams",
+    "BlobStartCopyFromURLOptionalParams",
+    "BlobCopyFromURLOptionalParams",
+    "BlobAbortCopyFromURLOptionalParams",
+    "BlobSetTierOptionalParams",
+    "BlobQueryOptionalParams",
+    "BlobGetTagsOptionalParams",
+    "BlobSetTagsOptionalParams",
+    "PageBlobCreateOptionalParams",
+    "PageBlobUploadPagesOptionalParams",
+    "PageBlobClearPagesOptionalParams",
+    "PageBlobUploadPagesFromURLOptionalParams",
+    "PageBlobGetPageRangesOptionalParams",
+    "PageBlobGetPageRangesDiffOptionalParams",
+    "PageBlobResizeOptionalParams",
+    "PageBlobUpdateSequenceNumberOptionalParams",
+    "PageBlobCopyIncrementalOptionalParams",
+    "AppendBlobCreateOptionalParams",
+    "AppendBlobAppendBlockOptionalParams",
+    "AppendBlobAppendBlockFromUrlOptionalParams",
+    "AppendBlobSealOptionalParams",
+    "BlockBlobUploadOptionalParams",
+    "BlockBlobPutBlobFromUrlOptionalParams",
+    "BlockBlobStageBlockOptionalParams",
+    "BlockBlobStageBlockFromURLOptionalParams",
+    "BlockBlobCommitBlockListOptionalParams",
+    "BlockBlobGetBlockListOptionalParams",
+    "ServiceSetPropertiesHeaders",
+    "ServiceGetPropertiesHeaders",
+    "ServiceGetStatisticsHeaders",
+    "ServiceListContainersSegmentHeaders",
+    "ServiceGetUserDelegationKeyHeaders",
+    "ServiceGetAccountInfoHeaders",
+    "ServiceGetAccountInfoWithHeadHeaders",
+    "ServiceSubmitBatchHeaders",
+    "ServiceFilterBlobsHeaders",
+    "ContainerCreateHeaders",
+    "ContainerGetPropertiesHeaders",
+    "ContainerGetPropertiesWithHeadHeaders",
+    "ContainerDeleteHeaders",
+    "ContainerSetMetadataHeaders",
+    "ContainerGetAccessPolicyHeaders",
+    "ContainerSetAccessPolicyHeaders",
+    "ContainerRestoreHeaders",
+    "ContainerSubmitBatchHeaders",
+    "ContainerFilterBlobsHeaders",
+    "ContainerAcquireLeaseHeaders",
+    "ContainerReleaseLeaseHeaders",
+    "ContainerRenewLeaseHeaders",
+    "ContainerBreakLeaseHeaders",
+    "ContainerChangeLeaseHeaders",
+    "ContainerListBlobFlatSegmentHeaders",
+    "ContainerListBlobHierarchySegmentHeaders",
+    "ContainerGetAccountInfoHeaders",
+    "ContainerGetAccountInfoWithHeadHeaders",
+    "BlobDownloadHeaders",
+    "BlobGetPropertiesHeaders",
+    "BlobDeleteHeaders",
+    "PageBlobCreateHeaders",
+    "AppendBlobCreateHeaders",
+    "BlockBlobUploadHeaders",
+    "BlockBlobPutBlobFromUrlHeaders",
+    "BlobUndeleteHeaders",
+    "BlobSetExpiryHeaders",
+    "BlobSetHTTPHeadersHeaders",
+    "BlobSetImmutabilityPolicyHeaders",
+    "BlobDeleteImmutabilityPolicyHeaders",
+    "BlobSetLegalHoldHeaders",
+    "BlobSetMetadataHeaders",
+    "BlobAcquireLeaseHeaders",
+    "BlobReleaseLeaseHeaders",
+    "BlobRenewLeaseHeaders",
+    "BlobChangeLeaseHeaders",
+    "BlobBreakLeaseHeaders",
+    "BlobCreateSnapshotHeaders",
+    "BlobStartCopyFromURLHeaders",
+    "BlobCopyFromURLHeaders",
+    "BlobAbortCopyFromURLHeaders",
+    "BlobSetTierHeaders",
+    "BlobGetAccountInfoHeaders",
+    "BlobGetAccountInfoWithHeadHeaders",
+    "BlockBlobStageBlockHeaders",
+    "BlockBlobStageBlockFromURLHeaders",
+    "BlockBlobCommitBlockListHeaders",
+    "BlockBlobGetBlockListHeaders",
+    "PageBlobUploadPagesHeaders",
+    "PageBlobClearPagesHeaders",
+    "PageBlobUploadPagesFromURLHeaders",
+    "PageBlobGetPageRangesHeaders",
+    "PageBlobGetPageRangesDiffHeaders",
+    "PageBlobResizeHeaders",
+    "PageBlobUpdateSequenceNumberHeaders",
+    "PageBlobCopyIncrementalHeaders",
+    "AppendBlobAppendBlockHeaders",
+    "AppendBlobAppendBlockFromUrlHeaders",
+    "AppendBlobSealHeaders",
+    "BlobQueryHeaders",
+    "BlobGetTagsHeaders",
+    "BlobSetTagsHeaders"
+  ],
+  "enums": [
+    "PublicAccessType",
+    "CopyStatusType",
+    "LeaseDurationType",
+    "LeaseStateType",
+    "LeaseStatusType",
+    "AccessTier",
+    "ArchiveStatus",
+    "BlobType",
+    "RehydratePriority",
+    "BlobImmutabilityPolicyMode",
+    "StorageErrorCode",
+    "GeoReplicationStatusType",
+    "QueryFormatType",
+    "PremiumPageBlobAccessTier",
+    "BlobDeleteType",
+    "BlobExpiryOptions",
+    "BlockListType",
+    "BlobCopySourceTags",
+    "DeleteSnapshotsOptionType",
+    "EncryptionAlgorithmType",
+    "FilterBlobsIncludeItem",
+    "ListBlobsIncludeItem",
+    "ListContainersIncludeType",
+    "SequenceNumberActionType",
+    "SkuName",
+    "AccountKind",
+    "SyncCopyStatusType",
+    "Version",
+    "Version1",
+    "Version2",
+    "Version3",
+    "Version4",
+    "Version5",
+    "Version6",
+    "Version7",
+    "Version8",
+    "Version9",
+    "Version10",
+    "Version11",
+    "Version12",
+    "Version13",
+    "Version14",
+    "Version15",
+    "Version16",
+    "Version17",
+    "Version18",
+    "Version19",
+    "Version20",
+    "Version21",
+    "Version22",
+    "Version23",
+    "Version24",
+    "Version25",
+    "Version26",
+    "Version27",
+    "Version28",
+    "Version29",
+    "Version30",
+    "Version31",
+    "Version32",
+    "Version33",
+    "Version34",
+    "Version35",
+    "Version36",
+    "Version37",
+    "Version38",
+    "Version39",
+    "Version40",
+    "Version41",
+    "Version42",
+    "Version43",
+    "Version44",
+    "Version45",
+    "Version46",
+    "Version47",
+    "Version48",
+    "Version49",
+    "Version50",
+    "Version51",
+    "Version52",
+    "Version53",
+    "Version54",
+    "Version55",
+    "Version56",
+    "Version57",
+    "Version58",
+    "Version59",
+    "Version60",
+    "Version61",
+    "Version62",
+    "Version63",
+    "Version64",
+    "Version65",
+    "Version66",
+    "Version67",
+    "Version68",
+    "Version69",
+    "Version70",
+    "Version71",
+    "Version72"
+  ],
+  "aliases": [
+    {
+      "name": "ServiceSetPropertiesResponse",
+      "definition": "ServiceSetPropertiesHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceGetPropertiesResponse",
+      "definition": "StorageServiceProperties & ServiceGetPropertiesHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceGetStatisticsResponse",
+      "definition": "StorageServiceStats & ServiceGetStatisticsHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceListContainersSegmentResponse",
+      "definition": "ListContainersSegmentResponse & ServiceListContainersSegmentHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceGetUserDelegationKeyResponse",
+      "definition": "UserDelegationKey & ServiceGetUserDelegationKeyHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceGetAccountInfoResponse",
+      "definition": "ServiceGetAccountInfoHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceGetAccountInfoWithHeadResponse",
+      "definition": "ServiceGetAccountInfoWithHeadHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceSubmitBatchResponse",
+      "definition": "ServiceSubmitBatchHeaders & { /** * The response body as a node.js Readable stream. */ body?: NodeJS.ReadableStream",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ServiceFilterBlobsResponse",
+      "definition": "FilterBlobSegment & ServiceFilterBlobsHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerCreateResponse",
+      "definition": "ContainerCreateHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerGetPropertiesResponse",
+      "definition": "ContainerGetPropertiesHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerGetPropertiesWithHeadResponse",
+      "definition": "ContainerGetPropertiesWithHeadHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerDeleteResponse",
+      "definition": "ContainerDeleteHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerSetMetadataResponse",
+      "definition": "ContainerSetMetadataHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerGetAccessPolicyResponse",
+      "definition": "Array<SignedIdentifier> & ContainerGetAccessPolicyHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerSetAccessPolicyResponse",
+      "definition": "ContainerSetAccessPolicyHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerRestoreResponse",
+      "definition": "ContainerRestoreHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerSubmitBatchResponse",
+      "definition": "ContainerSubmitBatchHeaders & { /** * The response body as a node.js Readable stream. */ body?: NodeJS.ReadableStream",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerFilterBlobsResponse",
+      "definition": "FilterBlobSegment & ContainerFilterBlobsHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerAcquireLeaseResponse",
+      "definition": "ContainerAcquireLeaseHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerReleaseLeaseResponse",
+      "definition": "ContainerReleaseLeaseHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerRenewLeaseResponse",
+      "definition": "ContainerRenewLeaseHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerBreakLeaseResponse",
+      "definition": "ContainerBreakLeaseHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerChangeLeaseResponse",
+      "definition": "ContainerChangeLeaseHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerListBlobFlatSegmentResponse",
+      "definition": "ListBlobsFlatSegmentResponse & ContainerListBlobFlatSegmentHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerListBlobHierarchySegmentResponse",
+      "definition": "ListBlobsHierarchySegmentResponse & ContainerListBlobHierarchySegmentHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerGetAccountInfoResponse",
+      "definition": "ContainerGetAccountInfoHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "ContainerGetAccountInfoWithHeadResponse",
+      "definition": "ContainerGetAccountInfoWithHeadHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobDownloadResponse",
+      "definition": "BlobDownloadHeaders & { /** * The response body as a node.js Readable stream. */ body?: NodeJS.ReadableStream",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobGetPropertiesResponse",
+      "definition": "BlobGetPropertiesHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobDeleteResponse",
+      "definition": "BlobDeleteHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobUndeleteResponse",
+      "definition": "BlobUndeleteHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetExpiryResponse",
+      "definition": "BlobSetExpiryHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetHTTPHeadersResponse",
+      "definition": "BlobSetHTTPHeadersHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetImmutabilityPolicyResponse",
+      "definition": "BlobSetImmutabilityPolicyHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobDeleteImmutabilityPolicyResponse",
+      "definition": "BlobDeleteImmutabilityPolicyHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetLegalHoldResponse",
+      "definition": "BlobSetLegalHoldHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetMetadataResponse",
+      "definition": "BlobSetMetadataHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobAcquireLeaseResponse",
+      "definition": "BlobAcquireLeaseHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobReleaseLeaseResponse",
+      "definition": "BlobReleaseLeaseHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobRenewLeaseResponse",
+      "definition": "BlobRenewLeaseHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobChangeLeaseResponse",
+      "definition": "BlobChangeLeaseHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobBreakLeaseResponse",
+      "definition": "BlobBreakLeaseHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobCreateSnapshotResponse",
+      "definition": "BlobCreateSnapshotHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobStartCopyFromURLResponse",
+      "definition": "BlobStartCopyFromURLHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobCopyFromURLResponse",
+      "definition": "BlobCopyFromURLHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobAbortCopyFromURLResponse",
+      "definition": "BlobAbortCopyFromURLHeaders & { /** * The response status code. */ statusCode: 204",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetTierResponse",
+      "definition": "BlobSetTierHeaders & { /** * The response status code. */ statusCode: 200 | 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobGetAccountInfoResponse",
+      "definition": "BlobGetAccountInfoHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobGetAccountInfoWithHeadResponse",
+      "definition": "BlobGetAccountInfoWithHeadHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobQueryResponse",
+      "definition": "BlobQueryHeaders & { /** * The response body as a node.js Readable stream. */ body?: NodeJS.ReadableStream",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobGetTagsResponse",
+      "definition": "BlobTags & BlobGetTagsHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlobSetTagsResponse",
+      "definition": "BlobSetTagsHeaders & { /** * The response status code. */ statusCode: 204",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobCreateResponse",
+      "definition": "PageBlobCreateHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobUploadPagesResponse",
+      "definition": "PageBlobUploadPagesHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobClearPagesResponse",
+      "definition": "PageBlobClearPagesHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobUploadPagesFromURLResponse",
+      "definition": "PageBlobUploadPagesFromURLHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobGetPageRangesResponse",
+      "definition": "PageList & PageBlobGetPageRangesHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobGetPageRangesDiffResponse",
+      "definition": "PageList & PageBlobGetPageRangesDiffHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobResizeResponse",
+      "definition": "PageBlobResizeHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobUpdateSequenceNumberResponse",
+      "definition": "PageBlobUpdateSequenceNumberHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "PageBlobCopyIncrementalResponse",
+      "definition": "PageBlobCopyIncrementalHeaders & { /** * The response status code. */ statusCode: 202",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "AppendBlobCreateResponse",
+      "definition": "AppendBlobCreateHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "AppendBlobAppendBlockResponse",
+      "definition": "AppendBlobAppendBlockHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "AppendBlobAppendBlockFromUrlResponse",
+      "definition": "AppendBlobAppendBlockFromUrlHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "AppendBlobSealResponse",
+      "definition": "AppendBlobSealHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlockBlobUploadResponse",
+      "definition": "BlockBlobUploadHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlockBlobPutBlobFromUrlResponse",
+      "definition": "BlockBlobPutBlobFromUrlHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlockBlobStageBlockResponse",
+      "definition": "BlockBlobStageBlockHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlockBlobStageBlockFromURLResponse",
+      "definition": "BlockBlobStageBlockFromURLHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlockBlobCommitBlockListResponse",
+      "definition": "BlockBlobCommitBlockListHeaders & { /** * The response status code. */ statusCode: 201",
+      "rustType": "GeneratedResponse"
+    },
+    {
+      "name": "BlockBlobGetBlockListResponse",
+      "definition": "BlockList & BlockBlobGetBlockListHeaders & { /** * The response status code. */ statusCode: 200",
+      "rustType": "GeneratedResponse"
+    }
+  ]
+}

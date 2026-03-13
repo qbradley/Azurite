@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::utils::i_logger`
 - Phase: `5.3`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

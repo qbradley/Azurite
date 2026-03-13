@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::artifacts::models`
 - Phase: `5.8`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Export families: interfaces, enums, and intersection response type aliases.
@@ -7535,3 +7535,7 @@ export type BlockBlobGetBlockListResponse = BlockList & BlockBlobGetBlockListHea
 - If the corresponding swagger changes, diff the regenerated TS file first, then update the Rust port and this record together.
 - Regenerated `models.ts` must be diffed together with `mappers.ts`, `parameters.ts`, `specifications.ts`, and all handler interfaces because operation signatures and response wrappers move as a set.
 - If new response intersection aliases appear, keep the individual header/body/status pieces visible in Rust instead of collapsing them into opaque helper types.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-blob/src/generated/artifacts/models.rs` with generated names preserved verbatim.
+- Forced deviation: the first framework port aliases generated interfaces/options to `GeneratedObject`, string unions/enums to `String`, and HTTP wrapper aliases to `GeneratedResponse` so the autorest surface compiles before Phase 6+ handwritten blob logic fills in concrete per-field models.

@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::handlers::handler_mappers`
 - Phase: `5.16`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

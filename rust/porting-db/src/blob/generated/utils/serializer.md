@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::utils::serializer`
 - Phase: `5.5`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

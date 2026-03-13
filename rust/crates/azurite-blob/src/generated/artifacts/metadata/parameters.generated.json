@@ -1,0 +1,3367 @@
+{
+  "access": {
+    "__name": "access",
+    "parameterPath": [
+      "options",
+      "access"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-public-access",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "action0": {
+    "__name": "action0",
+    "parameterPath": "action",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-action",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "acquire",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "action1": {
+    "__name": "action1",
+    "parameterPath": "action",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-action",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "release",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "action2": {
+    "__name": "action2",
+    "parameterPath": "action",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-action",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "renew",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "action3": {
+    "__name": "action3",
+    "parameterPath": "action",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-action",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "break",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "action4": {
+    "__name": "action4",
+    "parameterPath": "action",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-action",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "change",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "appendPosition": {
+    "__name": "appendPosition",
+    "parameterPath": [
+      "options",
+      "appendPositionAccessConditions",
+      "appendPosition"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-condition-appendpos",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blob": {
+    "__name": "blob",
+    "parameterPath": "blob",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "blob",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobCacheControl": {
+    "__name": "blobCacheControl",
+    "parameterPath": [
+      "options",
+      "blobHTTPHeaders",
+      "blobCacheControl"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-cache-control",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobContentDisposition": {
+    "__name": "blobContentDisposition",
+    "parameterPath": [
+      "options",
+      "blobHTTPHeaders",
+      "blobContentDisposition"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-content-disposition",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobContentEncoding": {
+    "__name": "blobContentEncoding",
+    "parameterPath": [
+      "options",
+      "blobHTTPHeaders",
+      "blobContentEncoding"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-content-encoding",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobContentLanguage": {
+    "__name": "blobContentLanguage",
+    "parameterPath": [
+      "options",
+      "blobHTTPHeaders",
+      "blobContentLanguage"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-content-language",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobContentLength": {
+    "__name": "blobContentLength",
+    "parameterPath": "blobContentLength",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-content-length",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobContentMD5": {
+    "__name": "blobContentMD5",
+    "parameterPath": [
+      "options",
+      "blobHTTPHeaders",
+      "blobContentMD5"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-content-md5",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "ByteArray",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobContentType": {
+    "__name": "blobContentType",
+    "parameterPath": [
+      "options",
+      "blobHTTPHeaders",
+      "blobContentType"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-content-type",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobDeleteType": {
+    "__name": "blobDeleteType",
+    "parameterPath": [
+      "options",
+      "blobDeleteType"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "deletetype",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "Permanent"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobSequenceNumber": {
+    "__name": "blobSequenceNumber",
+    "parameterPath": [
+      "options",
+      "blobSequenceNumber"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-sequence-number",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": 0,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobTagsString": {
+    "__name": "blobTagsString",
+    "parameterPath": [
+      "options",
+      "blobTagsString"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-tags",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobType0": {
+    "__name": "blobType0",
+    "parameterPath": "blobType",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-type",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "PageBlob",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobType1": {
+    "__name": "blobType1",
+    "parameterPath": "blobType",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-type",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "AppendBlob",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blobType2": {
+    "__name": "blobType2",
+    "parameterPath": "blobType",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-type",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "BlockBlob",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "blockId": {
+    "__name": "blockId",
+    "parameterPath": "blockId",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "blockid",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "breakPeriod": {
+    "__name": "breakPeriod",
+    "parameterPath": [
+      "options",
+      "breakPeriod"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-break-period",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp0": {
+    "__name": "comp0",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "properties",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp1": {
+    "__name": "comp1",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "stats",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp10": {
+    "__name": "comp10",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "expiry",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp11": {
+    "__name": "comp11",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "immutabilityPolicies",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp12": {
+    "__name": "comp12",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "legalhold",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp13": {
+    "__name": "comp13",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "snapshot",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp14": {
+    "__name": "comp14",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "copy",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp15": {
+    "__name": "comp15",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "tier",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp16": {
+    "__name": "comp16",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "query",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp17": {
+    "__name": "comp17",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "tags",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp18": {
+    "__name": "comp18",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "page",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp19": {
+    "__name": "comp19",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "pagelist",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp2": {
+    "__name": "comp2",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "list",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp20": {
+    "__name": "comp20",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "incrementalcopy",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp21": {
+    "__name": "comp21",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "appendblock",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp22": {
+    "__name": "comp22",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "seal",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp23": {
+    "__name": "comp23",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "block",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp24": {
+    "__name": "comp24",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "blocklist",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp3": {
+    "__name": "comp3",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "userdelegationkey",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp4": {
+    "__name": "comp4",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "batch",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp5": {
+    "__name": "comp5",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "blobs",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp6": {
+    "__name": "comp6",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "metadata",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp7": {
+    "__name": "comp7",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "acl",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp8": {
+    "__name": "comp8",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "undelete",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "comp9": {
+    "__name": "comp9",
+    "parameterPath": "comp",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "comp",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "lease",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "containerName": {
+    "__name": "containerName",
+    "parameterPath": "containerName",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "containerName",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "contentLength": {
+    "__name": "contentLength",
+    "parameterPath": "contentLength",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "Content-Length",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "copyActionAbortConstant": {
+    "__name": "copyActionAbortConstant",
+    "parameterPath": "copyActionAbortConstant",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-copy-action",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "abort",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "copyId": {
+    "__name": "copyId",
+    "parameterPath": "copyId",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "copyid",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "copySource": {
+    "__name": "copySource",
+    "parameterPath": "copySource",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-copy-source",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "copySourceAuthorization": {
+    "__name": "copySourceAuthorization",
+    "parameterPath": [
+      "options",
+      "copySourceAuthorization"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-copy-source-authorization",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "copySourceBlobProperties": {
+    "__name": "copySourceBlobProperties",
+    "parameterPath": [
+      "options",
+      "copySourceBlobProperties"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-copy-source-blob-properties",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "copySourceTags": {
+    "__name": "copySourceTags",
+    "parameterPath": [
+      "options",
+      "copySourceTags"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-copy-source-tag-option",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "REPLACE",
+          "COPY"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "defaultEncryptionScope": {
+    "__name": "defaultEncryptionScope",
+    "parameterPath": [
+      "options",
+      "containerCpkScopeInfo",
+      "defaultEncryptionScope"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-default-encryption-scope",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "deletedContainerName": {
+    "__name": "deletedContainerName",
+    "parameterPath": [
+      "options",
+      "deletedContainerName"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-deleted-container-name",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "deletedContainerVersion": {
+    "__name": "deletedContainerVersion",
+    "parameterPath": [
+      "options",
+      "deletedContainerVersion"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-deleted-container-version",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "deleteSnapshots": {
+    "__name": "deleteSnapshots",
+    "parameterPath": [
+      "options",
+      "deleteSnapshots"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-delete-snapshots",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "include",
+          "only"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "delimiter": {
+    "__name": "delimiter",
+    "parameterPath": "delimiter",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "delimiter",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "duration": {
+    "__name": "duration",
+    "parameterPath": [
+      "options",
+      "duration"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-duration",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "encryptionAlgorithm": {
+    "__name": "encryptionAlgorithm",
+    "parameterPath": [
+      "options",
+      "cpkInfo",
+      "encryptionAlgorithm"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-encryption-algorithm",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "AES256"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "encryptionKey": {
+    "__name": "encryptionKey",
+    "parameterPath": [
+      "options",
+      "cpkInfo",
+      "encryptionKey"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-encryption-key",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "encryptionKeySha256": {
+    "__name": "encryptionKeySha256",
+    "parameterPath": [
+      "options",
+      "cpkInfo",
+      "encryptionKeySha256"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-encryption-key-sha256",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "encryptionScope": {
+    "__name": "encryptionScope",
+    "parameterPath": [
+      "options",
+      "cpkScopeInfo",
+      "encryptionScope"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-encryption-scope",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "expiresOn": {
+    "__name": "expiresOn",
+    "parameterPath": [
+      "options",
+      "expiresOn"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-expiry-time",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "expiryOptions": {
+    "__name": "expiryOptions",
+    "parameterPath": "expiryOptions",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-expiry-option",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifMatch": {
+    "__name": "ifMatch",
+    "parameterPath": [
+      "options",
+      "modifiedAccessConditions",
+      "ifMatch"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "If-Match",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifModifiedSince": {
+    "__name": "ifModifiedSince",
+    "parameterPath": [
+      "options",
+      "modifiedAccessConditions",
+      "ifModifiedSince"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "If-Modified-Since",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "DateTimeRfc1123",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifNoneMatch": {
+    "__name": "ifNoneMatch",
+    "parameterPath": [
+      "options",
+      "modifiedAccessConditions",
+      "ifNoneMatch"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "If-None-Match",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifSequenceNumberEqualTo": {
+    "__name": "ifSequenceNumberEqualTo",
+    "parameterPath": [
+      "options",
+      "sequenceNumberAccessConditions",
+      "ifSequenceNumberEqualTo"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-if-sequence-number-eq",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifSequenceNumberLessThan": {
+    "__name": "ifSequenceNumberLessThan",
+    "parameterPath": [
+      "options",
+      "sequenceNumberAccessConditions",
+      "ifSequenceNumberLessThan"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-if-sequence-number-lt",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifSequenceNumberLessThanOrEqualTo": {
+    "__name": "ifSequenceNumberLessThanOrEqualTo",
+    "parameterPath": [
+      "options",
+      "sequenceNumberAccessConditions",
+      "ifSequenceNumberLessThanOrEqualTo"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-if-sequence-number-le",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifTags": {
+    "__name": "ifTags",
+    "parameterPath": [
+      "options",
+      "modifiedAccessConditions",
+      "ifTags"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-if-tags",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "ifUnmodifiedSince": {
+    "__name": "ifUnmodifiedSince",
+    "parameterPath": [
+      "options",
+      "modifiedAccessConditions",
+      "ifUnmodifiedSince"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "If-Unmodified-Since",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "DateTimeRfc1123",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "immutabilityPolicyExpiry": {
+    "__name": "immutabilityPolicyExpiry",
+    "parameterPath": [
+      "options",
+      "immutabilityPolicyExpiry"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-immutability-policy-until-date",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "DateTimeRfc1123",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "immutabilityPolicyMode": {
+    "__name": "immutabilityPolicyMode",
+    "parameterPath": [
+      "options",
+      "immutabilityPolicyMode"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-immutability-policy-mode",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "Mutable",
+          "Unlocked",
+          "Locked"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "include0": {
+    "__name": "include0",
+    "parameterPath": [
+      "options",
+      "include"
+    ],
+    "collectionFormat": ",",
+    "mapper": {
+      "__name": null,
+      "serializedName": "include",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Sequence",
+        "className": null,
+        "allowedValues": [],
+        "element": {
+          "__name": null,
+          "serializedName": null,
+          "required": false,
+          "isConstant": false,
+          "defaultValue": null,
+          "xmlName": null,
+          "xmlElementName": null,
+          "headerCollectionPrefix": null,
+          "type": {
+            "name": "Enum",
+            "className": null,
+            "allowedValues": [
+              "",
+              "metadata",
+              "deleted",
+              "system"
+            ],
+            "element": null,
+            "value": null,
+            "modelProperties": {}
+          }
+        },
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "include1": {
+    "__name": "include1",
+    "parameterPath": [
+      "options",
+      "include"
+    ],
+    "collectionFormat": ",",
+    "mapper": {
+      "__name": null,
+      "serializedName": "include",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Sequence",
+        "className": null,
+        "allowedValues": [],
+        "element": {
+          "__name": null,
+          "serializedName": null,
+          "required": false,
+          "isConstant": false,
+          "defaultValue": null,
+          "xmlName": null,
+          "xmlElementName": null,
+          "headerCollectionPrefix": null,
+          "type": {
+            "name": "Enum",
+            "className": null,
+            "allowedValues": [
+              "none",
+              "versions"
+            ],
+            "element": null,
+            "value": null,
+            "modelProperties": {}
+          }
+        },
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "include2": {
+    "__name": "include2",
+    "parameterPath": [
+      "options",
+      "include"
+    ],
+    "collectionFormat": ",",
+    "mapper": {
+      "__name": null,
+      "serializedName": "include",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Sequence",
+        "className": null,
+        "allowedValues": [],
+        "element": {
+          "__name": null,
+          "serializedName": null,
+          "required": false,
+          "isConstant": false,
+          "defaultValue": null,
+          "xmlName": null,
+          "xmlElementName": null,
+          "headerCollectionPrefix": null,
+          "type": {
+            "name": "Enum",
+            "className": null,
+            "allowedValues": [
+              "",
+              "copy",
+              "deleted",
+              "metadata",
+              "snapshots",
+              "uncommittedblobs",
+              "versions",
+              "tags",
+              "immutabilitypolicy",
+              "legalhold",
+              "deletedwithversions",
+              "permissions"
+            ],
+            "element": null,
+            "value": null,
+            "modelProperties": {}
+          }
+        },
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "leaseId0": {
+    "__name": "leaseId0",
+    "parameterPath": [
+      "options",
+      "leaseAccessConditions",
+      "leaseId"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-id",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "leaseId1": {
+    "__name": "leaseId1",
+    "parameterPath": "leaseId",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-lease-id",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "legalHold0": {
+    "__name": "legalHold0",
+    "parameterPath": "legalHold",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-legal-hold",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "legalHold1": {
+    "__name": "legalHold1",
+    "parameterPath": [
+      "options",
+      "legalHold"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-legal-hold",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "listType": {
+    "__name": "listType",
+    "parameterPath": [
+      "options",
+      "listType"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "blocklisttype",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": "committed",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "committed",
+          "uncommitted",
+          "all"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "marker": {
+    "__name": "marker",
+    "parameterPath": [
+      "options",
+      "marker"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "marker",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "maxresults": {
+    "__name": "maxresults",
+    "parameterPath": [
+      "options",
+      "maxresults"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "maxresults",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "maxSize": {
+    "__name": "maxSize",
+    "parameterPath": [
+      "options",
+      "appendPositionAccessConditions",
+      "maxSize"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-blob-condition-maxsize",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "metadata": {
+    "__name": "metadata",
+    "parameterPath": [
+      "options",
+      "metadata"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-meta",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": "x-ms-meta-",
+      "type": {
+        "name": "Dictionary",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": {
+          "__name": null,
+          "serializedName": null,
+          "required": false,
+          "isConstant": false,
+          "defaultValue": null,
+          "xmlName": null,
+          "xmlElementName": null,
+          "headerCollectionPrefix": null,
+          "type": {
+            "name": "String",
+            "className": null,
+            "allowedValues": [],
+            "element": null,
+            "value": null,
+            "modelProperties": {}
+          }
+        },
+        "modelProperties": {}
+      }
+    }
+  },
+  "multipartContentType": {
+    "__name": "multipartContentType",
+    "parameterPath": "multipartContentType",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "Content-Type",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "pageWrite0": {
+    "__name": "pageWrite0",
+    "parameterPath": "pageWrite",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-page-write",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "update",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "pageWrite1": {
+    "__name": "pageWrite1",
+    "parameterPath": "pageWrite",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-page-write",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "clear",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "prefix": {
+    "__name": "prefix",
+    "parameterPath": [
+      "options",
+      "prefix"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "prefix",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "preventEncryptionScopeOverride": {
+    "__name": "preventEncryptionScopeOverride",
+    "parameterPath": [
+      "options",
+      "containerCpkScopeInfo",
+      "preventEncryptionScopeOverride"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-deny-encryption-scope-override",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "prevsnapshot": {
+    "__name": "prevsnapshot",
+    "parameterPath": [
+      "options",
+      "prevsnapshot"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "prevsnapshot",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "prevSnapshotUrl": {
+    "__name": "prevSnapshotUrl",
+    "parameterPath": [
+      "options",
+      "prevSnapshotUrl"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-previous-snapshot-url",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "proposedLeaseId0": {
+    "__name": "proposedLeaseId0",
+    "parameterPath": [
+      "options",
+      "proposedLeaseId"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-proposed-lease-id",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "proposedLeaseId1": {
+    "__name": "proposedLeaseId1",
+    "parameterPath": "proposedLeaseId",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-proposed-lease-id",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "range0": {
+    "__name": "range0",
+    "parameterPath": [
+      "options",
+      "range"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-range",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "range1": {
+    "__name": "range1",
+    "parameterPath": "range",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-range",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "rangeGetContentCRC64": {
+    "__name": "rangeGetContentCRC64",
+    "parameterPath": [
+      "options",
+      "rangeGetContentCRC64"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-range-get-content-crc64",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "rangeGetContentMD5": {
+    "__name": "rangeGetContentMD5",
+    "parameterPath": [
+      "options",
+      "rangeGetContentMD5"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-range-get-content-md5",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "rehydratePriority": {
+    "__name": "rehydratePriority",
+    "parameterPath": [
+      "options",
+      "rehydratePriority"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-rehydrate-priority",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "requestId": {
+    "__name": "requestId",
+    "parameterPath": [
+      "options",
+      "requestId"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-client-request-id",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "restype0": {
+    "__name": "restype0",
+    "parameterPath": "restype",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "restype",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "service",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "restype1": {
+    "__name": "restype1",
+    "parameterPath": "restype",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "restype",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "account",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "restype2": {
+    "__name": "restype2",
+    "parameterPath": "restype",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "restype",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "container",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sealBlob": {
+    "__name": "sealBlob",
+    "parameterPath": [
+      "options",
+      "sealBlob"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-seal-blob",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Boolean",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sequenceNumberAction": {
+    "__name": "sequenceNumberAction",
+    "parameterPath": "sequenceNumberAction",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-sequence-number-action",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Enum",
+        "className": null,
+        "allowedValues": [
+          "max",
+          "update",
+          "increment"
+        ],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "snapshot": {
+    "__name": "snapshot",
+    "parameterPath": [
+      "options",
+      "snapshot"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "snapshot",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceContentcrc64": {
+    "__name": "sourceContentcrc64",
+    "parameterPath": [
+      "options",
+      "sourceContentcrc64"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-content-crc64",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "ByteArray",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceContentMD5": {
+    "__name": "sourceContentMD5",
+    "parameterPath": [
+      "options",
+      "sourceContentMD5"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-content-md5",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "ByteArray",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceIfMatch": {
+    "__name": "sourceIfMatch",
+    "parameterPath": [
+      "options",
+      "sourceModifiedAccessConditions",
+      "sourceIfMatch"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-if-match",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceIfModifiedSince": {
+    "__name": "sourceIfModifiedSince",
+    "parameterPath": [
+      "options",
+      "sourceModifiedAccessConditions",
+      "sourceIfModifiedSince"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-if-modified-since",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "DateTimeRfc1123",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceIfNoneMatch": {
+    "__name": "sourceIfNoneMatch",
+    "parameterPath": [
+      "options",
+      "sourceModifiedAccessConditions",
+      "sourceIfNoneMatch"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-if-none-match",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceIfTags": {
+    "__name": "sourceIfTags",
+    "parameterPath": [
+      "options",
+      "sourceModifiedAccessConditions",
+      "sourceIfTags"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-if-tags",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceIfUnmodifiedSince": {
+    "__name": "sourceIfUnmodifiedSince",
+    "parameterPath": [
+      "options",
+      "sourceModifiedAccessConditions",
+      "sourceIfUnmodifiedSince"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-if-unmodified-since",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "DateTimeRfc1123",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceRange0": {
+    "__name": "sourceRange0",
+    "parameterPath": "sourceRange",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-range",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceRange1": {
+    "__name": "sourceRange1",
+    "parameterPath": [
+      "options",
+      "sourceRange"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-source-range",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "sourceUrl": {
+    "__name": "sourceUrl",
+    "parameterPath": "sourceUrl",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-copy-source",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "tier0": {
+    "__name": "tier0",
+    "parameterPath": [
+      "options",
+      "tier"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-access-tier",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "tier1": {
+    "__name": "tier1",
+    "parameterPath": "tier",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-access-tier",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "timeout": {
+    "__name": "timeout",
+    "parameterPath": [
+      "options",
+      "timeout"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "timeout",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "Number",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "transactionalContentCrc64": {
+    "__name": "transactionalContentCrc64",
+    "parameterPath": [
+      "options",
+      "transactionalContentCrc64"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-content-crc64",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "ByteArray",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "transactionalContentMD5": {
+    "__name": "transactionalContentMD5",
+    "parameterPath": [
+      "options",
+      "transactionalContentMD5"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "Content-MD5",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "ByteArray",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "url": {
+    "__name": "url",
+    "parameterPath": "url",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "url",
+      "required": true,
+      "isConstant": false,
+      "defaultValue": "",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "version": {
+    "__name": "version",
+    "parameterPath": "version",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-version",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "versionId": {
+    "__name": "versionId",
+    "parameterPath": [
+      "options",
+      "versionId"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "versionid",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "where": {
+    "__name": "where",
+    "parameterPath": [
+      "options",
+      "where"
+    ],
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "where",
+      "required": false,
+      "isConstant": false,
+      "defaultValue": null,
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  },
+  "xMsRequiresSync": {
+    "__name": "xMsRequiresSync",
+    "parameterPath": "xMsRequiresSync",
+    "collectionFormat": null,
+    "mapper": {
+      "__name": null,
+      "serializedName": "x-ms-requires-sync",
+      "required": true,
+      "isConstant": true,
+      "defaultValue": "true",
+      "xmlName": null,
+      "xmlElementName": null,
+      "headerCollectionPrefix": null,
+      "type": {
+        "name": "String",
+        "className": null,
+        "allowedValues": [],
+        "element": null,
+        "value": null,
+        "modelProperties": {}
+      }
+    }
+  }
+}

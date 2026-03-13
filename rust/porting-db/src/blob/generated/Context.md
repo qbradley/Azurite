@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::context`
 - Phase: `5.7`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

@@ -75,3 +75,16 @@ Workspace status: ✅ `cargo check` passes, ✅ `cargo test` passes (9 active + 
 - **Phase 3 Tests Refinement:** COMPLETE. 15 Phase 3 auth parity tests passing. IIPRange type asymmetry bug (D-010) fixed — explicit adapter now preserves structural compatibility between SasIPRange and IIPRange. All tests pass.
 - **Overall Stats:** 59 tests passing, 72 porting-db records, 113 Rust source files.
 - **User Directive — Continuous Pipeline:** Auto-launch Phase 6 immediately. No pause between batches. Work all night if necessary.
+
+### Phase 4 Common Parity Tests Added (2026-03-13)
+- Added `rust/crates/azurite-common/tests/common/phase4_common.rs` with executable parity coverage for constants, utilities, `BufferStream`, logger strategy swapping, `ConfigurationBase`, `ServerBase`, `AccountDataStore`, and `Environment`.
+- Added unit coverage in `rust/crates/azurite-common/src/telemetry.rs` for the persisted `instaceID` typo and the intentionally broken known-host redaction behavior.
+- Found and fixed three real Phase 4 parity bugs while activating the suite: `convertDateTimeStringMsTo7Digital()` now replaces only the first `Z`, `getURLQueries()` now strips URL fragments like Node's `url.parse()`, and `Environment` now accepts duplicate CLI args with last-value-wins plus the `-1` extent-memory sentinel.
+- Verified `cd rust && cargo test --workspace --quiet` passes with the Phase 4 suites enabled.
+
+### Phase 5-7 Cross-Team Validation (2026-03-13 → 23:52)
+- **Aragorn's Phase 5 insight:** Snapshot-backed generated metadata is mechanical, auditable, and future-proof for autorest regenerations.
+- **Faramir's Phase 6-7 insight:** StorageErrorFactory is case-sensitive, SAS context carries IP range asymmetry (D-010), ANY members stay validation-only sentinels (D-009). 19 records seeded. Error factory quirks must survive translation exactly.
+- **Boromir action:** Phase 4 parity tests confirmed passing. Phase 5+ test placeholders `#[ignore]` ready to unignore incrementally.
+- **Metrics update:** 67 active tests, 4 ignored (true Phase 5+ unimplementables), 91 porting-db records, 153 Rust source files, D-012 recorded.
+- **Key learning:** Language boundary fragility — date/time parsing and URL handling require explicit TS-equivalent paths; do not rely on idiomatic Rust shortcuts.

@@ -92,3 +92,14 @@ Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in pla
 - **Overall Stats:** 59 tests passing, 72 porting-db records, 113 Rust source files.
 - **Continuous Pipeline Directive:** User directive received (2026-03-13T23:08) — auto-launch Phase 6 immediately upon batch completion. No pause between phases.
 
+
+### Phase 5 blob generated framework ported (2026-03-13)
+- Ported all Phase 5 blob generated modules into `rust/crates/azurite-blob/src/generated/`, including request/response adapters, context state, six ordered middleware stages, handler traits/mappers, and generated artifact metadata loaders.
+- Preserved the strict dispatch → deserializer → handler → serializer → error → end stage order in Rust and kept the `Operation`/`specifications`/`handlerMappers` coupling explicit.
+- Used JSON-backed snapshots extracted from the autorest TypeScript artifacts for parameters, mappers, and specifications so future TS regenerations can be propagated mechanically while the Rust workspace still compiles today.
+
+### Phase 5-7 Analysis Complete (2026-03-13 → 23:52)
+- **Faramir's Phase 6-7 insight:** Documented StorageErrorFactory case-sensitivity quirks, SAS IP range asymmetry (D-010), and ANY-character sentinel semantics (D-009). 19 porting-db records created.
+- **Cross-team insight:** Generated framework order-sensitivity is critical; enum member ordering in Operation, specifications coupling, handler lookup tables must preserve exact TS structure. Any reordering silently reroutes requests.
+- **Boromir's Phase 4-5 parity update:** 3 bugs fixed (date Z-handling, URL fragment stripping, CLI arg registration). Test suite now at 67 active + 4 ignored. Phase 5+ test placeholders ready.
+- **Project metrics update:** 153 Rust source files, 91 porting-db records, 67 tests passing. D-012 (Phase 5 Translation) recorded.

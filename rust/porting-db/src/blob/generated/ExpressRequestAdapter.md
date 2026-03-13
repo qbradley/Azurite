@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::express_request_adapter`
 - Phase: `5.19`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

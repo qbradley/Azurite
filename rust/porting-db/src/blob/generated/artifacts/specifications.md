@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::artifacts::specifications`
 - Phase: `5.12`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.
@@ -50,3 +50,7 @@ export default Specifications;
 - If the corresponding swagger changes, diff the regenerated TS file first, then update the Rust port and this record together.
 - A regenerated spec diff must be propagated to dispatch logic, serializer expectations, handler signatures, and response wrapper types as one unit.
 - If default error body mappers or status-code maps change, update `error.middleware.ts` behavior review because handler vs middleware errors may need new parity tests.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-blob/src/generated/artifacts/specifications.rs` as Rust metadata loaded from generated JSON snapshots extracted from the TypeScript autorest literals.
+- Forced deviation: instead of hand-transcribing 2.8k lines of object literals into Rust constants, the port keeps the generated metadata mechanically synchronized via extracted snapshots so future TS regen diffs stay auditable and propagatable.

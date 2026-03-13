@@ -87,6 +87,20 @@ Aragorn has completed Phase 1 translation (15 files, porting-db updated). Boromi
 - **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules all passing. Test suite clean.
 - **Samwise:** Phase 3 translated, Phase 4 analyzed. 44 tests passing, 38 porting-db records, 108 Rust source files.
 
+### Phase 5 Blob Generated Framework Translation Complete (2026-03-13 → 23:52)
+- **Status:** Aragorn completed Phase 5 generation. 34 files under `rust/azurite-blob/src/generated/`.
+- **Approach:** Snapshot-backed metadata (JSON) + generic carrier types for generated object families.
+- **Key insight:** Snapshot-backed translation is mechanical and auditable, making future autorest regenerations traceable.
+- **Cross-team impact:** Faramir's Phase 6-7 analysis relies on Phase 5 generated framework structure. Error factory quirks documented.
+- **Boromir's note:** Phase 5 test placeholders ready for unignoring as Phase 6-7 business logic lands.
+- **Next:** Phase 6-7 error/context/auth implementation ready to consume Phase 5 generated framework.
+
+### Phase 4 Parity Testing Complete (2026-03-13 → 23:52)
+- **Status:** Boromir identified and fixed 3 parity bugs (date Z-handling, URL fragments, CLI arg ordering).
+- **Tests:** 67 active, 4 ignored (Phase 5+ placeholders).
+- **Cross-team impact:** Utilities now trusted for Phase 5+ implementation. Parity test framework proven robust.
+- **Key learnings:** Date/time parsing and URL handling are language-boundary fragility points. Explicit UTC paths required.
+
 ### Phase 5 TS analysis completed (2026-03-13)
 - Analyzed all 34 blob generated-framework files and wrote records under `rust/porting-db/src/blob/generated/`.
 - **Critical fidelity risks discovered:**
@@ -106,3 +120,16 @@ Aragorn has completed Phase 1 translation (15 files, porting-db updated). Boromi
 - **Phase 3 Tests Refinement:** Boromir COMPLETE. 15 Phase 3 auth parity tests passing. IIPRange type asymmetry bug (D-010) fixed — explicit adapter now preserves structural compatibility between SasIPRange and IIPRange.
 - **Overall Stats:** 59 tests passing, 72 porting-db records, 113 Rust source files.
 - **User Directive — Continuous Pipeline:** Auto-launch Phase 6 immediately. No pause between batches. Work all night if necessary.
+
+### Phase 6 + 7 TS analysis completed (2026-03-13)
+- Analyzed all 19 requested files and wrote records under `rust/porting-db/src/blob/errors/`, `rust/porting-db/src/blob/context/`, and `rust/porting-db/src/blob/authentication/`.
+- **Critical fidelity risks discovered:**
+  1. `StorageErrorFactory.ts` contains several compatibility-sensitive quirks that are easy to “clean up” accidentally: `getInvalidTag()` returns storage error code `DuplicateTagNames`, `getAuthorizationSourceIPMismatch()` leaves the literal `{SourceIP}` placeholder in the message, `getInvalidPageRange2()` mutates the generated error to add `Content-Range`, and default request IDs vary between `DefaultBlobRequestID` and empty string.
+  2. Blob SAS signing/auth has real asymmetries that must stay explicit in Rust: `IBlobSASSignatureValues.ts` generation only throws when **both** `permissions` and `expiryTime` are missing without an identifier, while `BlobSASAuthenticator.ts` request parsing requires **both** when identifier is absent; UDK layouts also include intentional blank placeholder fields, and the `2025-07-05` delegated-user fields exist in the signature type but are not parsed by the authenticator yet.
+  3. Both operation-permission tables (`OperationAccountSASPermission.ts`, `OperationBlobSASPermission.ts`) use “any matching character” semantics instead of “all required characters”, and empty permission strings mean deny/not-allowed rather than no-op. `BlobSnapshot` requests are additionally routed through the container SAS permission table because `BlobSASAuthenticator.ts` only special-cases `resource === Blob`.
+  4. Authenticator behavior is intentionally loose in several places: shared-key canonicalization comments overstate whitespace normalization that the code does not actually do, account/blob SAS IP validation is stubbed to always pass, comma-containing protocol strings always pass protocol validation, bearer-token auth decodes JWTs without verifying signatures in BASIC mode, and public-access auth swallows ACL lookup errors and returns `undefined`.
+- **TS patterns for Aragorn:**
+  - `BlobStorageContext` is a pure proxy over generated `Context`; `xMsRequestID` aliases `contextId`, and auth-relevant flags (`isSecondary`, `authenticationPath`, `disableProductStyleUrl`, `loose`) live on the wrapped generated context, not on a separate blob struct.
+  - Blob shared-key auth preserves several exact canonicalization details: `Content-Length: 0` signs as empty string, query values are decoded with `decodeURIComponent(value.replace(/\+/g, '%20'))`, and the secondary-endpoint retry path only triggers when `authenticationPath.indexOf(account) === 1`.
+  - Blob service SAS auth is split into two flows (shared key vs user delegation key) plus a post-signature saved-policy override path; keep those branches explicit rather than trying to unify them prematurely.
+  - `IRange.rangeToString()` has a JS-truthiness quirk: `count = 0` bypasses validation and formats like an open-ended range.

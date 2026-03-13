@@ -96,6 +96,7 @@ impl Environment {
     fn command() -> Command {
         let command = Command::new("azurite")
             .disable_help_subcommand(true)
+            .args_override_self(true)
             .arg(
                 Arg::new("blobHost")
                     .long("blobHost")
@@ -219,6 +220,7 @@ impl Environment {
                 Arg::new("extentMemoryLimit")
                     .long("extentMemoryLimit")
                     .help("Optional. The number of megabytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory")
+                    .allow_hyphen_values(true)
                     .default_value("-1"),
             )
             .arg(

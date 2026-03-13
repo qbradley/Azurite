@@ -1,0 +1,1196 @@
+{
+  "IServiceHandler": {
+    "ifaceName": "IServiceHandler",
+    "handlerName": "ServiceHandler",
+    "methods": [
+      {
+        "methodName": "setProperties",
+        "params": [
+          {
+            "name": "storageServiceProperties",
+            "type": "Models.StorageServiceProperties"
+          },
+          {
+            "name": "options",
+            "type": "Models.ServiceSetPropertiesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceSetPropertiesResponse"
+      },
+      {
+        "methodName": "getProperties",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ServiceGetPropertiesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceGetPropertiesResponse"
+      },
+      {
+        "methodName": "getStatistics",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ServiceGetStatisticsOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceGetStatisticsResponse"
+      },
+      {
+        "methodName": "listContainersSegment",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ServiceListContainersSegmentOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceListContainersSegmentResponse"
+      },
+      {
+        "methodName": "getUserDelegationKey",
+        "params": [
+          {
+            "name": "keyInfo",
+            "type": "Models.KeyInfo"
+          },
+          {
+            "name": "options",
+            "type": "Models.ServiceGetUserDelegationKeyOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceGetUserDelegationKeyResponse"
+      },
+      {
+        "methodName": "getAccountInfo",
+        "params": [
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceGetAccountInfoResponse"
+      },
+      {
+        "methodName": "submitBatch",
+        "params": [
+          {
+            "name": "body",
+            "type": "NodeJS.ReadableStream"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "multipartContentType",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.ServiceSubmitBatchOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceSubmitBatchResponse"
+      },
+      {
+        "methodName": "filterBlobs",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ServiceFilterBlobsOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ServiceFilterBlobsResponse"
+      }
+    ]
+  },
+  "IContainerHandler": {
+    "ifaceName": "IContainerHandler",
+    "handlerName": "ContainerHandler",
+    "methods": [
+      {
+        "methodName": "create",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerCreateOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerCreateResponse"
+      },
+      {
+        "methodName": "getProperties",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerGetPropertiesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerGetPropertiesResponse"
+      },
+      {
+        "methodName": "getPropertiesWithHead",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerGetPropertiesWithHeadOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerGetPropertiesWithHeadResponse"
+      },
+      {
+        "methodName": "delete",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerDeleteMethodOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerDeleteResponse"
+      },
+      {
+        "methodName": "setMetadata",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerSetMetadataOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerSetMetadataResponse"
+      },
+      {
+        "methodName": "getAccessPolicy",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerGetAccessPolicyOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerGetAccessPolicyResponse"
+      },
+      {
+        "methodName": "setAccessPolicy",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerSetAccessPolicyOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerSetAccessPolicyResponse"
+      },
+      {
+        "methodName": "restore",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerRestoreOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerRestoreResponse"
+      },
+      {
+        "methodName": "submitBatch",
+        "params": [
+          {
+            "name": "body",
+            "type": "NodeJS.ReadableStream"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "multipartContentType",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.ContainerSubmitBatchOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerSubmitBatchResponse"
+      },
+      {
+        "methodName": "filterBlobs",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerFilterBlobsOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerFilterBlobsResponse"
+      },
+      {
+        "methodName": "acquireLease",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerAcquireLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerAcquireLeaseResponse"
+      },
+      {
+        "methodName": "releaseLease",
+        "params": [
+          {
+            "name": "leaseId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.ContainerReleaseLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerReleaseLeaseResponse"
+      },
+      {
+        "methodName": "renewLease",
+        "params": [
+          {
+            "name": "leaseId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.ContainerRenewLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerRenewLeaseResponse"
+      },
+      {
+        "methodName": "breakLease",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerBreakLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerBreakLeaseResponse"
+      },
+      {
+        "methodName": "changeLease",
+        "params": [
+          {
+            "name": "leaseId",
+            "type": "string"
+          },
+          {
+            "name": "proposedLeaseId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.ContainerChangeLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerChangeLeaseResponse"
+      },
+      {
+        "methodName": "listBlobFlatSegment",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.ContainerListBlobFlatSegmentOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerListBlobFlatSegmentResponse"
+      },
+      {
+        "methodName": "listBlobHierarchySegment",
+        "params": [
+          {
+            "name": "delimiter",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.ContainerListBlobHierarchySegmentOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerListBlobHierarchySegmentResponse"
+      },
+      {
+        "methodName": "getAccountInfo",
+        "params": [
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "ContainerGetAccountInfoResponse"
+      }
+    ]
+  },
+  "IBlobHandler": {
+    "ifaceName": "IBlobHandler",
+    "handlerName": "BlobHandler",
+    "methods": [
+      {
+        "methodName": "download",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobDownloadOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobDownloadResponse"
+      },
+      {
+        "methodName": "getProperties",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobGetPropertiesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobGetPropertiesResponse"
+      },
+      {
+        "methodName": "delete",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobDeleteMethodOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobDeleteResponse"
+      },
+      {
+        "methodName": "undelete",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobUndeleteOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobUndeleteResponse"
+      },
+      {
+        "methodName": "setExpiry",
+        "params": [
+          {
+            "name": "expiryOptions",
+            "type": "Models.BlobExpiryOptions"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobSetExpiryOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetExpiryResponse"
+      },
+      {
+        "methodName": "setHTTPHeaders",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobSetHTTPHeadersOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetHTTPHeadersResponse"
+      },
+      {
+        "methodName": "setImmutabilityPolicy",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobSetImmutabilityPolicyOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetImmutabilityPolicyResponse"
+      },
+      {
+        "methodName": "deleteImmutabilityPolicy",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobDeleteImmutabilityPolicyOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobDeleteImmutabilityPolicyResponse"
+      },
+      {
+        "methodName": "setLegalHold",
+        "params": [
+          {
+            "name": "legalHold",
+            "type": "boolean"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobSetLegalHoldOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetLegalHoldResponse"
+      },
+      {
+        "methodName": "setMetadata",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobSetMetadataOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetMetadataResponse"
+      },
+      {
+        "methodName": "acquireLease",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobAcquireLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobAcquireLeaseResponse"
+      },
+      {
+        "methodName": "releaseLease",
+        "params": [
+          {
+            "name": "leaseId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobReleaseLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobReleaseLeaseResponse"
+      },
+      {
+        "methodName": "renewLease",
+        "params": [
+          {
+            "name": "leaseId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobRenewLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobRenewLeaseResponse"
+      },
+      {
+        "methodName": "changeLease",
+        "params": [
+          {
+            "name": "leaseId",
+            "type": "string"
+          },
+          {
+            "name": "proposedLeaseId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobChangeLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobChangeLeaseResponse"
+      },
+      {
+        "methodName": "breakLease",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobBreakLeaseOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobBreakLeaseResponse"
+      },
+      {
+        "methodName": "createSnapshot",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobCreateSnapshotOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobCreateSnapshotResponse"
+      },
+      {
+        "methodName": "startCopyFromURL",
+        "params": [
+          {
+            "name": "copySource",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobStartCopyFromURLOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobStartCopyFromURLResponse"
+      },
+      {
+        "methodName": "copyFromURL",
+        "params": [
+          {
+            "name": "copySource",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobCopyFromURLOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobCopyFromURLResponse"
+      },
+      {
+        "methodName": "abortCopyFromURL",
+        "params": [
+          {
+            "name": "copyId",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobAbortCopyFromURLOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobAbortCopyFromURLResponse"
+      },
+      {
+        "methodName": "setTier",
+        "params": [
+          {
+            "name": "tier",
+            "type": "Models.AccessTier"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlobSetTierOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetTierResponse"
+      },
+      {
+        "methodName": "getAccountInfo",
+        "params": [
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobGetAccountInfoResponse"
+      },
+      {
+        "methodName": "query",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobQueryOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobQueryResponse"
+      },
+      {
+        "methodName": "getTags",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobGetTagsOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobGetTagsResponse"
+      },
+      {
+        "methodName": "setTags",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlobSetTagsOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlobSetTagsResponse"
+      }
+    ]
+  },
+  "IPageBlobHandler": {
+    "ifaceName": "IPageBlobHandler",
+    "handlerName": "PageBlobHandler",
+    "methods": [
+      {
+        "methodName": "create",
+        "params": [
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "blobContentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobCreateOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobCreateResponse"
+      },
+      {
+        "methodName": "uploadPages",
+        "params": [
+          {
+            "name": "body",
+            "type": "NodeJS.ReadableStream"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobUploadPagesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobUploadPagesResponse"
+      },
+      {
+        "methodName": "clearPages",
+        "params": [
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobClearPagesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobClearPagesResponse"
+      },
+      {
+        "methodName": "uploadPagesFromURL",
+        "params": [
+          {
+            "name": "sourceUrl",
+            "type": "string"
+          },
+          {
+            "name": "sourceRange",
+            "type": "string"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "range",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobUploadPagesFromURLOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobUploadPagesFromURLResponse"
+      },
+      {
+        "methodName": "getPageRanges",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.PageBlobGetPageRangesOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobGetPageRangesResponse"
+      },
+      {
+        "methodName": "getPageRangesDiff",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.PageBlobGetPageRangesDiffOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobGetPageRangesDiffResponse"
+      },
+      {
+        "methodName": "resize",
+        "params": [
+          {
+            "name": "blobContentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobResizeOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobResizeResponse"
+      },
+      {
+        "methodName": "updateSequenceNumber",
+        "params": [
+          {
+            "name": "sequenceNumberAction",
+            "type": "Models.SequenceNumberActionType"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobUpdateSequenceNumberOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobUpdateSequenceNumberResponse"
+      },
+      {
+        "methodName": "copyIncremental",
+        "params": [
+          {
+            "name": "copySource",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.PageBlobCopyIncrementalOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "PageBlobCopyIncrementalResponse"
+      }
+    ]
+  },
+  "IAppendBlobHandler": {
+    "ifaceName": "IAppendBlobHandler",
+    "handlerName": "AppendBlobHandler",
+    "methods": [
+      {
+        "methodName": "create",
+        "params": [
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.AppendBlobCreateOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "AppendBlobCreateResponse"
+      },
+      {
+        "methodName": "appendBlock",
+        "params": [
+          {
+            "name": "body",
+            "type": "NodeJS.ReadableStream"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.AppendBlobAppendBlockOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "AppendBlobAppendBlockResponse"
+      },
+      {
+        "methodName": "appendBlockFromUrl",
+        "params": [
+          {
+            "name": "sourceUrl",
+            "type": "string"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.AppendBlobAppendBlockFromUrlOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "AppendBlobAppendBlockFromUrlResponse"
+      },
+      {
+        "methodName": "seal",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.AppendBlobSealOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "AppendBlobSealResponse"
+      }
+    ]
+  },
+  "IBlockBlobHandler": {
+    "ifaceName": "IBlockBlobHandler",
+    "handlerName": "BlockBlobHandler",
+    "methods": [
+      {
+        "methodName": "upload",
+        "params": [
+          {
+            "name": "body",
+            "type": "NodeJS.ReadableStream"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlockBlobUploadOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlockBlobUploadResponse"
+      },
+      {
+        "methodName": "putBlobFromUrl",
+        "params": [
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "copySource",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlockBlobPutBlobFromUrlOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlockBlobPutBlobFromUrlResponse"
+      },
+      {
+        "methodName": "stageBlock",
+        "params": [
+          {
+            "name": "blockId",
+            "type": "string"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "body",
+            "type": "NodeJS.ReadableStream"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlockBlobStageBlockOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlockBlobStageBlockResponse"
+      },
+      {
+        "methodName": "stageBlockFromURL",
+        "params": [
+          {
+            "name": "blockId",
+            "type": "string"
+          },
+          {
+            "name": "contentLength",
+            "type": "number"
+          },
+          {
+            "name": "sourceUrl",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlockBlobStageBlockFromURLOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlockBlobStageBlockFromURLResponse"
+      },
+      {
+        "methodName": "commitBlockList",
+        "params": [
+          {
+            "name": "blocks",
+            "type": "Models.BlockLookupList"
+          },
+          {
+            "name": "options",
+            "type": "Models.BlockBlobCommitBlockListOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlockBlobCommitBlockListResponse"
+      },
+      {
+        "methodName": "getBlockList",
+        "params": [
+          {
+            "name": "options",
+            "type": "Models.BlockBlobGetBlockListOptionalParams"
+          },
+          {
+            "name": "context",
+            "type": "Context"
+          }
+        ],
+        "responseType": "BlockBlobGetBlockListResponse"
+      }
+    ]
+  }
+}

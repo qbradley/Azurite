@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::middleware_factory`
 - Phase: `5.17`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.
@@ -104,3 +104,7 @@ export default abstract class MiddlewareFactory {
 - Because this file is autorest-generated, treat TS regen diffs as contract updates rather than hand edits.
 - If the corresponding swagger changes, diff the regenerated TS file first, then update the Rust port and this record together.
 - If autorest inserts a new middleware stage, update `ExpressMiddlewareFactory.ts` and every later service listener factory in lockstep.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-blob/src/generated/middleware_factory.rs` with the canonical six-stage order preserved as `GENERATED_MIDDLEWARE_ORDER`.
+- Forced deviation: the Rust factory narrows the TypeScript callback-style `MiddlewareTypes` contract into explicit stage slots and direct stage helpers instead of untyped Node callback values. This keeps the middleware order visible without inventing faux Express closures before the blob listener pipeline is fully wired.

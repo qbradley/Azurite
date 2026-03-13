@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::artifacts::parameters`
 - Phase: `5.9`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

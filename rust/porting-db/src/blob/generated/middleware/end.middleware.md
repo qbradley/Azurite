@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::middleware::end`
 - Phase: `5.26`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

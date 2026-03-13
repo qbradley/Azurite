@@ -1,0 +1,617 @@
+[
+  {
+    "operation": "Service_SetProperties",
+    "handler": "serviceHandler",
+    "method": "setProperties",
+    "arguments": [
+      "storageServiceProperties",
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_GetProperties",
+    "handler": "serviceHandler",
+    "method": "getProperties",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_GetStatistics",
+    "handler": "serviceHandler",
+    "method": "getStatistics",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_ListContainersSegment",
+    "handler": "serviceHandler",
+    "method": "listContainersSegment",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_GetUserDelegationKey",
+    "handler": "serviceHandler",
+    "method": "getUserDelegationKey",
+    "arguments": [
+      "keyInfo",
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_GetAccountInfo",
+    "handler": "serviceHandler",
+    "method": "getAccountInfo",
+    "arguments": []
+  },
+  {
+    "operation": "Service_GetAccountInfoWithHead",
+    "handler": "serviceHandler",
+    "method": "getAccountInfo",
+    "arguments": []
+  },
+  {
+    "operation": "Service_SubmitBatch",
+    "handler": "serviceHandler",
+    "method": "submitBatch",
+    "arguments": [
+      "body",
+      "contentLength",
+      "multipartContentType",
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_FilterBlobs",
+    "handler": "serviceHandler",
+    "method": "filterBlobs",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_Create",
+    "handler": "containerHandler",
+    "method": "create",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_GetProperties",
+    "handler": "containerHandler",
+    "method": "getProperties",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_GetPropertiesWithHead",
+    "handler": "containerHandler",
+    "method": "getProperties",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_Delete",
+    "handler": "containerHandler",
+    "method": "delete",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_SetMetadata",
+    "handler": "containerHandler",
+    "method": "setMetadata",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_GetAccessPolicy",
+    "handler": "containerHandler",
+    "method": "getAccessPolicy",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_SetAccessPolicy",
+    "handler": "containerHandler",
+    "method": "setAccessPolicy",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_Restore",
+    "handler": "containerHandler",
+    "method": "restore",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_SubmitBatch",
+    "handler": "containerHandler",
+    "method": "submitBatch",
+    "arguments": [
+      "body",
+      "contentLength",
+      "multipartContentType",
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_FilterBlobs",
+    "handler": "containerHandler",
+    "method": "filterBlobs",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_AcquireLease",
+    "handler": "containerHandler",
+    "method": "acquireLease",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_ReleaseLease",
+    "handler": "containerHandler",
+    "method": "releaseLease",
+    "arguments": [
+      "leaseId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_RenewLease",
+    "handler": "containerHandler",
+    "method": "renewLease",
+    "arguments": [
+      "leaseId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_BreakLease",
+    "handler": "containerHandler",
+    "method": "breakLease",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_ChangeLease",
+    "handler": "containerHandler",
+    "method": "changeLease",
+    "arguments": [
+      "leaseId",
+      "proposedLeaseId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_ListBlobFlatSegment",
+    "handler": "containerHandler",
+    "method": "listBlobFlatSegment",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_ListBlobHierarchySegment",
+    "handler": "containerHandler",
+    "method": "listBlobHierarchySegment",
+    "arguments": [
+      "delimiter",
+      "options"
+    ]
+  },
+  {
+    "operation": "Container_GetAccountInfo",
+    "handler": "containerHandler",
+    "method": "getAccountInfo",
+    "arguments": []
+  },
+  {
+    "operation": "Container_GetAccountInfoWithHead",
+    "handler": "containerHandler",
+    "method": "getAccountInfo",
+    "arguments": []
+  },
+  {
+    "operation": "Blob_Download",
+    "handler": "blobHandler",
+    "method": "download",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_GetProperties",
+    "handler": "blobHandler",
+    "method": "getProperties",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_Delete",
+    "handler": "blobHandler",
+    "method": "delete",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_Undelete",
+    "handler": "blobHandler",
+    "method": "undelete",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetExpiry",
+    "handler": "blobHandler",
+    "method": "setExpiry",
+    "arguments": [
+      "expiryOptions",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetHTTPHeaders",
+    "handler": "blobHandler",
+    "method": "setHTTPHeaders",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetImmutabilityPolicy",
+    "handler": "blobHandler",
+    "method": "setImmutabilityPolicy",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_DeleteImmutabilityPolicy",
+    "handler": "blobHandler",
+    "method": "deleteImmutabilityPolicy",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetLegalHold",
+    "handler": "blobHandler",
+    "method": "setLegalHold",
+    "arguments": [
+      "legalHold",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetMetadata",
+    "handler": "blobHandler",
+    "method": "setMetadata",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_AcquireLease",
+    "handler": "blobHandler",
+    "method": "acquireLease",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_ReleaseLease",
+    "handler": "blobHandler",
+    "method": "releaseLease",
+    "arguments": [
+      "leaseId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_RenewLease",
+    "handler": "blobHandler",
+    "method": "renewLease",
+    "arguments": [
+      "leaseId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_ChangeLease",
+    "handler": "blobHandler",
+    "method": "changeLease",
+    "arguments": [
+      "leaseId",
+      "proposedLeaseId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_BreakLease",
+    "handler": "blobHandler",
+    "method": "breakLease",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_CreateSnapshot",
+    "handler": "blobHandler",
+    "method": "createSnapshot",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_StartCopyFromURL",
+    "handler": "blobHandler",
+    "method": "startCopyFromURL",
+    "arguments": [
+      "copySource",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_CopyFromURL",
+    "handler": "blobHandler",
+    "method": "copyFromURL",
+    "arguments": [
+      "copySource",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_AbortCopyFromURL",
+    "handler": "blobHandler",
+    "method": "abortCopyFromURL",
+    "arguments": [
+      "copyId",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetTier",
+    "handler": "blobHandler",
+    "method": "setTier",
+    "arguments": [
+      "tier",
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_GetAccountInfo",
+    "handler": "blobHandler",
+    "method": "getAccountInfo",
+    "arguments": []
+  },
+  {
+    "operation": "Blob_GetAccountInfoWithHead",
+    "handler": "blobHandler",
+    "method": "getAccountInfo",
+    "arguments": []
+  },
+  {
+    "operation": "Blob_Query",
+    "handler": "blobHandler",
+    "method": "query",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_GetTags",
+    "handler": "blobHandler",
+    "method": "getTags",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Blob_SetTags",
+    "handler": "blobHandler",
+    "method": "setTags",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_Create",
+    "handler": "pageBlobHandler",
+    "method": "create",
+    "arguments": [
+      "contentLength",
+      "blobContentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_UploadPages",
+    "handler": "pageBlobHandler",
+    "method": "uploadPages",
+    "arguments": [
+      "body",
+      "contentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_ClearPages",
+    "handler": "pageBlobHandler",
+    "method": "clearPages",
+    "arguments": [
+      "contentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_UploadPagesFromURL",
+    "handler": "pageBlobHandler",
+    "method": "uploadPagesFromURL",
+    "arguments": [
+      "sourceUrl",
+      "sourceRange",
+      "contentLength",
+      "range",
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_GetPageRanges",
+    "handler": "pageBlobHandler",
+    "method": "getPageRanges",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_GetPageRangesDiff",
+    "handler": "pageBlobHandler",
+    "method": "getPageRangesDiff",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_Resize",
+    "handler": "pageBlobHandler",
+    "method": "resize",
+    "arguments": [
+      "blobContentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_UpdateSequenceNumber",
+    "handler": "pageBlobHandler",
+    "method": "updateSequenceNumber",
+    "arguments": [
+      "sequenceNumberAction",
+      "options"
+    ]
+  },
+  {
+    "operation": "PageBlob_CopyIncremental",
+    "handler": "pageBlobHandler",
+    "method": "copyIncremental",
+    "arguments": [
+      "copySource",
+      "options"
+    ]
+  },
+  {
+    "operation": "AppendBlob_Create",
+    "handler": "appendBlobHandler",
+    "method": "create",
+    "arguments": [
+      "contentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "AppendBlob_AppendBlock",
+    "handler": "appendBlobHandler",
+    "method": "appendBlock",
+    "arguments": [
+      "body",
+      "contentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "AppendBlob_AppendBlockFromUrl",
+    "handler": "appendBlobHandler",
+    "method": "appendBlockFromUrl",
+    "arguments": [
+      "sourceUrl",
+      "contentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "AppendBlob_Seal",
+    "handler": "appendBlobHandler",
+    "method": "seal",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "BlockBlob_Upload",
+    "handler": "blockBlobHandler",
+    "method": "upload",
+    "arguments": [
+      "body",
+      "contentLength",
+      "options"
+    ]
+  },
+  {
+    "operation": "BlockBlob_PutBlobFromUrl",
+    "handler": "blockBlobHandler",
+    "method": "putBlobFromUrl",
+    "arguments": [
+      "contentLength",
+      "copySource",
+      "options"
+    ]
+  },
+  {
+    "operation": "BlockBlob_StageBlock",
+    "handler": "blockBlobHandler",
+    "method": "stageBlock",
+    "arguments": [
+      "blockId",
+      "contentLength",
+      "body",
+      "options"
+    ]
+  },
+  {
+    "operation": "BlockBlob_StageBlockFromURL",
+    "handler": "blockBlobHandler",
+    "method": "stageBlockFromURL",
+    "arguments": [
+      "blockId",
+      "contentLength",
+      "sourceUrl",
+      "options"
+    ]
+  },
+  {
+    "operation": "BlockBlob_CommitBlockList",
+    "handler": "blockBlobHandler",
+    "method": "commitBlockList",
+    "arguments": [
+      "blocks",
+      "options"
+    ]
+  },
+  {
+    "operation": "BlockBlob_GetBlockList",
+    "handler": "blockBlobHandler",
+    "method": "getBlockList",
+    "arguments": [
+      "options"
+    ]
+  }
+]

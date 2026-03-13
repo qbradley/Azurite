@@ -9,3 +9,4 @@ mod pending;
 mod persistence;
 mod phase2_persistence;
 mod phase3_authentication;
+mod phase4_common;

@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::errors::unsupported_request_error`
 - Phase: `5.13`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

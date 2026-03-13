@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::express_middleware_factory`
 - Phase: `5.18`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.
@@ -193,3 +193,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
 - Because this file is autorest-generated, treat TS regen diffs as contract updates rather than hand edits.
 - If the corresponding swagger changes, diff the regenerated TS file first, then update the Rust port and this record together.
 - If context construction or adapter wiring changes here, audit every middleware stage because they all assume the same `Context` holder path and wrapper behavior.
+
+## Rust port notes
+- Ported in `rust/crates/azurite-blob/src/generated/express_middleware_factory.rs` using generated request/response adapters plus a shared `ContextHolder`.
+- Forced deviation: until the surrounding blob listener wiring lands, the Rust port exposes direct stage methods (`dispatch`, `deserialize`, `handle`, `serialize`, `error`, `end`) while the abstract `create*Middleware` slots remain marker methods. The six-stage order and per-request context reconstruction still match the generated TypeScript flow.

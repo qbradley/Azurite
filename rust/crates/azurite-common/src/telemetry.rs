@@ -775,3 +775,52 @@ impl AzuriteTelemetryClient {
         parameters.trim_end_matches(',').to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AzuriteTelemetryClient;
+    use std::{collections::HashMap, fs};
+
+    use tempfile::tempdir;
+
+    #[test]
+    fn get_instance_id_persists_instaceid_field_name_and_reuses_saved_value() {
+        let temp = tempdir().unwrap();
+        let location = temp.path().display().to_string();
+        let config_file_name = "AzuriteConfig".to_string();
+
+        let first = AzuriteTelemetryClient::GetInstanceID(
+            location.clone(),
+            config_file_name.clone(),
+            false,
+        );
+        assert!(!first.is_empty());
+
+        let config_path = temp.path().join(&config_file_name);
+        let payload = fs::read_to_string(&config_path).unwrap();
+        let parsed: HashMap<String, String> = serde_json::from_str(&payload).unwrap();
+        assert_eq!(parsed.get("instaceID"), Some(&first));
+        assert!(!payload.contains("instanceID"));
+
+        let second = AzuriteTelemetryClient::GetInstanceID(location, config_file_name, false);
+        assert_eq!(second, first);
+    }
+
+    #[test]
+    fn get_request_uri_preserves_known_hosts_redaction_bug() {
+        assert_eq!(
+            AzuriteTelemetryClient::GetRequestUri("http://127.0.0.1:10000/devstoreaccount1"),
+            "http://127.0.0.1:10000/devstoreaccount1"
+        );
+        assert_eq!(
+            AzuriteTelemetryClient::GetRequestUri("http://localhost:10000/devstoreaccount1"),
+            "http://localhost:10000/devstoreaccount1"
+        );
+        assert_eq!(
+            AzuriteTelemetryClient::GetRequestUri(
+                "http://host.docker.internal:10000/devstoreaccount1"
+            ),
+            "http://host.docker.internal:10000/devstoreaccount1"
+        );
+    }
+}

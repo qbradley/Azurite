@@ -41,7 +41,7 @@ pub fn minDate(date1: DateTime<Utc>, date2: DateTime<Utc>) -> DateTime<Utc> {
 
 #[allow(non_snake_case)]
 pub fn convertDateTimeStringMsTo7Digital(dateTimeString: &str) -> String {
-    dateTimeString.replace('Z', "0000Z")
+    dateTimeString.replacen('Z', "0000Z", 1)
 }
 
 #[allow(non_snake_case)]
@@ -129,6 +129,7 @@ pub fn getURLQueries(url: &str) -> HashMap<String, String> {
         return queries;
     };
 
+    let queryString = queryString.split('#').next().unwrap_or(queryString);
     let queryString = queryString.trim();
     let queryString = queryString.strip_prefix('?').unwrap_or(queryString);
     for querySubString in queryString.split('&') {

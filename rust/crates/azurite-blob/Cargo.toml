@@ -7,12 +7,16 @@ rust-version.workspace = true
 
 [dependencies]
 azurite-common = { path = "../azurite-common" }
+async-trait.workspace = true
 axum.workspace = true
 bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
+quick-xml.workspace = true
+regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
 tower.workspace = true
 tower-http.workspace = true

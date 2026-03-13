@@ -113,32 +113,32 @@ Autorest-generated code for blob. Establishes patterns for queue and table.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 5.1 | `src/blob/generated/IRequest.ts` | `azurite-blob/src/generated/i_request.rs` | ~20 | L | — | ⬜ |
-| 5.2 | `src/blob/generated/IResponse.ts` | `azurite-blob/src/generated/i_response.rs` | ~20 | L | — | ⬜ |
-| 5.3 | `src/blob/generated/utils/ILogger.ts` | `azurite-blob/src/generated/utils/i_logger.rs` | ~15 | L | — | ⬜ |
-| 5.4 | `src/blob/generated/utils/utils.ts` | `azurite-blob/src/generated/utils/utils.rs` | ~50 | L | — | ⬜ |
-| 5.5 | `src/blob/generated/utils/serializer.ts` | `azurite-blob/src/generated/utils/serializer.rs` | ~100 | M | — | ⬜ |
-| 5.6 | `src/blob/generated/utils/xml.ts` | `azurite-blob/src/generated/utils/xml.rs` | ~80 | M | — | ⬜ |
-| 5.7 | `src/blob/generated/Context.ts` | `azurite-blob/src/generated/context.rs` | ~120 | M | 5.1, 5.2 | ⬜ |
-| 5.8 | `src/blob/generated/artifacts/models.ts` | `azurite-blob/src/generated/artifacts/models.rs` | ~800 | H | — | ⬜ |
-| 5.9 | `src/blob/generated/artifacts/parameters.ts` | `azurite-blob/src/generated/artifacts/parameters.rs` | ~300 | M | 5.8 | ⬜ |
-| 5.10 | `src/blob/generated/artifacts/mappers.ts` | `azurite-blob/src/generated/artifacts/mappers.rs` | ~7394 | H | 5.8 | ⬜ |
-| 5.11 | `src/blob/generated/artifacts/operation.ts` | `azurite-blob/src/generated/artifacts/operation.rs` | ~100 | M | — | ⬜ |
-| 5.12 | `src/blob/generated/artifacts/specifications.ts` | `azurite-blob/src/generated/artifacts/specifications.rs` | ~500 | H | 5.8-5.11 | ⬜ |
-| 5.13 | `src/blob/generated/errors/*.ts` (4 files) | `azurite-blob/src/generated/errors/` | ~100 | L | — | ⬜ |
-| 5.14 | `src/blob/generated/handlers/I*Handler.ts` (6 files) | `azurite-blob/src/generated/handlers/` | ~200 | M | 5.7, 5.8 | ⬜ |
-| 5.15 | `src/blob/generated/handlers/IHandlers.ts` | `azurite-blob/src/generated/handlers/i_handlers.rs` | ~20 | L | 5.14 | ⬜ |
-| 5.16 | `src/blob/generated/handlers/handlerMappers.ts` | `azurite-blob/src/generated/handlers/handler_mappers.rs` | ~100 | M | 5.14 | ⬜ |
-| 5.17 | `src/blob/generated/MiddlewareFactory.ts` | `azurite-blob/src/generated/middleware_factory.rs` | ~80 | M | 5.3, 5.15 | ⬜ |
-| 5.18 | `src/blob/generated/ExpressMiddlewareFactory.ts` | `azurite-blob/src/generated/express_middleware_factory.rs` | ~100 | M | 5.17 | ⬜ |
-| 5.19 | `src/blob/generated/ExpressRequestAdapter.ts` | `azurite-blob/src/generated/express_request_adapter.rs` | ~80 | M | 5.1 | ⬜ |
-| 5.20 | `src/blob/generated/ExpressResponseAdapter.ts` | `azurite-blob/src/generated/express_response_adapter.rs` | ~80 | M | 5.2 | ⬜ |
-| 5.21 | `src/blob/generated/middleware/dispatch.middleware.ts` | `azurite-blob/src/generated/middleware/dispatch.rs` | ~150 | H | 5.7, 5.12 | ⬜ |
-| 5.22 | `src/blob/generated/middleware/deserializer.middleware.ts` | `azurite-blob/src/generated/middleware/deserializer.rs` | ~200 | H | 5.7, 5.10 | ⬜ |
-| 5.23 | `src/blob/generated/middleware/serializer.middleware.ts` | `azurite-blob/src/generated/middleware/serializer.rs` | ~150 | H | 5.7, 5.10 | ⬜ |
-| 5.24 | `src/blob/generated/middleware/HandlerMiddlewareFactory.ts` | `azurite-blob/src/generated/middleware/handler_middleware_factory.rs` | ~80 | M | 5.15, 5.16 | ⬜ |
-| 5.25 | `src/blob/generated/middleware/error.middleware.ts` | `azurite-blob/src/generated/middleware/error.rs` | ~50 | M | 5.7 | ⬜ |
-| 5.26 | `src/blob/generated/middleware/end.middleware.ts` | `azurite-blob/src/generated/middleware/end.rs` | ~30 | L | 5.7 | ⬜ |
+| 5.1 | `src/blob/generated/IRequest.ts` | `azurite-blob/src/generated/i_request.rs` | ~20 | L | — | ✅ |
+| 5.2 | `src/blob/generated/IResponse.ts` | `azurite-blob/src/generated/i_response.rs` | ~20 | L | — | ✅ |
+| 5.3 | `src/blob/generated/utils/ILogger.ts` | `azurite-blob/src/generated/utils/i_logger.rs` | ~15 | L | — | ✅ |
+| 5.4 | `src/blob/generated/utils/utils.ts` | `azurite-blob/src/generated/utils/utils.rs` | ~50 | L | — | ✅ |
+| 5.5 | `src/blob/generated/utils/serializer.ts` | `azurite-blob/src/generated/utils/serializer.rs` | ~100 | M | — | ✅ |
+| 5.6 | `src/blob/generated/utils/xml.ts` | `azurite-blob/src/generated/utils/xml.rs` | ~80 | M | — | ✅ |
+| 5.7 | `src/blob/generated/Context.ts` | `azurite-blob/src/generated/context.rs` | ~120 | M | 5.1, 5.2 | ✅ |
+| 5.8 | `src/blob/generated/artifacts/models.ts` | `azurite-blob/src/generated/artifacts/models.rs` | ~800 | H | — | ✅ |
+| 5.9 | `src/blob/generated/artifacts/parameters.ts` | `azurite-blob/src/generated/artifacts/parameters.rs` | ~300 | M | 5.8 | ✅ |
+| 5.10 | `src/blob/generated/artifacts/mappers.ts` | `azurite-blob/src/generated/artifacts/mappers.rs` | ~7394 | H | 5.8 | ✅ |
+| 5.11 | `src/blob/generated/artifacts/operation.ts` | `azurite-blob/src/generated/artifacts/operation.rs` | ~100 | M | — | ✅ |
+| 5.12 | `src/blob/generated/artifacts/specifications.ts` | `azurite-blob/src/generated/artifacts/specifications.rs` | ~500 | H | 5.8-5.11 | ✅ |
+| 5.13 | `src/blob/generated/errors/*.ts` (4 files) | `azurite-blob/src/generated/errors/` | ~100 | L | — | ✅ |
+| 5.14 | `src/blob/generated/handlers/I*Handler.ts` (6 files) | `azurite-blob/src/generated/handlers/` | ~200 | M | 5.7, 5.8 | ✅ |
+| 5.15 | `src/blob/generated/handlers/IHandlers.ts` | `azurite-blob/src/generated/handlers/i_handlers.rs` | ~20 | L | 5.14 | ✅ |
+| 5.16 | `src/blob/generated/handlers/handlerMappers.ts` | `azurite-blob/src/generated/handlers/handler_mappers.rs` | ~100 | M | 5.14 | ✅ |
+| 5.17 | `src/blob/generated/MiddlewareFactory.ts` | `azurite-blob/src/generated/middleware_factory.rs` | ~80 | M | 5.3, 5.15 | ✅ |
+| 5.18 | `src/blob/generated/ExpressMiddlewareFactory.ts` | `azurite-blob/src/generated/express_middleware_factory.rs` | ~100 | M | 5.17 | ✅ |
+| 5.19 | `src/blob/generated/ExpressRequestAdapter.ts` | `azurite-blob/src/generated/express_request_adapter.rs` | ~80 | M | 5.1 | ✅ |
+| 5.20 | `src/blob/generated/ExpressResponseAdapter.ts` | `azurite-blob/src/generated/express_response_adapter.rs` | ~80 | M | 5.2 | ✅ |
+| 5.21 | `src/blob/generated/middleware/dispatch.middleware.ts` | `azurite-blob/src/generated/middleware/dispatch.rs` | ~150 | H | 5.7, 5.12 | ✅ |
+| 5.22 | `src/blob/generated/middleware/deserializer.middleware.ts` | `azurite-blob/src/generated/middleware/deserializer.rs` | ~200 | H | 5.7, 5.10 | ✅ |
+| 5.23 | `src/blob/generated/middleware/serializer.middleware.ts` | `azurite-blob/src/generated/middleware/serializer.rs` | ~150 | H | 5.7, 5.10 | ✅ |
+| 5.24 | `src/blob/generated/middleware/HandlerMiddlewareFactory.ts` | `azurite-blob/src/generated/middleware/handler_middleware_factory.rs` | ~80 | M | 5.15, 5.16 | ✅ |
+| 5.25 | `src/blob/generated/middleware/error.middleware.ts` | `azurite-blob/src/generated/middleware/error.rs` | ~50 | M | 5.7 | ✅ |
+| 5.26 | `src/blob/generated/middleware/end.middleware.ts` | `azurite-blob/src/generated/middleware/end.rs` | ~30 | L | 5.7 | ✅ |
 
 ---
 

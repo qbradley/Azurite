@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `generated::i_response`
 - Phase: `5.2`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 - Full exported declarations copied below for fidelity reference.

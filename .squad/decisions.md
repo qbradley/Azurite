@@ -104,6 +104,13 @@ For modules not yet translated, placeholder tests are marked `#[ignore]` instead
 **What:** Each batch completion automatically triggers the next phase. No pauses between scheduled phases. Continuous execution until all phases are complete.
 **Why:** User directive (2026-03-13T23:08) — maximize throughput and maintain momentum on the port. Auto-launch next phase immediately upon batch completion.
 
+## 2026-03-13: Phase 5 Blob Generated Framework Translation (D-012)
+**By:** Aragorn (Rust Expert)
+**What:** Represent autorest-generated blob framework metadata (`parameters`, `mappers`, `specifications`) as generated JSON snapshots loaded by Rust modules. Use generic carrier types (`GeneratedObject`, `GeneratedResponse`, `GeneratedValue`) to preserve model name fidelity while deferring concrete handwritten struct expansion to business logic phases.
+**Constraints:** Six-stage middleware pipeline explicit and ordered exactly as TypeScript. `Operation`, `specifications`, `handlerMappers` coupled by enum order. Concrete scalar inputs (`string`, `number`, `boolean`, stream) narrowed at boundaries; large object families stay generic.
+**Why:** Snapshot-backed metadata keeps translation mechanical and auditable. Easy to refresh after future autorest regenerations. Allows middleware/handler wiring to compile before downstream business logic phases.
+**Impact:** Phase 5 generated framework complete. 34 files under `rust/azurite-blob/src/generated/`. Supports Phase 6-7 error/context/auth analysis.
+
 ## Governance
 
 - All porting decisions must be recorded in `rust/porting-db/`
