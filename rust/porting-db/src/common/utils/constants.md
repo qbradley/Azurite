@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `utils::constants`
 - Phase: `4.1`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Constant `AZURITE_ACCOUNTS_ENV`
@@ -118,3 +118,7 @@
 - The hard-coded emulator key is compatibility-critical and must remain byte-for-byte identical.
 - Regex behavior should stay regex-based; do not silently replace with stricter IP parsing without reviewing all hostname/account-name extraction sites.
 - `VALID_ISSUE_PREFIXES` is slightly inconsistent (`windows-ppe` entry has no trailing slash). Preserve that exact literal list unless TS changes it.
+
+## Rust port notes
+- Implemented the full constants surface in `rust/crates/azurite-common/src/utils/constants.rs`, including lazy regex/set/key initialization and a struct-backed `DEFAULT_SQL_OPTIONS` value.
+- Kept literal compatibility-sensitive values unchanged, including the emulator account key bytes and the issuer prefix list order.

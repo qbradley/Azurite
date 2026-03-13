@@ -2,12 +2,6 @@ use async_trait::async_trait;
 
 use crate::storage_error::StorageError;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum DebugValue {
-    String(String),
-    Boolean(bool),
-}
-
 #[allow(non_snake_case)]
 #[async_trait]
 pub trait IEnvironment: Send + Sync {
@@ -28,9 +22,9 @@ pub trait IEnvironment: Send + Sync {
     fn cert(&self) -> Option<String>;
     fn key(&self) -> Option<String>;
     fn pwd(&self) -> Option<String>;
-    async fn debug(&self) -> Result<Option<DebugValue>, StorageError>;
+    async fn debug(&self) -> Result<Option<String>, StorageError>;
     fn oauth(&self) -> Option<String>;
     fn inMemoryPersistence(&self) -> bool;
-    fn extentMemoryLimit(&self) -> Option<u64>;
+    fn extentMemoryLimit(&self) -> Option<f64>;
     fn disableTelemetry(&self) -> bool;
 }

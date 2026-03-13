@@ -6,13 +6,15 @@ use axum::{
     Router,
 };
 use azurite_common::{
+    configuration_base::ConfigurationBase,
     i_request_listener_factory::IRequestListenerFactory,
     i_server_factory::IServerFactory,
-    server_base::{RequestListener, ServerBase},
+    server_base::{RequestListener, ServerBase, ServerStatus},
     storage_error::StorageError,
 };
 use bytes::Bytes;
 use pretty_assertions::assert_eq;
+use std::sync::Arc;
 use tower::ServiceExt;
 
 struct RequestListenerFactoryFixture;
@@ -53,7 +55,12 @@ impl IServerFactory for ServerFactoryFixture {
     type Server = ServerBase;
 
     async fn createServer(&self) -> Result<Self::Server, StorageError> {
-        Ok(ServerBase::new())
+        Ok(ServerBase::new(
+            "127.0.0.1".to_owned(),
+            10000,
+            Arc::new(RequestListenerFactoryFixture),
+            ConfigurationBase::default(),
+        ))
     }
 }
 
@@ -70,5 +77,5 @@ async fn server_factory_uses_associated_server_type() {
         .await
         .expect("server construction should succeed");
 
-    assert!(!server.is_started);
+    assert_eq!(server.getStatus(), ServerStatus::Closed);
 }

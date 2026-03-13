@@ -15,10 +15,13 @@ pub mod i_server_factory;
 pub mod logger;
 pub mod models;
 pub mod mutex;
+pub mod no_logger_strategy;
 pub mod persistence;
 pub mod server_base;
 pub mod storage_error;
+pub mod telemetry;
 pub mod utils;
+pub mod winston_logger_strategy;
 pub mod zero_bytes_stream;
 
 pub use authentication::{

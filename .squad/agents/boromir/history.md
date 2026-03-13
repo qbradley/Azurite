@@ -62,3 +62,16 @@ Workspace status: ✅ `cargo check` passes, ✅ `cargo test` passes (9 active + 
 - **Aragorn:** Phase 3 translation COMPLETE. 5 auth files ported; tests passing. Account-SAS signing ready for Phase 4 utils consolidation.
 - **Faramir:** Phase 4 analysis COMPLETE. 11 files analyzed; fidelity hazards documented (D-002 awaiting approval).
 - **Samwise:** Phase 3 translated, Phase 4 analyzed. Overall baseline: 44 tests passing, 38 porting-db records, 108 Rust source files.
+
+### Phase 3 Authentication Parity Tests Added (2026-03-13)
+- Added `azurite-common/tests/common/phase3_authentication.rs` with 15 executable parity tests covering `IIPRange`, `AccountSASPermissions`, `AccountSASServices`, `AccountSASResourceTypes`, and `IAccountSASSignatureValues`.
+- Verified canonical serialization orders match TypeScript (`rwdxlacuptfiy`, `btqf`, `sco`), sentinel values stay validation-only (`AnyPermission`, `AnyResourceType`), and account-SAS string-to-sign/signature fixtures match TS behavior for both 2015-04-05 and 2020-12-06 layouts.
+- Found and fixed a real parity bug in `i_ip_range.rs`: TS treats `end: ""` as falsy and serializes only `start`, so Rust now mirrors that instead of emitting `start-`.
+- `cargo test --workspace --locked` passed in a clean temporary worktree based on `HEAD`; I used the clean worktree because the shared main checkout contained unrelated in-progress Rust changes outside Boromir's scope.
+
+### Cross-Agent Status (2026-03-13 → 23:10 batch completion)
+- **Phase 4 Translation:** Aragorn COMPLETE. All 11 Phase 4 files compile. Tests pass. Decision notes recorded. IEnvironment contract refined to match TS surface precisely.
+- **Phase 5 Analysis:** Faramir COMPLETE. 34 blob-generated framework records seeded. 6-stage middleware pipeline, Operation/Specs coupling, and serializer any-type usage documented.
+- **Phase 3 Tests Refinement:** COMPLETE. 15 Phase 3 auth parity tests passing. IIPRange type asymmetry bug (D-010) fixed — explicit adapter now preserves structural compatibility between SasIPRange and IIPRange. All tests pass.
+- **Overall Stats:** 59 tests passing, 72 porting-db records, 113 Rust source files.
+- **User Directive — Continuous Pipeline:** Auto-launch Phase 6 immediately. No pause between batches. Work all night if necessary.

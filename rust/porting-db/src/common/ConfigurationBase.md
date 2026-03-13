@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `configuration_base`
 - Phase: `4.7`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Enum `CertOptions`
@@ -80,3 +80,7 @@
 - PEM/PFX precedence is easy to accidentally reorder during translation.
 - Returning `None` for unsupported OAuth strings is current behavior; converting that into an error would be a semantic change.
 - The `setExtentMemoryLimit()` helper currently mixes configuration interpretation, logging, and global `SharedChunkStore` mutation. Splitting those concerns in Rust may improve design, but keep the visible call flow close to TS.
+
+## Rust port notes
+- Ported the base configuration helper into `rust/crates/azurite-common/src/configuration_base.rs`, including TLS heuristics, OAuth parsing, address formatting, and the shared `setExtentMemoryLimit()` helper.
+- The Rust helper preserves the TS NaN/no-limit split and the logging side effects around `SharedChunkStore.setSizeLimit(...)`.

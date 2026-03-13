@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `telemetry`
 - Phase: `4.11`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Exported class `AzuriteTelemetryClient`
@@ -126,3 +126,7 @@
 - `TraceStopEvent()` is synchronous and there is no explicit flush path in this file, so shutdown delivery guarantees are weak.
 - Telemetry state is unsynchronized mutable global state in TS. Rust must serialize access explicitly without hiding the singleton shape.
 - `contextId` vs `contextID` mismatch appears again here: telemetry request ID uses only `contextId`, while logger output falls back between both spellings.
+
+## Rust port notes
+- Ported the telemetry singleton into `rust/crates/azurite-common/src/telemetry.rs` with explicit shared state, file-backed instance identity, request/event counters, and helper types for later service-context wiring.
+- Fidelity-sensitive quirks were preserved: the on-disk `instaceID` typo remains unchanged, `GetRequestUri()` keeps the broken `knownHosts` redaction logic, and request IDs still prefer `contextId` over `contextID`.

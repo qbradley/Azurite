@@ -1,8 +1,5 @@
 use async_trait::async_trait;
-use azurite_common::{
-    i_environment::{DebugValue, IEnvironment},
-    storage_error::StorageError,
-};
+use azurite_common::{i_environment::IEnvironment, storage_error::StorageError};
 use pretty_assertions::assert_eq;
 
 #[derive(Clone, Default)]
@@ -24,10 +21,10 @@ struct EnvironmentFixture {
     cert: Option<String>,
     key: Option<String>,
     pwd: Option<String>,
-    debug: Option<DebugValue>,
+    debug: Option<String>,
     oauth: Option<String>,
     in_memory_persistence: bool,
-    extent_memory_limit: Option<u64>,
+    extent_memory_limit: Option<f64>,
     disable_telemetry: bool,
 }
 
@@ -102,7 +99,7 @@ impl IEnvironment for EnvironmentFixture {
         self.pwd.clone()
     }
 
-    async fn debug(&self) -> Result<Option<DebugValue>, StorageError> {
+    async fn debug(&self) -> Result<Option<String>, StorageError> {
         Ok(self.debug.clone())
     }
 
@@ -114,7 +111,7 @@ impl IEnvironment for EnvironmentFixture {
         self.in_memory_persistence
     }
 
-    fn extentMemoryLimit(&self) -> Option<u64> {
+    fn extentMemoryLimit(&self) -> Option<f64> {
         self.extent_memory_limit
     }
 
@@ -145,10 +142,10 @@ async fn environment_contract_exposes_blob_queue_and_table_settings() {
         cert: Some(String::new()),
         key: Some(String::new()),
         pwd: None,
-        debug: Some(DebugValue::String(String::new())),
+        debug: Some(String::new()),
         oauth: Some(String::new()),
         in_memory_persistence: true,
-        extent_memory_limit: Some(0),
+        extent_memory_limit: Some(0.0),
         disable_telemetry: true,
     };
 
@@ -170,21 +167,18 @@ async fn environment_contract_exposes_blob_queue_and_table_settings() {
     assert_eq!(environment.cert(), Some(String::new()));
     assert_eq!(environment.key(), Some(String::new()));
     assert_eq!(environment.pwd(), None);
-    assert_eq!(
-        environment.debug().await.unwrap(),
-        Some(DebugValue::String(String::new()))
-    );
+    assert_eq!(environment.debug().await.unwrap(), Some(String::new()));
     assert_eq!(environment.oauth(), Some(String::new()));
     assert!(environment.inMemoryPersistence());
-    assert_eq!(environment.extentMemoryLimit(), Some(0));
+    assert_eq!(environment.extentMemoryLimit(), Some(0.0));
     assert!(environment.disableTelemetry());
 }
 
 #[tokio::test]
-async fn environment_debug_value_supports_boolean_and_none_variants() {
-    let boolean_environment = EnvironmentFixture {
+async fn environment_debug_value_supports_string_and_none_variants() {
+    let string_environment = EnvironmentFixture {
         location: "/tmp/azurite".to_owned(),
-        debug: Some(DebugValue::Boolean(false)),
+        debug: Some("debug.log".to_owned()),
         ..Default::default()
     };
     let none_environment = EnvironmentFixture {
@@ -193,8 +187,8 @@ async fn environment_debug_value_supports_boolean_and_none_variants() {
     };
 
     assert_eq!(
-        boolean_environment.debug().await.unwrap(),
-        Some(DebugValue::Boolean(false))
+        string_environment.debug().await.unwrap(),
+        Some("debug.log".to_owned())
     );
     assert_eq!(none_environment.debug().await.unwrap(), None);
 }

@@ -93,6 +93,17 @@ For modules not yet translated, placeholder tests are marked `#[ignore]` instead
 **Why:** This gives immediate protection against interface drift and casing/type mismatches without pretending stub structs are already behaviorally complete. It also keeps the remaining parity backlog explicit: `AccountDataStore` env parsing/refresh, `ConfigurationBase` helper methods, service-specific request listener/server factories, and Phase 2 extent roundtrip behavior.
 **Impact:** QA can unignore concrete parity tests incrementally as Aragorn lands implementations, while translated Phase 1 contracts are already covered by runnable tests. This keeps Boromir's parity rule enforceable earlier in the port instead of waiting for every concrete service implementation.
 
+## 2026-03-13: Phase 4 Translation — IEnvironment Rust Contract Refinement
+**By:** Aragorn (Rust Expert)
+**What:** Updated common `IEnvironment` Rust trait to precisely match TypeScript Phase 4 surface. `debug()` now returns `Option<String>` (preserves undefined → None mapping), and `extentMemoryLimit()` returns `Option<f64>` (preserves parseFloat/NaN behavior from `Environment.ts` flowing into `ConfigurationBase::setExtentMemoryLimit()`).
+**Implementation Detail:** Represented duplicate `disableProductStyleUrl` registration in clap builder by registering argument once, then mutating with alternate help text. Keeps duplicate registration visible in source without asking clap to accept same long flag twice.
+**Why:** Exact TypeScript semantics preservation; Phase 4 utilities depend on these nullable returns for configuration logic.
+
+## 2026-03-13: Continuous Pipeline Execution Directive
+**By:** Quetzal Bradley (via Copilot)
+**What:** Each batch completion automatically triggers the next phase. No pauses between scheduled phases. Continuous execution until all phases are complete.
+**Why:** User directive (2026-03-13T23:08) — maximize throughput and maintain momentum on the port. Auto-launch next phase immediately upon batch completion.
+
 ## Governance
 
 - All porting decisions must be recorded in `rust/porting-db/`

@@ -1,0 +1,402 @@
+# Porting Record — `src/blob/generated/utils/serializer.ts`
+
+## File info
+- Source path: `src/blob/generated/utils/serializer.ts`
+- Source lines: `392`
+- Source type: `autorest-generated`
+- Rust target (per `PORTING-ORDER.md`): `azurite-blob/src/generated/utils/serializer.rs`
+- Crate: `azurite-blob`
+- Module: `generated::utils::serializer`
+- Phase: `5.5`
+- Status: `analyzed`
+
+## Exported API
+- Full exported declarations copied below for fidelity reference.
+
+```ts
+export declare type ParameterPath =
+  | string
+  | string[]
+  | {
+      [propertyName: string]: ParameterPath;
+    };
+
+export async function deserialize(
+  context: Context,
+  req: IRequest,
+  spec: msRest.OperationSpec,
+  logger: ILogger
+): Promise<IHandlerParameters> {
+  const parameters: IHandlerParameters = {};
+
+  // Deserialize query parameters
+  for (const queryParameter of spec.queryParameters || []) {
+    if (!queryParameter.mapper.serializedName) {
+      throw new TypeError(
+        `QueryParameter mapper doesn't include valid "serializedName"`
+      );
+    }
+    const queryKey = queryParameter.mapper.serializedName;
+    let queryValueOriginal: string | string[] | undefined = req.getQuery(
+      queryKey
+    );
+
+    if (
+      queryValueOriginal !== undefined &&
+      queryParameter.collectionFormat !== undefined &&
+      queryParameter.mapper.type.name === "Sequence"
+    ) {
+      queryValueOriginal = `${queryValueOriginal}`.split(
+        queryParameter.collectionFormat
+      );
+    }
+
+    const queryValue = spec.serializer.deserialize(
+      queryParameter.mapper,
+      queryValueOriginal,
+      queryKey
+    );
+
+    // TODO: Currently validation is only in serialize method,
+    // remove when adding validateConstraints to deserialize()
+    // TODO: Make serialize return ServerError according to different validations?
+    spec.serializer.serialize(queryParameter.mapper, queryValue);
+
+    setParametersValue(parameters, queryParameter.parameterPath, queryValue);
+  }
+
+  // Deserialize header parameters
+  for (const headerParameter of spec.headerParameters || []) {
+    if (!headerParameter.mapper.serializedName) {
+      throw new TypeError(
+        `HeaderParameter mapper doesn't include valid "serializedName"`
+      );
+    }
+
+    const headerCollectionPrefix:
+      | string
+      | undefined = (headerParameter.mapper as msRest.DictionaryMapper)
+      .headerCollectionPrefix;
+    if (headerCollectionPrefix) {
+      const dictionary: any = {};
+      const headers = req.getHeaders();
+      for (const headerKey of Object.keys(headers)) {
+        if (
+          headerKey
+            .toLowerCase()
+            .startsWith(headerCollectionPrefix.toLocaleLowerCase())
+        ) {
+          // TODO: Validate collection type by serializer
+          dictionary[
+            headerKey.substring(headerCollectionPrefix.length)
+          ] = spec.serializer.serialize(
+            (headerParameter.mapper as msRest.DictionaryMapper).type.value,
+            headers[headerKey],
+            headerKey
+          );
+        }
+      }
+      setParametersValue(parameters, headerParameter.parameterPath, dictionary);
+    } else {
+      const headerKey = headerParameter.mapper.serializedName;
+      const headerValueOriginal = req.getHeader(headerKey);
+      const headerValue = spec.serializer.deserialize(
+        headerParameter.mapper,
+        headerValueOriginal,
+        headerKey
+      );
+
+      // TODO: Currently validation is only in serialize method,
+      // remove when adding validateConstraints to deserialize()
+      spec.serializer.serialize(headerParameter.mapper, headerValue);
+
+      setParametersValue(
+        parameters,
+        headerParameter.parameterPath,
+        headerValue
+      );
+    }
+  }
+
+  // Deserialize body
+  const bodyParameter = spec.requestBody;
+
+  if (bodyParameter && bodyParameter.mapper.type.name === "Stream") {
+    setParametersValue(parameters, "body", req.getBodyStream());
+  } else if (bodyParameter) {
+    const jsonContentTypes = ["application/json", "text/json"];
+    const xmlContentTypes = ["application/xml", "application/atom+xml"];
+    const contentType = req.getHeader("content-type") || "";
+    const contentComponents = !contentType
+      ? []
+      : contentType.split(";").map(component => component.toLowerCase());
+
+    const isRequestWithJSON = contentComponents.some(
+      component => jsonContentTypes.indexOf(component) !== -1
+    ); // TODO
+    const isRequestWithXML =
+      spec.isXML ||
+      contentComponents.some(
+        component => xmlContentTypes.indexOf(component) !== -1
+      );
+    // const isRequestWithStream = false;
+
+    const body = await readRequestIntoText(req);
+    logger.debug(
+      `deserialize(): Raw request body string is (removed all empty characters) ${body.replace(
+        /\s/g,
+        ""
+      )}`,
+      context.contextId
+    );
+
+    req.setBody(body);
+    let parsedBody: object = {};
+    if (isRequestWithJSON) {
+      // read body
+      parsedBody = JSON.parse(body);
+    } else if (isRequestWithXML) {
+      parsedBody = (await parseXML(body)) || {};
+    }
+
+    let valueToDeserialize: any = parsedBody;
+    if (
+      spec.isXML &&
+      bodyParameter.mapper.type.name === msRest.MapperType.Sequence
+    ) {
+      valueToDeserialize =
+        typeof valueToDeserialize === "object"
+          ? valueToDeserialize[bodyParameter.mapper.xmlElementName!]
+          : [];
+    }
+
+    parsedBody = spec.serializer.deserialize(
+      bodyParameter.mapper,
+      valueToDeserialize,
+      bodyParameter.mapper.serializedName!
+    );
+
+    // Validation purpose only, because only serialize supports validation
+    // TODO: Inject convenience layer error into deserialize; Drop @azure/ms-rest-js, move logic into generated code
+    spec.serializer.serialize(bodyParameter.mapper, parsedBody);
+
+    setParametersValue(parameters, bodyParameter.parameterPath, parsedBody);
+    setParametersValue(parameters, "body", req.getBody());
+  }
+
+  return parameters;
+}
+
+export async function serialize(
+  context: Context,
+  res: IResponse,
+  spec: msRest.OperationSpec,
+  handlerResponse: any,
+  logger: ILogger
+): Promise<void> {
+  const statusCodeInResponse: number = handlerResponse.statusCode;
+  res.setStatusCode(statusCodeInResponse);
+
+  const responseSpec = spec.responses[statusCodeInResponse];
+  if (!responseSpec) {
+    throw new TypeError(
+      `Request specification doesn't include provided response status code`
+    );
+  }
+
+  // Serialize headers
+  const headerSerializer = new msRest.Serializer(Mappers);
+  const headersMapper = responseSpec.headersMapper;
+  if (headersMapper && headersMapper.type.name === "Composite") {
+    const mappersForAllHeaders = headersMapper.type.modelProperties || {};
+
+    // Handle headerMapper one by one
+    for (const key in mappersForAllHeaders) {
+      if (mappersForAllHeaders.hasOwnProperty(key)) {
+        const headerMapper = mappersForAllHeaders[key];
+        const headerName = headerMapper.serializedName;
+        const headerValueOriginal = handlerResponse[key];
+        const headerValueSerialized = headerSerializer.serialize(
+          headerMapper,
+          headerValueOriginal
+        );
+
+        // Handle collection of headers starting with same prefix, such as x-ms-meta prefix
+        const headerCollectionPrefix = (headerMapper as msRest.DictionaryMapper)
+          .headerCollectionPrefix;
+        if (
+          headerCollectionPrefix !== undefined &&
+          headerValueOriginal !== undefined
+        ) {
+          for (const collectionHeaderPartialName in headerValueSerialized) {
+            if (
+              headerValueSerialized.hasOwnProperty(collectionHeaderPartialName)
+            ) {
+              const collectionHeaderValueSerialized =
+                headerValueSerialized[collectionHeaderPartialName];
+              const collectionHeaderName = `${headerCollectionPrefix}${collectionHeaderPartialName}`;
+              if (
+                collectionHeaderName &&
+                collectionHeaderValueSerialized !== undefined
+              ) {
+                res.setHeader(
+                  collectionHeaderName,
+                  collectionHeaderValueSerialized
+                );
+              }
+            }
+          }
+        } else {
+          if (headerName && headerValueSerialized !== undefined) {
+            res.setHeader(headerName, headerValueSerialized);
+          }
+        }
+      }
+    }
+  }
+
+  // Serialize XML bodies
+  if (
+    spec.isXML &&
+    responseSpec.bodyMapper &&
+    responseSpec.bodyMapper.type.name !== "Stream"
+  ) {
+    let body = spec.serializer.serialize(
+      responseSpec.bodyMapper!,
+      handlerResponse
+    );
+
+    // When root element is sequence type, should wrap with because serialize() doesn't do that
+    if (responseSpec.bodyMapper!.type.name === "Sequence") {
+      const sequenceElementName = responseSpec.bodyMapper!.xmlElementName;
+      if (sequenceElementName !== undefined) {
+        const newBody = {} as any;
+        newBody[sequenceElementName] = body;
+        body = newBody;
+      }
+    }
+
+    const xmlBody = stringifyXML(body, {
+      rootName:
+        responseSpec.bodyMapper!.xmlName ||
+        responseSpec.bodyMapper!.serializedName
+    });
+    res.setContentType(`application/xml`);
+
+    // TODO: Should send response in a serializer?
+    res.getBodyStream().write(xmlBody);
+    logger.debug(
+      `Serializer: Raw response body string is ${xmlBody}`,
+      context.contextId
+    );
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
+  }
+
+  // Serialize JSON bodies
+  if (
+    !spec.isXML &&
+    responseSpec.bodyMapper &&
+    responseSpec.bodyMapper.type.name !== "Stream"
+  ) {
+    let body = spec.serializer.serialize(
+      responseSpec.bodyMapper!,
+      handlerResponse
+    );
+
+    // When root element is sequence type, should wrap with because serialize() doesn't do that
+    if (responseSpec.bodyMapper!.type.name === "Sequence") {
+      const sequenceElementName = responseSpec.bodyMapper!.xmlElementName;
+      if (sequenceElementName !== undefined) {
+        const newBody = {} as any;
+        newBody[sequenceElementName] = body;
+        body = newBody;
+      }
+    }
+
+    if (!res.getHeader("content-type")) {
+      res.setContentType("application/json");
+    }
+
+    const jsonBody = JSON.stringify(body);
+
+    // TODO: Should send response in a serializer?
+    res.getBodyStream().write(jsonBody);
+    logger.debug(
+      `Serializer: Raw response body string is ${jsonBody}`,
+      context.contextId
+    );
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
+  }
+
+  // Serialize stream body
+  // TODO: Move to end middleware for end tracking
+  if (
+    handlerResponse.body &&
+    responseSpec.bodyMapper &&
+    responseSpec.bodyMapper.type.name === "Stream"
+  ) {
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
+
+    await new Promise((resolve, reject) => {
+      (handlerResponse.body as NodeJS.ReadableStream)
+        .on("error", reject)
+        .pipe(res.getBodyStream())
+        .on("error", reject)
+        .on("close", resolve);
+    });
+
+    // const totalTimeInMS = context.startTime
+    //   ? new Date().getTime() - context.startTime.getTime()
+    //   : undefined;
+
+    // logger.info(
+    // tslint:disable-next-line:max-line-length
+    //   `Serializer: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
+    //     res.getHeaders()
+    //   )}`,
+    //   context.contextID
+    // );
+  }
+}
+```
+
+## Dependencies
+- External packages:
+  - `@azure/ms-rest-js` — imported as `* as msRest`
+- Internal imports:
+  - `../artifacts/mappers` → `src/blob/generated/artifacts/mappers.ts` — Phase 5 — analyzed in this pass
+  - `../Context` → `src/blob/generated/Context.ts` — Phase 5 — analyzed in this pass
+  - `../IRequest` → `src/blob/generated/IRequest.ts` — Phase 5 — analyzed in this pass
+  - `../IResponse` → `src/blob/generated/IResponse.ts` — Phase 5 — analyzed in this pass
+  - `./ILogger` → `src/blob/generated/utils/ILogger.ts` — Phase 5 — analyzed in this pass
+  - `./xml` → `src/blob/generated/utils/xml.ts` — Phase 5 — analyzed in this pass
+
+## Type mappings
+| TypeScript | Recommended Rust | Notes |
+|---|---|---|
+| `ParameterPath` recursive union | `enum ParameterPath { Scalar, Segments, ObjectMap }` | Deserializer writes nested values into `IHandlerParameters` by walking this structure. |
+| `IHandlerParameters` / `dictionary: any` / `handlerResponse: any` | `serde_json::Value` maps plus typed response wrapper enum | Most generated `any` narrowing work lives here. |
+| `NodeJS.ReadableStream` / `WritableStream` | async stream reader/writer | Streaming bodies stay unbuffered only when mapper type is `Stream`. |
+| `msRest.Serializer` runtime mapper dispatch | custom serializer/deserializer over static mapper metadata | Need to preserve stringly mapper-type branching. |
+## `any` hotspots
+- `74: const dictionary: any = {};`
+- `155: let valueToDeserialize: any = parsedBody;`
+- `201: parameterValue: any`
+- `226: handlerResponse: any,`
+- `305: const newBody = {} as any;`
+- `342: const newBody = {} as any;`
+
+## Generated-code notes
+- `deserialize()` walks query parameters, header parameters (including `headerCollectionPrefix` dictionaries), and optional request body, validating values by calling `serialize()` after `deserialize()` because ms-rest-js lacks a separate constraint validator.
+- Non-stream bodies are fully buffered into text, logged after whitespace stripping, written back into `req.setBody(body)`, then parsed as JSON or XML depending on content-type and `spec.isXML`.
+- XML and JSON sequence bodies are manually wrapped/unwrapped using `xmlElementName` because the underlying serializer does not do that automatically.
+- `serialize()` sets `statusCode` first, resolves `responseSpec` by the returned code, writes headers from `headersMapper`, then emits XML, JSON, or stream bodies. Stream responses resolve on writable `close`, not `finish`.
+
+## Middleware chain ordering
+- Core implementation used by Stage 2 deserializer middleware and Stage 4 serializer middleware.
+
+## Change propagation notes
+- Because this file is autorest-generated, treat TS regen diffs as contract updates rather than hand edits.
+- If the corresponding swagger changes, diff the regenerated TS file first, then update the Rust port and this record together.
+- This file is the highest-risk generated translation unit: any ms-rest-js behavior change here propagates into request parsing, response emission, and handler contracts.
+- If future regeneration reduces `any` usage, reflect the narrower TS types here first and let the rest of the generated stack benefit mechanically.

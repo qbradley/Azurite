@@ -93,17 +93,17 @@ Shared SAS token primitives used by all services.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 4.1 | `src/common/utils/constants.ts` | `azurite-common/src/utils/constants.rs` | ~50 | L | — | ⬜ |
-| 4.2 | `src/common/utils/utils.ts` | `azurite-common/src/utils/utils.rs` | ~172 | M | — | ⬜ |
-| 4.3 | `src/common/utils/BufferStream.ts` | `azurite-common/src/utils/buffer_stream.rs` | ~30 | L | — | ⬜ |
-| 4.4 | `src/common/Logger.ts` | `azurite-common/src/logger.rs` | ~80 | M | 1.3, 1.4 | ⬜ |
-| 4.5 | `src/common/NoLoggerStrategy.ts` | `azurite-common/src/no_logger_strategy.rs` | ~20 | L | 1.4 | ⬜ |
-| 4.6 | `src/common/WinstonLoggerStrategy.ts` | `azurite-common/src/winston_logger_strategy.rs` | ~60 | M | 1.4 | ⬜ |
-| 4.7 | `src/common/ConfigurationBase.ts` | `azurite-common/src/configuration_base.rs` | ~120 | M | 1.5 | ⬜ |
-| 4.8 | `src/common/ServerBase.ts` | `azurite-common/src/server_base.rs` | ~180 | H | 4.7 | ⬜ |
-| 4.9 | `src/common/AccountDataStore.ts` | `azurite-common/src/account_data_store.rs` | ~150 | M | 1.6 | ⬜ |
-| 4.10 | `src/common/Environment.ts` | `azurite-common/src/environment.rs` | ~200 | M | 1.11, 4.7 | ⬜ |
-| 4.11 | `src/common/Telemetry.ts` | `azurite-common/src/telemetry.rs` | ~410 | H | — | ⬜ |
+| 4.1 | `src/common/utils/constants.ts` | `azurite-common/src/utils/constants.rs` | ~50 | L | — | ✅ |
+| 4.2 | `src/common/utils/utils.ts` | `azurite-common/src/utils/utils.rs` | ~172 | M | — | ✅ |
+| 4.3 | `src/common/utils/BufferStream.ts` | `azurite-common/src/utils/buffer_stream.rs` | ~30 | L | — | ✅ |
+| 4.4 | `src/common/Logger.ts` | `azurite-common/src/logger.rs` | ~80 | M | 1.3, 1.4 | ✅ |
+| 4.5 | `src/common/NoLoggerStrategy.ts` | `azurite-common/src/no_logger_strategy.rs` | ~20 | L | 1.4 | ✅ |
+| 4.6 | `src/common/WinstonLoggerStrategy.ts` | `azurite-common/src/winston_logger_strategy.rs` | ~60 | M | 1.4 | ✅ |
+| 4.7 | `src/common/ConfigurationBase.ts` | `azurite-common/src/configuration_base.rs` | ~120 | M | 1.5 | ✅ |
+| 4.8 | `src/common/ServerBase.ts` | `azurite-common/src/server_base.rs` | ~180 | H | 4.7 | ✅ |
+| 4.9 | `src/common/AccountDataStore.ts` | `azurite-common/src/account_data_store.rs` | ~150 | M | 1.6 | ✅ |
+| 4.10 | `src/common/Environment.ts` | `azurite-common/src/environment.rs` | ~200 | M | 1.11, 4.7 | ✅ |
+| 4.11 | `src/common/Telemetry.ts` | `azurite-common/src/telemetry.rs` | ~410 | H | — | ✅ |
 
 ---
 

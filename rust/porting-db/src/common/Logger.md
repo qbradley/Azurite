@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `logger`
 - Phase: `4.4`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Class `Logger implements ILogger`
@@ -67,3 +67,7 @@
 ## Fidelity risks and edge cases
 - Global mutable logger strategy is the main translation risk. A Rust port that removes runtime swapping would diverge from current TS behavior.
 - `contextID` spelling is preserved here; keep the naming inconsistency visible in notes because the codebase also uses `contextId` elsewhere.
+
+## Rust port notes
+- Ported `Logger` into `rust/crates/azurite-common/src/logger.rs` and kept the strategy-swapping surface plus a process-global `logger` singleton.
+- `configLogger()` still flips between `NoLoggerStrategy` and `WinstonLoggerStrategy(LogLevels::Debug, logFile)` at runtime, matching TS startup behavior.

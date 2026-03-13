@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `environment`
 - Phase: `4.10`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `Environment implements IEnvironment`
@@ -98,3 +98,7 @@
 - Duplicate `disableProductStyleUrl` registration is easy to “clean up” accidentally, but doing so changes the literal TS source shape Faramir is tracking for propagation.
 - Lazy validation means errors surface only when certain getters are called. A Rust parser that eagerly rejects combinations at startup would change timing/behavior.
 - `debug()` returning `undefined` by default and throwing only for bare `--debug` is subtle; preserve that distinction.
+
+## Rust port notes
+- Ported CLI parsing into `rust/crates/azurite-common/src/environment.rs` with clap-backed getters that preserve the TypeScript option names, defaults, lazy validation, and the duplicate `disableProductStyleUrl` registration shape.
+- `debug()` now returns the requested path or throws for bare `--debug`, and `extentMemoryLimit()` stays float-shaped so the downstream NaN path remains visible to future ports.

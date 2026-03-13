@@ -86,3 +86,23 @@ Aragorn has completed Phase 1 translation (15 files, porting-db updated). Boromi
 - **Aragorn:** Phase 3 translation COMPLETE. 5 auth files ported; tests passing. Account-SAS signing ready for Phase 4 utils consolidation.
 - **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules all passing. Test suite clean.
 - **Samwise:** Phase 3 translated, Phase 4 analyzed. 44 tests passing, 38 porting-db records, 108 Rust source files.
+
+### Phase 5 TS analysis completed (2026-03-13)
+- Analyzed all 34 blob generated-framework files and wrote records under `rust/porting-db/src/blob/generated/`.
+- **Critical fidelity risks discovered:**
+  1. The generated middleware chain is a strict six-stage pipeline — `dispatch -> deserializer -> handler -> serializer -> error -> end` — and `ExpressMiddlewareFactory` rebuilds adapters/context wrappers at each stage while sharing state through `res.locals[contextPath]`.
+  2. `operation.ts`, `specifications.ts`, and `handlers/handlerMappers.ts` are coupled by the zero-based numeric `Operation` enum. Reordering enum members or “simplifying” the lookup tables would silently reroute requests.
+  3. `utils/serializer.ts` and `Context.ts` are the main `any` choke points: handler parameters, handler responses, XML/JSON intermediate bodies, and dynamic handler lookup all stay runtime-typed today.
+  4. Request/response wrapper contracts carry observable quirks that must survive translation: `ExpressResponseAdapter.setHeader()` stringifies numbers/booleans, `error.middleware.ts` suppresses body/content-type only for HEAD failures, and stream serialization resolves on writable `close` while final `.end()` happens later in `end.middleware.ts`.
+- **TS patterns for Aragorn:**
+  - Generated models are split across `models.ts` (interfaces/enums/intersection response aliases), `mappers.ts` (123 composite mappers), `parameters.ts` (131 parameter descriptors), and `specifications.ts` (72 operation specs). Treat these four files as one change-propagation unit.
+  - Handler dispatch is intentionally stringly/dynamic: `IHandlers` exposes six named handler families, `handlerMappers.ts` maps each operation to `{ handler, method, arguments }`, and `HandlerMiddlewareFactory` indexes that map with `(this.handlers as any)[handlerPath.handler]`.
+  - XML handling depends on exact `xml2js` options (`explicitArray: false`, `explicitCharkey: false`, `explicitRoot: false`, `emptyTag: undefined`) plus manual sequence wrapping/unwrapping in `utils/serializer.ts`.
+  - `dispatch.middleware.ts` does not short-circuit on first match; it scores every operation by required conditions met and prefers `context.dispatchPattern` over `req.getPath()` when present.
+
+### Cross-Agent Status (2026-03-13 → 23:10 batch completion)
+- **Phase 4 Translation:** Aragorn COMPLETE. All 11 Phase 4 files compile. Tests pass. Decision notes recorded. IEnvironment contract tightened to match TS surface (Option<String> for debug, Option<f64> for extentMemoryLimit).
+- **Phase 5 Analysis:** COMPLETE. 34 blob-generated framework records seeded. 6-stage middleware pipeline order documented as architecture-critical. Operation/Specs coupling exposed. Serializer any-type usage noted.
+- **Phase 3 Tests Refinement:** Boromir COMPLETE. 15 Phase 3 auth parity tests passing. IIPRange type asymmetry bug (D-010) fixed — explicit adapter now preserves structural compatibility between SasIPRange and IIPRange.
+- **Overall Stats:** 59 tests passing, 72 porting-db records, 113 Rust source files.
+- **User Directive — Continuous Pipeline:** Auto-launch Phase 6 immediately. No pause between batches. Work all night if necessary.

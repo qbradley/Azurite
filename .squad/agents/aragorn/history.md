@@ -79,3 +79,16 @@ Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in pla
 - **Faramir:** Phase 4 utilities/config analysis COMPLETE. 11 files analyzed; fidelity hazards documented (Telemetry instaceID typo, knownHosts redaction quirk, WinstonLoggerStrategy contextID tab default, Environment CLI arg duplication). Awaiting decision approval on quirk preservation vs normalization.
 - **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules (OperationQueue, FSExtentStore, LokiExtentStore, etc.) all passing. Old placeholders removed; test suite clean at 36 active + 8 ignored.
 - **Samwise:** Phase 3 translation complete, Phase 4 analysis ready. Overall: 44 tests passing, 38 porting-db records, 108 Rust source files.
+
+### Phase 4 common utilities/config/logger/environment ported (2026-03-13)
+- Ported the 11 Phase 4 common files into `rust/crates/azurite-common/src/`, including shared utils/constants, `BufferStream`, runtime-configurable logging, clap-backed `Environment`, axum-based `ServerBase`, `AccountDataStore`, and the telemetry singleton.
+- Preserved the Phase 4 fidelity hazards Faramir flagged: the telemetry `instaceID` typo remains on disk, `GetRequestUri()` keeps the broken `knownHosts` redaction check, the duplicate `disableProductStyleUrl` registration stays represented in the clap builder flow, and request telemetry still prefers `contextId` over `contextID`.
+- Tightened the earlier Phase 1 placeholder environment contract to match the actual TS surface: `debug()` now returns an optional path string, and `extentMemoryLimit()` stays floating-point so the TypeScript `parseFloat`/NaN behavior remains visible to future ports.
+
+### Cross-Agent Status (2026-03-13 → 23:10 batch completion)
+- **Phase 4 Status:** COMPLETE. All 11 Phase 4 files compile. Tests pass. Decision notes recorded.
+- **Phase 5 Analysis:** Faramir's blob-generated framework analysis COMPLETE. 34 porting-db records seeded for blob middleware/Operation/Specs structure. Key finding: 6-stage middleware pipeline order is architecture-critical.
+- **Phase 3 Tests Refinement:** Boromir's Phase 3 auth parity tests COMPLETE. 15 tests passing. IIPRange type asymmetry bug (D-010) found and fixed — all tests pass with correct format preservation.
+- **Overall Stats:** 59 tests passing, 72 porting-db records, 113 Rust source files.
+- **Continuous Pipeline Directive:** User directive received (2026-03-13T23:08) — auto-launch Phase 6 immediately upon batch completion. No pause between phases.
+

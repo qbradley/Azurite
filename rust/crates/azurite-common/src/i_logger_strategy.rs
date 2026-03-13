@@ -17,6 +17,16 @@ impl LogLevels {
             Self::Debug => "debug",
         }
     }
+
+    pub fn priority(self) -> u8 {
+        match self {
+            Self::Error => 0,
+            Self::Warn => 1,
+            Self::Info => 2,
+            Self::Verbose => 4,
+            Self::Debug => 5,
+        }
+    }
 }
 
 #[allow(non_snake_case)]

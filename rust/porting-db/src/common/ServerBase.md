@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `server_base`
 - Phase: `4.8`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Type alias `RequestListener`
@@ -91,3 +91,7 @@
 - The strict state machine is behaviorally significant. Starting twice or closing while not running currently throws.
 - `afterStart()` failures leave the server running; `afterClose()` failures leave status `Closing`. Rust error handling should document these asymmetries instead of silently “improving” them.
 - `stoppable.stop()` is Node-specific and does not directly map to axum. The Rust translation must preserve the intent—stop accepting new requests and drain in-flight work—without hiding the shutdown boundary.
+
+## Rust port notes
+- Ported the lifecycle wrapper into `rust/crates/azurite-common/src/server_base.rs` using axum/tokio for bind/start/close while preserving the TS `Closed → Starting → Running → Closing` state machine.
+- The Rust version keeps the explicit before/after hook ordering and the address lookup behavior that reflects the bound socket rather than only the configured port.

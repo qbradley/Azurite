@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `account_data_store`
 - Phase: `4.9`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `AccountDataStore implements IAccountDataStore`
@@ -86,3 +86,7 @@
 - Silent fallback to the emulator account can hide operator misconfiguration; Rust should preserve the behavior unless the team explicitly decides otherwise.
 - `Initializing` and `Closing` are currently dead states. Do not remove them from the record; future TS changes may start using them.
 - The base64 decoder permissiveness may differ across languages. If Rust uses stricter decoding, document any deliberate divergence.
+
+## Rust port notes
+- Ported the in-memory account store into `rust/crates/azurite-common/src/account_data_store.rs`, including environment-driven refresh, masked logging, default-emulator fallback, and the periodic timer loop.
+- The Rust parser keeps the `account:key1[:key2];...` grammar and still falls back silently to the emulator account when refresh parsing fails.

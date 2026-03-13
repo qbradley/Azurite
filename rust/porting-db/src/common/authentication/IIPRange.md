@@ -16,7 +16,7 @@
 - `end?: string`
 
 ### Function `ipRangeToString(ipRange: IIPRange): string`
-- Serializes the range as `start-end` when `end` is present, otherwise returns `start` unchanged.
+- Serializes the range as `start-end` when `end` is a non-empty string, otherwise returns `start` unchanged.
 
 ## Dependencies
 - Imports: none.
@@ -57,7 +57,7 @@ pub fn ip_range_to_string(ip_range: &IIPRange) -> String {
 ## Special handling
 - TS performs pure string formatting only. Invalid IPv4/IPv6 text is not rejected here, so Rust should not silently add validation inside this helper.
 - Account SAS generation passes external `SasIPRange` values into this serializer via structural compatibility. Rust should keep an explicit adapter or compatible struct conversion rather than assuming this helper is used only with local `IIPRange`.
-- Preserve the exact `start-end` formatting with no added spaces and no special-case collapsing.
+- Preserve the exact `start-end` formatting with no added spaces. Because TS uses `ipRange.end ? ... : ...`, an empty-string `end` behaves the same as `undefined` and serializes as just `start`.
 
 ## Change propagation notes
 - If TS adds validation, IPv6 normalization, or extra range fields, audit every SAS signature generator that reuses `ipRangeToString()`.

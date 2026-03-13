@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `utils::buffer_stream`
 - Phase: `4.3`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BufferStream extends Readable`
@@ -53,3 +53,7 @@
 ## Fidelity risks and edge cases
 - Backpressure semantics are the main fidelity concern: a Rust implementation that eagerly materializes all chunks would not match the TS `Readable` behavior.
 - The TS class accepts `options?: any` only to feed the `Readable` base class. Omitting that hook in Rust is acceptable, but document it if upstream TS starts using custom stream options.
+
+## Rust port notes
+- Ported the stream wrapper to `rust/crates/azurite-common/src/utils/buffer_stream.rs` as a chunked in-memory reader with the same fixed 64 KiB chunk size.
+- The Rust wrapper keeps the TS chunking boundary explicit so later request-body plumbing can stay mechanically comparable to `BufferStream.ts`.

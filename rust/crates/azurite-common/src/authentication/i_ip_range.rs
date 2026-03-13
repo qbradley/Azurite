@@ -10,8 +10,8 @@ pub struct IIPRange {
 #[allow(non_snake_case)]
 pub fn ipRangeToString(ipRange: &IIPRange) -> String {
     match &ipRange.end {
-        Some(end) => format!("{}-{}", ipRange.start, end),
-        None => ipRange.start.clone(),
+        Some(end) if !end.is_empty() => format!("{}-{}", ipRange.start, end),
+        _ => ipRange.start.clone(),
     }
 }
 

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `utils::utils`
 - Phase: `4.2`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Constant `lfsa`
@@ -98,3 +98,7 @@
 - `convertRawHeadersToMetadata()` preserves the first-seen key casing after `x-ms-meta-` and concatenates duplicate values with commas. Both behaviors can affect tests.
 - `truncatedISO8061Date()` names ISO 8061, but it is really shaping ISO 8601 text; preserve the actual emitted strings rather than correcting the naming.
 - `getMD5FromString()`/`getMD5FromStream()` return raw bytes. Converting to hex in Rust would be a fidelity break.
+
+## Rust port notes
+- Ported the helper functions to `rust/crates/azurite-common/src/utils/utils.rs` with TypeScript-aligned names and string-shaping behavior.
+- `convertRawHeadersToMetadata()` preserves pairwise raw-header walking, metadata key validation, and duplicate-value comma joining; cryptographic helpers now use Rust crates while preserving the TS-visible inputs and outputs.

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `winston_logger_strategy`
 - Phase: `4.6`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `WinstonLoggerStrategy implements ILoggerStrategy`
@@ -58,3 +58,7 @@
 - The largest fidelity risk is over-idiomatizing into generic `tracing` macros without preserving the strategy object and its runtime-selected sink.
 - The tab default for missing `contextID` is easy to lose in Rust if `Option::None` is formatted as an empty string.
 - File-vs-console selection is mutually exclusive today; a Rust port that broadcasts to both would diverge from current TS behavior.
+
+## Rust port notes
+- Ported the concrete strategy to `rust/crates/azurite-common/src/winston_logger_strategy.rs`, formatting log lines as `timestamp contextID level: message` and preserving the default tab context.
+- File-vs-console selection remains mutually exclusive; Rust emits through direct writes plus `tracing` events while keeping the TS-visible strategy surface intact.

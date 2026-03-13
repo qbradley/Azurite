@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `no_logger_strategy`
 - Phase: `4.5`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `NoLoggerStrategy implements ILoggerStrategy`
@@ -42,3 +42,7 @@
 
 ## Fidelity risks and edge cases
 - There are no algorithmic risks here. The important point is preserving the existence of a dedicated no-op strategy rather than encoding “disabled logging” as `None`.
+
+## Rust port notes
+- Ported the null-object logger strategy to `rust/crates/azurite-common/src/no_logger_strategy.rs` as a dedicated no-op `ILoggerStrategy` implementation.
+- The global logger still starts with this strategy installed.
