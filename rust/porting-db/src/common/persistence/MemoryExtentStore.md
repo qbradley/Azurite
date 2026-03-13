@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::memory_extent_store`
 - Phase: `2.2`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IMemoryExtentChunk extends IExtentChunk`
@@ -135,4 +135,9 @@ impl IExtentStore for MemoryExtentStore {
 - If memory limit uses LRU eviction instead of hard failure, refactor `trySet()`.
 - If metadata store contract changes, sync `appendExtent()` logic.
 - If SharedChunkStore becomes per-instance, refactor initialization.
+
+## Rust port notes
+- Ported to `azurite-common/src/persistence/memory_extent_store.rs` with a shared `MemoryExtentChunkStore`, boxed async readers, and a synthetic concatenated reader for slice-by-slice `readExtent()` fidelity.
+- Preserved the `ZERO_EXTENT_ID` branch by copying `"*ZERO*"` into `persistence::ZERO_EXTENT_ID` inside `azurite-common` to avoid a crate cycle while keeping the blob-layer leakage visible.
+- Metadata updates still use the injected error factory boundary and were validated with `cargo check` plus `cargo test -p azurite-common`.
 

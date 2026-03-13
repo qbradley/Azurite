@@ -91,3 +91,31 @@ fn default_logger_uses_noop_strategy() {
     logger.info("no-op", Some("ctx"));
     logger.debug("still no-op", None);
 }
+
+#[test]
+fn logger_can_swap_strategies_after_construction() {
+    let initial = Arc::new(RecordingStrategy::default());
+    let replacement = Arc::new(RecordingStrategy::default());
+    let mut logger = Logger::new(initial.clone());
+
+    logger.info("before swap", Some("ctx-1"));
+    logger.set_strategy(replacement.clone());
+    logger.info("after swap", Some("ctx-2"));
+
+    assert_eq!(
+        initial.entries(),
+        vec![RecordedLog {
+            level: LogLevels::Info,
+            message: "before swap".to_owned(),
+            context_id: Some("ctx-1".to_owned()),
+        }]
+    );
+    assert_eq!(
+        replacement.entries(),
+        vec![RecordedLog {
+            level: LogLevels::Info,
+            message: "after swap".to_owned(),
+            context_id: Some("ctx-2".to_owned()),
+        }]
+    );
+}

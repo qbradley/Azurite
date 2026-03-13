@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::all_extents_async_iterator`
 - Phase: `2.5`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Class `AllExtentsAsyncIterator implements AsyncIterator<string[]>`
@@ -129,4 +129,9 @@ impl Stream for AllExtentsAsyncIterator {
 - If GC protect-time becomes per-container or per-call, pass as parameter.
 - If listExtents() pagination semantics change, update next() logic.
 - If IExtentMetadataStore trait signature changes, update method calls.
+
+## Rust port notes
+- Ported to `azurite-common/src/persistence/all_extents_async_iterator.rs` as a stateful iterator struct plus `into_stream()` adapter for the existing `BoxStream` trait boundary.
+- Preserved snapshot-time behavior (`Utc::now()` captured once at construction) and the 1000-item batch size.
+- Validated together with the metadata-store port using `cargo check` and `cargo test -p azurite-common`.
 

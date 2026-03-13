@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `zero_bytes_stream`
 - Phase: `2.6`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `ZeroBytesStream extends Readable`
@@ -126,4 +126,9 @@ impl futures::stream::Stream for ZeroBytesStream {
 - If chunk size (512) becomes configurable, add as const parameter or struct field.
 - If zero-byte streams are used for massive extents (TB+), reconsider allocation strategy.
 - If ReadableOptions parameters are leveraged elsewhere, extend constructor.
+
+## Rust port notes
+- Ported to `azurite-common/src/zero_bytes_stream.rs` as an `AsyncRead` implementation that emits at most 512 zero bytes per poll, matching the TS chunk pacing.
+- The Rust reader writes directly into `ReadBuf` instead of allocating a new remainder buffer, but keeps the same `length`/`leftBytes` state split.
+- Validated with `cargo check` and `cargo test -p azurite-common`.
 

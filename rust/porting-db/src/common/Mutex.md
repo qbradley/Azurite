@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `mutex`
 - Phase: `2.7`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `Mutex` (static-only utility)
@@ -173,4 +173,9 @@ impl Drop for MutexGuard {
 - If per-context locks are needed (e.g., per request), pass KeyMutex instance instead of static access.
 - If lock contention is high, profile and consider lock-free data structures (e.g., `parking_lot` or custom CAS loop).
 - If RAII guard becomes mandatory, implement async drop alternative or use scoped locking pattern.
+
+## Rust port notes
+- Ported in-place at `azurite-common/src/mutex.rs` using global Tokio mutex maps plus per-waiter `oneshot` channels.
+- The Rust unlock path hands the lock directly to the next queued waiter instead of deleting and re-locking through `setImmediate`, which preserves FIFO ordering under multi-threaded Tokio scheduling.
+- Validated with `cargo check` and `cargo test -p azurite-common`.
 

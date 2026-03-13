@@ -19,6 +19,7 @@ pub mod persistence;
 pub mod server_base;
 pub mod storage_error;
 pub mod utils;
+pub mod zero_bytes_stream;
 
 pub use configuration_base::ConfigurationBase;
 pub use environment::Environment;

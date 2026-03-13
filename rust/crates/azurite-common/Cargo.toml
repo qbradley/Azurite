@@ -28,3 +28,4 @@ assert_matches.workspace = true
 pretty_assertions.workspace = true
 tokio.workspace = true
 tokio-test.workspace = true
+tower.workspace = true

@@ -65,13 +65,13 @@ Extent storage — the binary data layer all services depend on.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 2.1 | `src/common/persistence/OperationQueue.ts` | `azurite-common/src/persistence/operation_queue.rs` | ~123 | M | 1.15 | ⬜ |
-| 2.2 | `src/common/persistence/MemoryExtentStore.ts` | `azurite-common/src/persistence/memory_extent_store.rs` | ~150 | M | 1.13 | ⬜ |
-| 2.3 | `src/common/persistence/FSExtentStore.ts` | `azurite-common/src/persistence/fs_extent_store.rs` | ~677 | H | 1.13, 2.1 | ⬜ |
-| 2.4 | `src/common/persistence/LokiExtentMetadataStore.ts` | `azurite-common/src/persistence/loki_extent_metadata_store.rs` | ~200 | M | 1.14 | ⬜ |
-| 2.5 | `src/common/persistence/AllExtentsAsyncIterator.ts` | `azurite-common/src/persistence/all_extents_async_iterator.rs` | ~50 | M | 1.14 | ⬜ |
-| 2.6 | `src/common/ZeroBytesStream.ts` | `azurite-common/src/zero_bytes_stream.rs` | ~30 | L | — | ⬜ |
-| 2.7 | `src/common/Mutex.ts` | `azurite-common/src/mutex.rs` | ~76 | M | — | ⬜ |
+| 2.1 | `src/common/persistence/OperationQueue.ts` | `azurite-common/src/persistence/operation_queue.rs` | ~123 | M | 1.15 | ✅ |
+| 2.2 | `src/common/persistence/MemoryExtentStore.ts` | `azurite-common/src/persistence/memory_extent_store.rs` | ~150 | M | 1.13 | ✅ |
+| 2.3 | `src/common/persistence/FSExtentStore.ts` | `azurite-common/src/persistence/fs_extent_store.rs` | ~677 | H | 1.13, 2.1 | ✅ |
+| 2.4 | `src/common/persistence/LokiExtentMetadataStore.ts` | `azurite-common/src/persistence/loki_extent_metadata_store.rs` | ~200 | M | 1.14 | ✅ |
+| 2.5 | `src/common/persistence/AllExtentsAsyncIterator.ts` | `azurite-common/src/persistence/all_extents_async_iterator.rs` | ~50 | M | 1.14 | ✅ |
+| 2.6 | `src/common/ZeroBytesStream.ts` | `azurite-common/src/zero_bytes_stream.rs` | ~30 | L | — | ✅ |
+| 2.7 | `src/common/Mutex.ts` | `azurite-common/src/mutex.rs` | ~76 | M | — | ✅ |
 
 ---
 

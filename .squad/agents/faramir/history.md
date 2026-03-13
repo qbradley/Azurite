@@ -46,3 +46,19 @@ Analyzed all 7 Phase 2 files. Records updated/corrected under `rust/porting-db/s
 ### Phase 1 & 2 Complete; Test Infrastructure Ready (2026-03-13)
 Aragorn has completed Phase 1 translation (15 files, porting-db updated). Boromir has set up test infrastructure with 9 active tests and 9 ignored placeholders. Both agents report SUCCESS. Workspace compiles, tests pass. Ready for Phase 2 translation guided by these fidelity risks.
 
+### Phase 3 TS analysis completed (2026-03-13)
+- Analyzed all 5 Phase 3 authentication files and wrote records under `rust/porting-db/src/common/authentication/`.
+- **Critical fidelity risks discovered:**
+  1. Canonical serializer order is contract-sensitive and differs by helper: permissions serialize as `rwdxlacuptfiy`, services as `btqf`, and resource types as `sco`. `AccountSASServices.toString()` is intentionally not enum declaration order.
+  2. `AccountSASPermission.Any` and `AccountSASResourceType.Any` are validation-only sentinels for later blob batch authorization. They are not accepted by the Phase 3 parser/serializer helpers and must stay outside canonical account-SAS string generation.
+  3. `IAccountSASSignatureValues` dispatches on `version >= "2020-12-06"` using plain string comparison and types `ipRange` as external `SasIPRange | string` even though serialization goes through local `ipRangeToString()`.
+- **TS patterns for Aragorn:**
+  - The three account-SAS helper classes are mutable boolean-flag objects with static `parse()` plus canonical `toString()` methods; prefer explicit Rust structs over compressed bitflags for change propagation.
+  - `AccountSASServices` and `AccountSASResourceTypes` reuse the duplicate-error message text `Duplicated permission character: ${c}` even outside permission parsing. Preserve that quirk if exact error text matters.
+  - `generateAccountSASSignature*()` builds newline-joined string-to-sign payloads with a required trailing empty field; the `2020-12-06` branch inserts `encryptionScope`, and both branches use `truncatedISO8061Date(..., false)` so timestamps are second-precision only.
+
+### Cross-Agent Status (2026-03-13 → 21:30)
+- **Aragorn:** Phase 2 persistence translation complete. 7 modules ported; `cargo check` and tests pass. Awaiting Phase 3 analysis output (now ready). Phase 3 contains 3 critical fidelity constraints documented above.
+- **Boromir:** Phase 1 parity test coverage now at 26 active tests, 4 ignored placeholders. Workspace clean. Ready to unignore Phase 3 test placeholders incrementally.
+- **Samwise:** All systems operational. Three new decisions documented (D-008, D-009, D-010) ready for review before Phase 3 implementation starts.
+

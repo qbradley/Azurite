@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::fs_extent_store`
 - Phase: `2.3`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Class `FSExtentStore implements IExtentStore`
@@ -183,4 +183,9 @@ impl IExtentStore for FSExtentStore {
 - If streamPipe() must support cancellation, add cancellation check in loop.
 - If OperationQueue concurrency semantics change, revisit queue limits.
 - If fd caching auto-closes (timeout), update fd lifecycle management.
+
+## Rust port notes
+- Ported to `azurite-common/src/persistence/fs_extent_store.rs` with Tokio file I/O, a per-location append-extent pool, cached `tokio::fs::File` handles, and two `OperationQueue` instances matching the TS append/read separation.
+- Preserved the `ZERO_EXTENT_ID` handling and the truncate-on-write-error recovery path; the active extent pool still rotates to a fresh UUID when an extent reaches `DEFAULT_MAX_EXTENT_SIZE`.
+- Multi-extent reads still flow through repeated `readExtent()` calls and a concatenated async reader; validated with `cargo check` and `cargo test -p azurite-common`.
 

@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::loki_extent_metadata_store`
 - Phase: `2.4`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Class `LokiExtentMetadata implements IExtentMetadataStore`
@@ -146,4 +146,9 @@ impl IExtentMetadataStore for LokiExtentMetadata { /* ... */ }
 - If IExtentModel schema changes, update updateExtent() to cover all fields.
 - If pagination semantics shift (time-based instead of $loki), update listExtents() and AllExtentsAsyncIterator.
 - If in-memory mode is deprecated, remove that branch.
+
+## Rust port notes
+- Ported to `azurite-common/src/persistence/loki_extent_metadata_store.rs` as a JSON-backed custom document store (`Vec` + `RwLock`) instead of a LokiJS port, per STRATEGY §11.1.
+- Preserved the `LastModifyInMS` storage field separately from `IExtentModel.lastModifiedInMS`, and retained marker-based pagination for `AllExtentsAsyncIterator`.
+- The port now implements `IGCExtentProvider` directly and was validated with `cargo check` and `cargo test -p azurite-common`.
 

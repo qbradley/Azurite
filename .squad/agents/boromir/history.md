@@ -34,3 +34,15 @@ Aragorn has completed Phase 1 Rust translation (15 common interfaces). Faramir p
 
 Workspace status: ✅ `cargo check` passes, ✅ `cargo test` passes (9 active + 9 ignored), ✅ porting-db updated.
 
+### Phase 1 Common Parity Coverage Expanded (2026-03-13)
+- Added active `azurite-common` parity suites for `IEnvironment`, `IGCManager`, `IGCExtentProvider`, `IRequestListenerFactory`, `IServerFactory`, legacy/new extent metadata contracts, `IExtentStore`, and `IOperationQueue` trait coverage.
+- Added concrete behavior checks for `OperationQueue` serialized execution, `Logger::set_strategy()`, and stub constructor/default shapes for `ConfigurationBase`, `Environment`, and `ServerBase`.
+- Kept ignored placeholders only for missing concrete TS behavior (`AccountDataStore` refresh/parser logic, `ConfigurationBase` methods, service-specific factories, and Phase 2 extent roundtrips).
+- Verified `cd rust && cargo test --workspace` passes with `azurite-common` at 26 active tests and 4 ignored placeholders.
+- Direct TypeScript execution was not available in this environment because repo Node dev dependencies (for example `ts-node/register`) are not installed, so parity expectations were encoded from TS source contracts and existing test patterns.
+
+### Cross-Agent Status (2026-03-13 → 21:30)
+- **Aragorn:** Phase 2 persistence translation complete. 7 modules translated to `rust/crates/azurite-common/src/`. All validation checks pass. Ready for Phase 3 implementation.
+- **Faramir:** Phase 3 authentication analysis complete. 5 files analyzed; 3 critical fidelity constraints documented and decisions recorded. porting-db records updated.
+- **Samwise:** All systems operational. Three new decisions (D-008, D-009, D-010) recorded in `.squad/decisions.md` and ready for API governance review.
+

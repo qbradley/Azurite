@@ -8,7 +8,7 @@
 - Crate: `azurite-common`
 - Module: `persistence::operation_queue`
 - Phase: `2.1`
-- Status: `analyzed`
+- Status: `ported`
 
 ## Exported API
 ### Default class `OperationQueue implements IOperationQueue`
@@ -82,4 +82,9 @@ impl IOperationQueue for OperationQueue {
 - If FSExtentStore changes queue usage, revisit operation scheduling contract.
 - If maxConcurrency becomes dynamic, rework semaphore setup.
 - If contextId semantics change, update logging and queue routing.
+
+## Rust port notes
+- Ported to `azurite-common/src/persistence/operation_queue.rs` with a Tokio `Semaphore` preserving FIFO admission and the TS schedule/resolve logging shape.
+- Added `OperationQueue::withMaxConcurrency()` for translated call sites while keeping a zero-arg `new()` for existing Phase 1 concrete tests.
+- Validated with `cargo check` and `cargo test -p azurite-common` from `rust/`.
 

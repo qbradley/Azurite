@@ -69,6 +69,30 @@ For modules not yet translated, placeholder tests are marked `#[ignore]` instead
 **Why:** Keeps Rust port aligned with TS suite structure, makes parity work discoverable, lets `cargo test` compile and verify pending suites as codebase evolves. Allows incremental replacement of ignored placeholders without workspace reorganization.
 **Impact:** Aragorn and future QA passes can expand parity test coverage incrementally as translations complete.
 
+## 2026-03-13: Copy ZERO_EXTENT_ID into azurite-common (D-008)
+**By:** Aragorn (Rust Expert)
+**What:** Copy `ZERO_EXTENT_ID = "*ZERO*"` into `azurite-common::persistence::ZERO_EXTENT_ID` instead of importing it from the future blob crate.
+**Why:** `MemoryExtentStore` and `FSExtentStore` are Phase 2 common-layer ports, while the original TypeScript constant lives under blob persistence. Keeping the exact value in `azurite-common` preserves the TS blob-layer leakage Faramir flagged without creating a Rust crate cycle.
+**Impact:** Future blob-layer ports should reuse this common constant or explicitly bridge back to the blob contract so the same sentinel string remains visible at both layers.
+
+## 2026-03-13: Preserve Account SAS Sentinel Enum Members as Validation-Only (D-009)
+**By:** Faramir (TypeScript Expert)
+**What:** Keep `AccountSASPermission.Any = "AnyPermission"` and `AccountSASResourceType.Any = "AnyResourceType"` as explicit sentinel variants/constants in the Rust port. Do **not** allow the normal Phase 3 parser/serializer helpers to accept or emit those values.
+**Why:** In TS, `AccountSASPermissions.parse()/toString()` and `AccountSASResourceTypes.parse()/toString()` only handle canonical one-character account-SAS values. The `Any*` members are consumed later by blob batch authorization checks in `src/blob/authentication/OperationAccountSASPermission.ts`. Preserving them as validation-only sentinels maintains TS fidelity and prevents future serialization bugs.
+**Impact:** Aragorn's Phase 3 port must map these as enum variants/constants but exclude them from canonical serialization. Serialization order sensitivity (`rwdxlacuptfiy`, `btqf`, `sco`) is contract-critical and must be replicated exactly.
+
+## 2026-03-13: Preserve Account-SAS IP Range Type Asymmetry (D-010)
+**By:** Faramir (TypeScript Expert)
+**What:** Keep an explicit compatibility layer between account-SAS `SasIPRange | string` and the local `IIPRange` formatter logic instead of silently collapsing them into one undocumented Rust type.
+**Why:** `src/common/authentication/IAccountSASSignatureValues.ts` intentionally imports `SasIPRange` from `@azure/storage-blob`, while blob/queue/table service SAS interfaces import local `IIPRange`. The current TS code relies on structural compatibility plus shared formatting; future TS changes could split those shapes. Preserving the asymmetry with an explicit layer makes the coupling visible and tractable.
+**Impact:** Aragorn's Phase 3 port should avoid auto-collapsing these types. Document the adapter explicitly so future maintainers see the boundary.
+
+## 2026-03-13: Execute Phase 1 Parity Coverage with Fixtures Even for Incomplete Implementations (D-011)
+**By:** Boromir (QA Expert)
+**What:** Activate Phase 1 parity coverage with executable Rust fixture-based contract tests for translated interfaces even when the matching concrete runtime implementation is not fully ported yet. Keep `#[ignore]` placeholders only for concrete TypeScript behaviors that truly have no Rust equivalent yet.
+**Why:** This gives immediate protection against interface drift and casing/type mismatches without pretending stub structs are already behaviorally complete. It also keeps the remaining parity backlog explicit: `AccountDataStore` env parsing/refresh, `ConfigurationBase` helper methods, service-specific request listener/server factories, and Phase 2 extent roundtrip behavior.
+**Impact:** QA can unignore concrete parity tests incrementally as Aragorn lands implementations, while translated Phase 1 contracts are already covered by runnable tests. This keeps Boromir's parity rule enforceable earlier in the port instead of waiting for every concrete service implementation.
+
 ## Governance
 
 - All porting decisions must be recorded in `rust/porting-db/`

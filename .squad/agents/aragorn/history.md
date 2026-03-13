@@ -58,3 +58,13 @@ Faramir's Phase 2 analysis is complete. **Critical implementation notes for Phas
 - `AllExtentsAsyncIterator`: Snapshot-time pagination → preserve immutable snapshot, translate to `futures::stream::Stream`
 
 Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in place. Tests will expand as Phase 2 translations complete.
+
+### Phase 2 Persistence Implementations Ported (2026-03-13)
+- Ported `OperationQueue`, `MemoryExtentStore`, `FSExtentStore`, `LokiExtentMetadata`, `AllExtentsAsyncIterator`, `ZeroBytesStream`, and `Mutex` into `rust/crates/azurite-common/src/`.
+- Kept fidelity-sensitive seams: copied `ZERO_EXTENT_ID = "*ZERO*"` into `azurite-common::persistence`, preserved Loki's stored `LastModifyInMS` casing apart from `IExtentModel.lastModifiedInMS`, and kept FIFO queue/mutex behavior with Tokio semaphores + oneshot handoff.
+- Validation after the port: `cargo check` and `cargo test -p azurite-common` both pass from `rust/`.
+
+### Cross-Agent Status (2026-03-13 → 21:30)
+- **Faramir:** Phase 3 authentication analysis complete. 5 files analyzed; 3 critical fidelity constraints documented (sentinel enums, serialization order, IP range asymmetry). Ready for Phase 3 implementation.
+- **Boromir:** Phase 1 parity test coverage expanded. 26 active tests passing, 4 ignored placeholders for incomplete behavior. Workspace compiles cleanly; ready to unignore incrementally as Phase 3 translations complete.
+- **Samwise:** All systems operational. Ready for Phase 3 implementation review.
