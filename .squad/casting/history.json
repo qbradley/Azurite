@@ -1,0 +1,16 @@
+{
+  "assignments": [
+    {
+      "assignment_id": "azurite-rust-port-001",
+      "universe": "lord-of-the-rings",
+      "created_at": "2026-03-13T20:20:17.083Z",
+      "agents": [
+        { "name": "Gandalf", "role": "Lead / Architect" },
+        { "name": "Faramir", "role": "TypeScript Expert" },
+        { "name": "Aragorn", "role": "Rust Expert" },
+        { "name": "Samwise", "role": "Azure Storage REST Expert" },
+        { "name": "Boromir", "role": "QA Expert" }
+      ]
+    }
+  ]
+}

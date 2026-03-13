@@ -1,0 +1,44 @@
+{
+  "entries": [
+    {
+      "persistent_name": "Gandalf",
+      "role": "Lead / Architect",
+      "universe": "lord-of-the-rings",
+      "created_at": "2026-03-13T20:20:17.083Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Faramir",
+      "role": "TypeScript Expert",
+      "universe": "lord-of-the-rings",
+      "created_at": "2026-03-13T20:20:17.083Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Aragorn",
+      "role": "Rust Expert",
+      "universe": "lord-of-the-rings",
+      "created_at": "2026-03-13T20:20:17.083Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Samwise",
+      "role": "Azure Storage REST Expert",
+      "universe": "lord-of-the-rings",
+      "created_at": "2026-03-13T20:20:17.083Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Boromir",
+      "role": "QA Expert",
+      "universe": "lord-of-the-rings",
+      "created_at": "2026-03-13T20:20:17.083Z",
+      "legacy_named": false,
+      "status": "active"
+    }
+  ]
+}
