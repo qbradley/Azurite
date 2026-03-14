@@ -19,6 +19,7 @@ md-5.workspace = true
 bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
+futures.workspace = true
 quick-xml.workspace = true
 regex.workspace = true
 reqwest.workspace = true

@@ -16,39 +16,64 @@ use azurite_queue::{
     },
     QueueConfiguration, QueueServer,
 };
-use azurite_table::TableServer;
+use azurite_table::{
+    utils::constants::{
+        DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT, DEFAULT_TABLE_LISTENING_PORT, DEFAULT_TABLE_LOKI_DB_PATH,
+        DEFAULT_TABLE_SERVER_HOST_NAME,
+    },
+    TableConfiguration, TableServer,
+};
 
-// Table service constants - Phase 15 (concurrent translation)
-// When table constants module is available, import from there instead
-#[allow(dead_code)]
-const DEFAULT_TABLE_LOKI_DB_PATH: &str = "__azurite_db_table__.json";
-
-const BLOB_BEFORE_CLOSE_MESSAGE: &str = "Azurite Blob service is closing...";
-const BLOB_AFTER_CLOSE_MESSAGE: &str = "Azurite Blob service successfully closed";
-const QUEUE_BEFORE_CLOSE_MESSAGE: &str = "Azurite Queue service is closing...";
-const QUEUE_AFTER_CLOSE_MESSAGE: &str = "Azurite Queue service successfully closed";
-const TABLE_BEFORE_CLOSE_MESSAGE: &str = "Azurite Table service is closing...";
-const TABLE_AFTER_CLOSE_MESSAGE: &str = "Azurite Table service successfully closed";
+fn build_table_configuration(
+    env: &Environment,
+    location: &str,
+    debugFilePath: Option<String>,
+) -> TableConfiguration {
+    TableConfiguration::new(
+        env.tableHost()
+            .unwrap_or_else(|| DEFAULT_TABLE_SERVER_HOST_NAME.to_string()),
+        env.tablePort().unwrap_or(DEFAULT_TABLE_LISTENING_PORT),
+        env.tableKeepAliveTimeout()
+            .unwrap_or(DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT),
+        location.to_string(),
+        PathBuf::from(location)
+            .join(DEFAULT_TABLE_LOKI_DB_PATH)
+            .display()
+            .to_string(),
+        !env.silent(),
+        None,
+        debugFilePath.is_some(),
+        debugFilePath,
+        env.loose(),
+        env.skipApiVersionCheck(),
+        env.cert().unwrap_or_default(),
+        env.key().unwrap_or_default(),
+        env.pwd().unwrap_or_default(),
+        env.oauth(),
+        env.disableProductStyleUrl(),
+        env.inMemoryPersistence(),
+        None,
+        None,
+    )
+}
 
 #[allow(non_snake_case)]
 async fn shutdown(
-    _blobServer: BlobServerFactoryResult,
+    mut blobServer: BlobServerFactoryResult,
     mut queueServer: QueueServer,
-    _tableServer: TableServer,
+    mut tableServer: TableServer,
 ) {
     AzuriteTelemetryClient::TraceStopEvent("");
 
-    println!("{}", BLOB_BEFORE_CLOSE_MESSAGE);
-    println!("{}", BLOB_AFTER_CLOSE_MESSAGE);
-
-    println!("{}", QUEUE_BEFORE_CLOSE_MESSAGE);
+    if let Err(err) = blobServer.server.close().await {
+        eprintln!("Error closing blob server: {}", err);
+    }
     if let Err(err) = queueServer.close().await {
         eprintln!("Error closing queue server: {}", err);
     }
-    println!("{}", QUEUE_AFTER_CLOSE_MESSAGE);
-
-    println!("{}", TABLE_BEFORE_CLOSE_MESSAGE);
-    println!("{}", TABLE_AFTER_CLOSE_MESSAGE);
+    if let Err(err) = tableServer.close().await {
+        eprintln!("Error closing table server: {}", err);
+    }
 }
 
 #[allow(non_snake_case)]
@@ -77,8 +102,8 @@ async fn main_impl() -> Result<(), StorageError> {
     }
 
     let blobServerFactory = BlobServerFactory::new();
-    let blobServer = blobServerFactory.createServer(None).await?;
-    let blobConfig = &blobServer.config;
+    let mut blobServer = blobServerFactory.createServerFromEnvironment(&env).await?;
+    let blobConfig = blobServer.config.clone();
 
     let mut persistencePathArray = (*DEFAULT_QUEUE_PERSISTENCE_ARRAY).clone();
     if let Some(firstDestination) = persistencePathArray.get_mut(0) {
@@ -116,7 +141,8 @@ async fn main_impl() -> Result<(), StorageError> {
         None,
     );
 
-    let tableServer = TableServer::new();
+    let tableConfig = build_table_configuration(&env, &location, debugFilePath.clone());
+    let mut tableServer = TableServer::withConfiguration(tableConfig);
 
     configLogger(
         blobConfig.enableDebugLog,
@@ -127,27 +153,11 @@ async fn main_impl() -> Result<(), StorageError> {
 
     setExtentMemoryLimit(&env, true)?;
 
-    println!(
-        "Azurite Blob service is starting at {}",
-        blobConfig.getHttpServerAddress()
-    );
-    println!(
-        "Azurite Blob service is successfully listening at {}",
-        blobConfig.getHttpServerAddress()
-    );
-
-    println!(
-        "Azurite Queue service is starting at {}",
-        queueConfig.getHttpServerAddress()
-    );
-    queueServer.start().await?;
-    println!(
-        "Azurite Queue service is successfully listening at {}",
-        queueServer.getHttpServerAddress()
-    );
-
-    println!("Azurite Table service is starting at 127.0.0.1:10002");
-    println!("Azurite Table service is successfully listening at 127.0.0.1:10002");
+    tokio::try_join!(
+        blobServer.server.start(),
+        queueServer.start(),
+        tableServer.start(),
+    )?;
 
     AzuriteTelemetryClient::init(location.clone(), !env.disableTelemetry(), None, false);
     AzuriteTelemetryClient::TraceStartEvent("").await;

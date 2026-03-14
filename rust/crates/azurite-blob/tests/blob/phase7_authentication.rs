@@ -21,9 +21,11 @@ use azurite_blob::generated::artifacts::models::{
 use azurite_blob::generated::artifacts::operation::Operation;
 use azurite_blob::generated::context::Context;
 use azurite_blob::generated::i_request::{GeneratedHttpRequest, HttpMethod, RequestHeaderValue};
+use azurite_blob::generated::i_response::GeneratedHttpResponse;
 use azurite_blob::persistence::{
     BlobTypeResult, GetContainerAccessPolicyResponse, IBlobMetadataStore,
 };
+use azurite_blob::AuthenticationMiddlewareFactory;
 use azurite_common::authentication::DateOrString as CommonDateOrString;
 use azurite_common::i_account_data_store::{IAccountDataStore, IAccountProperties};
 use azurite_common::i_cleaner::ICleaner;
@@ -1001,6 +1003,29 @@ async fn i_authenticator_contract_preserves_none_success_and_error_results() {
         "AuthorizationFailure",
         "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
     );
+}
+
+#[tokio::test]
+async fn authentication_middleware_continues_after_false_results_until_a_later_success() {
+    let request = make_request(HttpMethod::GET, "/?comp=list");
+    let context = make_context(Operation::Service_ListContainersSegment, None, None);
+    let blob_context = BlobStorageContext::new(&context);
+    let response = GeneratedHttpResponse::default();
+    let factory = AuthenticationMiddlewareFactory::new(logger());
+    let authenticators = vec![
+        Arc::new(StubAuthenticator {
+            result: Ok(Some(false)),
+        }) as Arc<dyn IAuthenticator + Send + Sync>,
+        Arc::new(StubAuthenticator { result: Ok(None) }) as Arc<dyn IAuthenticator + Send + Sync>,
+        Arc::new(StubAuthenticator {
+            result: Ok(Some(true)),
+        }) as Arc<dyn IAuthenticator + Send + Sync>,
+    ];
+
+    assert!(factory
+        .authenticate(&blob_context, &request, &response, &authenticators)
+        .await
+        .expect("authentication should continue until success"));
 }
 
 #[test]

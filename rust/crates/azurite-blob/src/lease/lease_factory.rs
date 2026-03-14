@@ -16,6 +16,13 @@ use crate::lease::lease_leased_state::LeaseLeasedState;
 pub struct LeaseFactory;
 
 impl LeaseFactory {
+    pub fn create_lease_state(
+        lease: &ILease,
+        context: &Context,
+    ) -> Result<Box<dyn ILeaseState>, StorageError> {
+        Self::createLeaseState(lease.clone(), context.clone())
+    }
+
     pub fn createLeaseState(
         lease: ILease,
         context: Context,

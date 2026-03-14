@@ -202,6 +202,11 @@ impl IBlobHandler for BlobHandler {
                 response.insert_field(key.clone(), value.clone());
             }
 
+            // Remap properties keys to match response headersMapper field names
+            if let Some(v) = response.fields.remove("etag") {
+                response.insert_field("eTag", v);
+            }
+
             // Override with per-request query overrides
             if let Some(req_ref) = req.as_ref() {
                 override_prop_from_query(req_ref, &mut response, "rscc", "cacheControl");
@@ -1324,6 +1329,11 @@ impl BlobHandler {
             response.insert_field(key.clone(), value.clone());
         }
 
+        // Remap properties keys to match response headersMapper field names
+        if let Some(v) = response.fields.remove("etag") {
+            response.insert_field("eTag", v);
+        }
+
         // Apply per-request override query params (rscc, rscd, rsce, rscl, rsct)
         if let Some(req_ref) = req.as_ref() {
             override_prop_from_query(req_ref, &mut response, "rscc", "cacheControl");
@@ -1499,6 +1509,11 @@ impl BlobHandler {
 
         for (key, value) in &blob.properties {
             response.insert_field(key.clone(), value.clone());
+        }
+
+        // Remap properties keys to match response headersMapper field names
+        if let Some(v) = response.fields.remove("etag") {
+            response.insert_field("eTag", v);
         }
 
         if let Some(req_ref) = req.as_ref() {

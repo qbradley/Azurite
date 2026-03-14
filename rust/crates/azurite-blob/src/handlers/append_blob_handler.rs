@@ -217,11 +217,11 @@ impl IAppendBlobHandler for AppendBlobHandler {
         );
         properties.insert(
             "leaseStatus".to_string(),
-            GeneratedValue::String("Unlocked".to_string()),
+            GeneratedValue::String("unlocked".to_string()),
         );
         properties.insert(
             "leaseState".to_string(),
-            GeneratedValue::String("Available".to_string()),
+            GeneratedValue::String("available".to_string()),
         );
         properties.insert("serverEncrypted".to_string(), GeneratedValue::Bool(true));
         // Append blobs start unsealed

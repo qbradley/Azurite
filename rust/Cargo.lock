@@ -192,6 +192,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "futures",
  "md-5",
  "pretty_assertions",
  "quick-xml",

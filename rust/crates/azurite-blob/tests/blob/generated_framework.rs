@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
+use azurite_blob::errors::StorageErrorFactory;
 use azurite_blob::generated::artifacts::mappers::{Mapper, MapperType};
 use azurite_blob::generated::artifacts::models::{
     self, GeneratedBody, GeneratedResponse, GeneratedValue,
@@ -1737,6 +1738,49 @@ async fn stream_request_bodies_remain_streams_during_deserialization() {
             .as_deref(),
         Some("stream-payload")
     );
+}
+
+#[test]
+fn error_middleware_writes_storage_errors_without_collapsing_them_to_500() {
+    let logger = RecordingLogger::default();
+    let request = GeneratedHttpRequest::new(
+        HttpMethod::GET,
+        "http://127.0.0.1/",
+        "http://127.0.0.1",
+        "/",
+    );
+    let context = Context::from_holder(
+        Context::new_holder(),
+        "generated",
+        Some(request.clone()),
+        Some(GeneratedHttpResponse::default()),
+    );
+    let mut response = GeneratedHttpResponse::default();
+    let error = StorageErrorFactory::getAuthorizationFailure("ctx-403");
+
+    error_middleware(&context, &error, &request, &mut response, &logger)
+        .expect("storage error should convert into an HTTP response");
+    end_middleware(&context, &mut response, &logger);
+
+    assert_eq!(response.getStatusCode(), 403);
+    assert_eq!(
+        response
+            .getHeader("x-ms-error-code")
+            .and_then(|value| value.as_single())
+            .as_deref(),
+        Some("AuthorizationFailure")
+    );
+    assert_eq!(
+        response
+            .getHeader("content-type")
+            .and_then(|value| value.as_single())
+            .as_deref(),
+        Some("application/xml")
+    );
+    let body = response.getBodyStream().text();
+    assert!(body.contains("<Code>AuthorizationFailure</Code>"));
+    assert!(body.contains("<Message>Server failed to authenticate the request."));
+    assert!(response.getBodyStream().is_ended());
 }
 
 #[test]

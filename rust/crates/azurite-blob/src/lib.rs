@@ -33,6 +33,7 @@ pub mod lease;
 pub mod main_entry;
 pub mod middlewares;
 pub mod persistence;
+pub mod runtime_blob_metadata_store;
 pub mod utils;
 
 pub use blob_configuration::BlobConfiguration;

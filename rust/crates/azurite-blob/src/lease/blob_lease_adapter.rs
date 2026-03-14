@@ -10,6 +10,12 @@ use crate::persistence::BlobModel;
 pub struct BlobLeaseAdapter;
 
 impl BlobLeaseAdapter {
+    /// Back-compat constructor for legacy call sites that still use `new(&blob)`.
+    pub fn new(blob: &BlobModel) -> ILease {
+        let mut cloned = blob.clone();
+        Self::from_blob(&mut cloned)
+    }
+
     /// Constructs an `ILease` view of the blob's current lease state.
     pub fn from_blob(blob: &mut BlobModel) -> ILease {
         // Default missing leaseState / leaseStatus rather than throwing.

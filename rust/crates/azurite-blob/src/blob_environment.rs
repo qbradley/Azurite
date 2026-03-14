@@ -4,7 +4,10 @@ use std::{
 };
 
 use async_trait::async_trait;
-use azurite_common::{i_environment::IEnvironment, storage_error::StorageError};
+use azurite_common::{
+    environment::Environment as CommonEnvironment, i_environment::IEnvironment,
+    storage_error::StorageError,
+};
 use clap::{builder::ValueParser, Arg, ArgAction, Command};
 use tokio::fs;
 
@@ -347,6 +350,74 @@ impl IBlobEnvironment for BlobEnvironment {
 
     fn disableTelemetry(&self) -> bool {
         self.flags.disableTelemetry
+    }
+}
+
+#[allow(non_snake_case)]
+#[async_trait]
+impl IBlobEnvironment for CommonEnvironment {
+    fn blobHost(&self) -> Option<String> {
+        IEnvironment::blobHost(self)
+    }
+
+    fn blobPort(&self) -> Option<u16> {
+        IEnvironment::blobPort(self)
+    }
+
+    fn blobKeepAliveTimeout(&self) -> Option<u64> {
+        IEnvironment::blobKeepAliveTimeout(self)
+    }
+
+    async fn location(&self) -> Result<String, StorageError> {
+        IEnvironment::location(self).await
+    }
+
+    fn silent(&self) -> bool {
+        IEnvironment::silent(self)
+    }
+
+    fn loose(&self) -> bool {
+        IEnvironment::loose(self)
+    }
+
+    fn skipApiVersionCheck(&self) -> bool {
+        IEnvironment::skipApiVersionCheck(self)
+    }
+
+    fn cert(&self) -> Option<String> {
+        IEnvironment::cert(self)
+    }
+
+    fn key(&self) -> Option<String> {
+        IEnvironment::key(self)
+    }
+
+    fn pwd(&self) -> Option<String> {
+        IEnvironment::pwd(self)
+    }
+
+    async fn debug(&self) -> Result<Option<String>, StorageError> {
+        IEnvironment::debug(self).await
+    }
+
+    fn oauth(&self) -> Option<String> {
+        IEnvironment::oauth(self)
+    }
+
+    fn disableProductStyleUrl(&self) -> bool {
+        IEnvironment::disableProductStyleUrl(self)
+    }
+
+    fn inMemoryPersistence(&self) -> bool {
+        IEnvironment::inMemoryPersistence(self)
+    }
+
+    fn extentMemoryLimit(&self) -> Option<f64> {
+        IEnvironment::extentMemoryLimit(self)
+    }
+
+    fn disableTelemetry(&self) -> bool {
+        IEnvironment::disableTelemetry(self)
     }
 }
 

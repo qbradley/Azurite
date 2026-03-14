@@ -50,8 +50,8 @@ impl AuthenticationMiddleware {
         );
 
         for authenticator in authenticators {
-            if let Some(pass) = authenticator.validate(req, context).await? {
-                return Ok(pass);
+            if let Some(true) = authenticator.validate(req, context).await? {
+                return Ok(true);
             }
         }
 

@@ -10,6 +10,69 @@ pub struct StorageErrorFactory;
 
 #[allow(non_snake_case)]
 impl StorageErrorFactory {
+    pub fn get_container_not_found(contextID: Option<&str>) -> StorageError {
+        Self::getContainerNotFound(contextID)
+    }
+
+    pub fn get_container_already_exists(contextID: Option<&str>) -> StorageError {
+        Self::getContainerAlreadyExists(contextID)
+    }
+
+    pub fn get_blob_already_exists(contextID: Option<&str>) -> StorageError {
+        Self::getBlobAlreadyExists(contextID)
+    }
+
+    pub fn get_blob_not_found(contextID: Option<&str>) -> StorageError {
+        Self::getBlobNotFound(contextID)
+    }
+
+    pub fn get_blob_snapshot_operation_not_supported(contextID: Option<&str>) -> StorageError {
+        Self::getBlobSnapshotsPresent_hassnapshot(contextID.unwrap_or(DEFAULT_ID))
+    }
+
+    pub fn get_blob_archived(contextID: Option<&str>) -> StorageError {
+        Self::getBlobArchived(contextID, None)
+    }
+
+    pub fn get_blob_invalid_blob_type(contextID: Option<&str>) -> StorageError {
+        Self::getBlobInvalidBlobType(contextID)
+    }
+
+    pub fn get_blob_sealed(contextID: Option<&str>) -> StorageError {
+        Self::getBlobSealed(contextID)
+    }
+
+    pub fn get_invalid_blob_or_block(contextID: Option<&str>) -> StorageError {
+        Self::getInvalidBlobOrBlock(contextID)
+    }
+
+    pub fn get_invalid_block_list(contextID: Option<&str>) -> StorageError {
+        Self::getInvalidBlockList(contextID)
+    }
+
+    pub fn get_invalid_header_value(
+        contextID: Option<&str>,
+        additionalMessages: Option<BTreeMap<String, String>>,
+    ) -> StorageError {
+        Self::getInvalidHeaderValue(contextID, additionalMessages)
+    }
+
+    pub fn get_invalid_operation(contextID: Option<&str>, message: Option<&str>) -> StorageError {
+        Self::getInvalidOperation(contextID, message)
+    }
+
+    pub fn get_block_count_exceeds_limit(contextID: Option<&str>) -> StorageError {
+        Self::getBlockCountExceedsLimit(contextID)
+    }
+
+    pub fn get_append_position_condition_not_met(contextID: Option<&str>) -> StorageError {
+        Self::getAppendPositionConditionNotMet(contextID)
+    }
+
+    pub fn get_max_blob_size_condition_not_met(contextID: Option<&str>) -> StorageError {
+        Self::getMaxBlobSizeConditionNotMet(contextID)
+    }
+
     pub fn getContainerNotFound(contextID: Option<&str>) -> StorageError {
         StorageError::new(
             404,

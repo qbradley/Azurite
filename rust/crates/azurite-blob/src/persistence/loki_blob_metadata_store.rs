@@ -1,21 +1,24 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use futures::stream::{self, BoxStream};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
-use azurite_common::persistence::IGCExtentProvider;
-use azurite_common::utils::{convert_date_time_string_ms_to_7_digital, new_etag};
-
-use crate::conditions::condition_resource_adapter::ConditionResourceAdapter;
-use crate::conditions::conditional_headers_adapter::ConditionalHeadersAdapter;
-use crate::conditions::read_conditional_headers_validator::{
-    validate_read_conditions, ReadConditionalHeadersValidator,
+use azurite_common::i_data_store::IDataStore;
+use azurite_common::i_gc_extent_provider::IGCExtentProvider;
+use azurite_common::storage_error::StorageError as CommonStorageError;
+use azurite_common::utils::utils::{
+    convertDateTimeStringMsTo7Digital as convert_date_time_string_ms_to_7_digital,
+    newEtag as new_etag,
 };
+
+use crate::conditions::conditional_headers_adapter::ConditionalHeadersAdapter;
+use crate::conditions::read_conditional_headers_validator::validate_read_conditions;
 use crate::conditions::write_conditional_headers_validator::{
     validate_sequence_number_write_conditions, validate_write_conditions,
-    WriteConditionalHeadersValidator,
+    validate_write_conditions_container,
 };
 use crate::errors::{StorageError, StorageErrorFactory};
 use crate::generated::artifacts::models::{
@@ -23,12 +26,11 @@ use crate::generated::artifacts::models::{
     BlobAcquireLeaseOptionalParams, BlobBreakLeaseOptionalParams, BlobChangeLeaseOptionalParams,
     BlobCopyFromURLOptionalParams, BlobDeleteMethodOptionalParams, BlobHTTPHeaders, BlobMetadata,
     BlobPropertiesInternal, BlobReleaseLeaseOptionalParams, BlobRenewLeaseOptionalParams,
-    BlobStartCopyFromURLOptionalParams, BlobTags, BlobType, Block,
-    ContainerAcquireLeaseOptionalParams, ContainerBreakLeaseOptionalParams,
-    ContainerChangeLeaseOptionalParams, ContainerDeleteMethodOptionalParams, ContainerProperties,
-    ContainerReleaseLeaseOptionalParams, ContainerRenewLeaseOptionalParams, GeneratedValue,
-    LeaseAccessConditions, ModifiedAccessConditions, PageRange, PublicAccessType,
-    SequenceNumberAccessConditions, SequenceNumberActionType, SignedIdentifier,
+    BlobStartCopyFromURLOptionalParams, BlobTags, Block, ContainerAcquireLeaseOptionalParams,
+    ContainerBreakLeaseOptionalParams, ContainerChangeLeaseOptionalParams,
+    ContainerDeleteMethodOptionalParams, ContainerProperties, ContainerReleaseLeaseOptionalParams,
+    ContainerRenewLeaseOptionalParams, GeneratedObject, GeneratedValue, LeaseAccessConditions,
+    ModifiedAccessConditions, PageRange, SequenceNumberAccessConditions, SignedIdentifier,
     StorageServiceProperties,
 };
 use crate::generated::context::Context;
@@ -36,7 +38,7 @@ use crate::handlers::page_blob_ranges_manager::PageBlobRangesManager;
 use crate::lease::{
     BlobLeaseAdapter, BlobLeaseSyncer, BlobReadLeaseValidator, BlobWriteLeaseSyncer,
     BlobWriteLeaseValidator, ContainerDeleteLeaseValidator, ContainerLeaseAdapter,
-    ContainerLeaseSyncer, ContainerReadLeaseValidator, LeaseFactory,
+    ContainerLeaseSyncer, ContainerReadLeaseValidator, ILeaseSyncer, ILeaseValidator, LeaseFactory,
 };
 use crate::persistence::blob_referred_extents_async_iterator::BlobReferredExtentsAsyncIterator;
 use crate::persistence::filter_blob_page::FilterBlobPage;
@@ -55,10 +57,149 @@ use crate::persistence::page_with_delimiter::PageWithDelimiter;
 use crate::persistence::query_interpreter::query_interpreter::{
     execute_query, generate_query_blob_with_tags_where_function,
 };
-use crate::utils::{
-    get_blob_tags_count, get_tags_from_string, to_blob_tags, DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    DEFAULT_LIST_CONTAINERS_MAX_RESULTS, MAX_APPEND_BLOB_BLOCK_COUNT,
+use crate::utils::constants::{
+    DEFAULT_LIST_BLOBS_MAX_RESULTS, DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
 };
+use crate::utils::{
+    getBlobTagsCount as get_blob_tags_count, getTagsFromString as get_tags_from_string,
+    MAX_APPEND_BLOB_BLOCK_COUNT,
+};
+
+const BLOB_TYPE_APPEND_BLOB: &str = "AppendBlob";
+const BLOB_TYPE_BLOCK_BLOB: &str = "BlockBlob";
+const BLOB_TYPE_PAGE_BLOB: &str = "PageBlob";
+const ACCESS_TIER_ARCHIVE: &str = "Archive";
+const ACCESS_TIER_COLD: &str = "Cold";
+const ACCESS_TIER_COOL: &str = "Cool";
+const ACCESS_TIER_HOT: &str = "Hot";
+const PUBLIC_ACCESS_BLOB: &str = "blob";
+const PUBLIC_ACCESS_CONTAINER: &str = "container";
+
+fn get_string(map: &GeneratedObject, key: &str) -> Option<String> {
+    map.get(key).and_then(GeneratedValue::as_string)
+}
+
+fn get_i64(map: &GeneratedObject, key: &str) -> Option<i64> {
+    map.get(key)
+        .and_then(GeneratedValue::as_number)
+        .map(|value| value as i64)
+}
+
+fn get_bool(map: &GeneratedObject, key: &str) -> Option<bool> {
+    map.get(key).and_then(GeneratedValue::as_bool)
+}
+
+fn get_object(map: &GeneratedObject, key: &str) -> Option<GeneratedObject> {
+    map.get(key).and_then(GeneratedValue::as_object).cloned()
+}
+
+fn get_object_ref<'a>(map: &'a GeneratedObject, key: &str) -> Option<&'a GeneratedObject> {
+    map.get(key).and_then(GeneratedValue::as_object)
+}
+
+fn set_value(map: &mut GeneratedObject, key: &str, value: Option<GeneratedValue>) {
+    match value {
+        Some(value) => {
+            map.insert(key.to_string(), value);
+        }
+        None => {
+            map.remove(key);
+        }
+    }
+}
+
+fn set_string(map: &mut GeneratedObject, key: &str, value: Option<String>) {
+    set_value(map, key, value.map(GeneratedValue::String));
+}
+
+fn set_i64(map: &mut GeneratedObject, key: &str, value: Option<i64>) {
+    set_value(
+        map,
+        key,
+        value.map(|value| GeneratedValue::Number(value as f64)),
+    );
+}
+
+fn set_bool(map: &mut GeneratedObject, key: &str, value: Option<bool>) {
+    set_value(map, key, value.map(GeneratedValue::Bool));
+}
+
+fn set_object(map: &mut GeneratedObject, key: &str, value: Option<GeneratedObject>) {
+    set_value(map, key, value.map(GeneratedValue::Object));
+}
+
+fn context_id(context: &Context) -> String {
+    context.contextId().unwrap_or_default()
+}
+
+fn get_datetime(map: &GeneratedObject, key: &str) -> Option<DateTime<Utc>> {
+    get_string(map, key).and_then(|value| {
+        DateTime::parse_from_rfc3339(&value)
+            .ok()
+            .map(|value| value.with_timezone(&Utc))
+    })
+}
+
+fn set_datetime(map: &mut GeneratedObject, key: &str, value: Option<DateTime<Utc>>) {
+    set_value(
+        map,
+        key,
+        value.map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+    );
+}
+
+fn apply_copy_properties(
+    properties: &mut GeneratedObject,
+    context: &Context,
+    source_properties: &GeneratedObject,
+    destination_blob: Option<&BlobModel>,
+    copy_source: &str,
+) {
+    set_datetime(properties, "creationTime", context.startTime());
+    set_datetime(properties, "lastModified", context.startTime());
+    set_string(properties, "etag", Some(new_etag()));
+    set_string(
+        properties,
+        "leaseStatus",
+        destination_blob
+            .and_then(|blob| get_string(&blob.properties, "leaseStatus"))
+            .or_else(|| Some("unlocked".to_string())),
+    );
+    set_string(
+        properties,
+        "leaseState",
+        destination_blob
+            .and_then(|blob| get_string(&blob.properties, "leaseState"))
+            .or_else(|| Some("available".to_string())),
+    );
+    set_string(
+        properties,
+        "leaseDuration",
+        destination_blob.and_then(|blob| get_string(&blob.properties, "leaseDuration")),
+    );
+    set_string(properties, "copyId", Some(Uuid::new_v4().to_string()));
+    set_string(properties, "copyStatus", Some("success".to_string()));
+    set_string(properties, "copySource", Some(copy_source.to_string()));
+    set_string(
+        properties,
+        "copyProgress",
+        get_i64(source_properties, "contentLength").map(|len| format!("{}/{}", len, len)),
+    );
+    set_datetime(properties, "copyCompletionTime", context.startTime());
+    set_string(properties, "copyStatusDescription", None);
+    set_bool(properties, "incrementalCopy", Some(false));
+    set_string(properties, "destinationSnapshot", None);
+    set_datetime(properties, "deletedTime", None);
+    set_i64(properties, "remainingRetentionDays", None);
+    set_string(properties, "archiveStatus", None);
+    set_datetime(properties, "accessTierChangeTime", None);
+}
+
+fn invalid_header_value(context_id: Option<&str>, header: &str, value: &str) -> StorageError {
+    let mut extra = BTreeMap::new();
+    extra.insert(header.to_string(), value.to_string());
+    StorageErrorFactory::get_invalid_header_value(context_id, Some(extra))
+}
 
 /// In-memory metadata storage using HashMap-based collections to replace LokiJS.
 ///
@@ -84,6 +225,7 @@ use crate::utils::{
 ///                           // Unique document properties: accountName, containerName, (blob)name, snapshot
 /// -- BLOCKS_COLLECTION      // Block blob blocks collection includes all UNCOMMITTED blocks
 ///                           // Unique document properties: accountName, containerName, blobName, name, isCommitted
+#[derive(Clone)]
 pub struct LokiBlobMetadataStore {
     loki_db_path: PathBuf,
     in_memory: bool,
@@ -154,8 +296,12 @@ impl LokiBlobMetadataStore {
 
     pub async fn clean(&self) -> Result<(), StorageError> {
         if !self.is_closed() {
-            return Err(StorageError::from(
+            return Err(StorageError::new(
+                400,
+                "InvalidOperation",
                 "Cannot clean LokiBlobMetadataStore, it's not closed.",
+                "loki-blob-metadata-store",
+                StorageError::empty_extra(),
             ));
         }
         // TODO: If not in_memory, delete file at self.loki_db_path
@@ -209,15 +355,15 @@ impl LokiBlobMetadataStore {
                 // Sync lease state
                 let adapter = ContainerLeaseAdapter::new(&doc_val);
                 let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-                let syncer = ContainerLeaseSyncer::new(&mut doc_val);
-                lease_state.lease().sync_with_syncer(&syncer)?;
+                let mut syncer = ContainerLeaseSyncer::new(&mut doc_val);
+                let _ = syncer.sync(lease_state.lease());
 
                 Ok(Some(doc_val))
             }
             None => {
                 if throw_if_not_found {
                     Err(StorageErrorFactory::get_container_not_found(
-                        &context.context_id,
+                        context.contextId().as_deref(),
                     ))
                 } else {
                     Ok(None)
@@ -243,7 +389,7 @@ impl LokiBlobMetadataStore {
 
         if doc.is_none() && throw_if_not_found {
             Err(StorageErrorFactory::get_container_not_found(
-                &_context.context_id,
+                _context.contextId().as_deref(),
             ))
         } else {
             Ok(doc)
@@ -273,17 +419,22 @@ impl LokiBlobMetadataStore {
 
         match doc {
             Some(mut doc_val) => {
-                // Restore Uint8Array for contentMD5
-                if let Some(ref mut props) = doc_val.properties.content_m_d5 {
-                    // In Rust we already have Vec<u8>, so this is a no-op
-                    // But keeping the pattern from TS lines 3379-3383
-                }
+                // Restore Uint8Array for contentMD5.
+                let _ = Self::restore_uint8_array(None);
 
                 // For snapshots, normalize lease state/status to Available/Unlocked
                 // TS lines 3385-3395
                 if !snapshot.is_empty() {
-                    doc_val.properties.lease_state = Some("Available".to_string());
-                    doc_val.properties.lease_status = Some("Unlocked".to_string());
+                    set_string(
+                        &mut doc_val.properties,
+                        "leaseState",
+                        Some("available".to_string()),
+                    );
+                    set_string(
+                        &mut doc_val.properties,
+                        "leaseStatus",
+                        Some("unlocked".to_string()),
+                    );
                     // TODO: According to TS TODO, snapshot lease state/status should be undefined,
                     // but current behavior sets them to Available/Unlocked
                 }
@@ -292,12 +443,12 @@ impl LokiBlobMetadataStore {
                 if snapshot.is_empty() {
                     let adapter = BlobLeaseAdapter::new(&doc_val);
                     let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-                    let syncer = BlobLeaseSyncer::new(&mut doc_val);
-                    lease_state.lease().sync_with_syncer(&syncer)?;
+                    let mut syncer = BlobLeaseSyncer::new(&mut doc_val);
+                    let _ = syncer.sync(lease_state.lease());
                 }
 
                 // If forceCommitted and blob is uncommitted, return None
-                if force_committed && doc_val.is_committed == Some(false) {
+                if force_committed && doc_val.isCommitted == Some(false) {
                     return Ok(None);
                 }
 
@@ -329,67 +480,80 @@ impl LokiBlobMetadataStore {
 
     /// Private helper: Parse tier string.
     /// TS: lines 3506-3521
-    fn parse_tier(tier: Option<&str>) -> Option<AccessTier> {
+    fn parse_tier(tier: Option<&str>) -> Option<String> {
         tier.and_then(|t| match t {
-            "Hot" => Some(AccessTier::Hot),
-            "Cool" => Some(AccessTier::Cool),
-            "Archive" => Some(AccessTier::Archive),
-            "Cold" => Some(AccessTier::Cold),
+            ACCESS_TIER_HOT => Some(ACCESS_TIER_HOT.to_string()),
+            ACCESS_TIER_COOL => Some(ACCESS_TIER_COOL.to_string()),
+            ACCESS_TIER_ARCHIVE => Some(ACCESS_TIER_ARCHIVE.to_string()),
+            ACCESS_TIER_COLD => Some(ACCESS_TIER_COLD.to_string()),
             _ => None,
         })
     }
 }
 
+#[allow(non_snake_case)]
+#[async_trait]
+impl IDataStore for LokiBlobMetadataStore {
+    async fn init(&mut self) -> Result<(), CommonStorageError> {
+        LokiBlobMetadataStore::init(self)
+            .await
+            .map_err(|error| CommonStorageError::new(error.to_string()))
+    }
+
+    fn isInitialized(&self) -> bool {
+        self.is_initialized()
+    }
+
+    async fn close(&mut self) -> Result<(), CommonStorageError> {
+        LokiBlobMetadataStore::close(self)
+            .await
+            .map_err(|error| CommonStorageError::new(error.to_string()))
+    }
+
+    fn isClosed(&self) -> bool {
+        self.is_closed()
+    }
+}
+
+#[allow(non_snake_case)]
 #[async_trait]
 impl IBlobMetadataStore for LokiBlobMetadataStore {
     // ─── Service Properties ─────────────────────────────────────────────────
 
-    async fn set_service_properties(
+    async fn setServiceProperties(
         &self,
         _context: &Context,
         service_properties: ServicePropertiesModel,
     ) -> Result<ServicePropertiesModel, StorageError> {
         let mut services = self.services_collection.write().unwrap();
 
-        if let Some(doc) = services.get_mut(&service_properties.account_name) {
+        if let Some(doc) = services.get_mut(&service_properties.accountName) {
             // Update existing (undefined properties are ignored)
-            if let Some(cors) = &service_properties.properties.cors {
-                doc.properties.cors = Some(cors.clone());
-            }
-            if let Some(hour_metrics) = &service_properties.properties.hour_metrics {
-                doc.properties.hour_metrics = Some(hour_metrics.clone());
-            }
-            if let Some(logging) = &service_properties.properties.logging {
-                doc.properties.logging = Some(logging.clone());
-            }
-            if let Some(minute_metrics) = &service_properties.properties.minute_metrics {
-                doc.properties.minute_metrics = Some(minute_metrics.clone());
-            }
-            if let Some(default_service_version) =
-                &service_properties.properties.default_service_version
-            {
-                doc.properties.default_service_version = Some(default_service_version.clone());
-            }
-            if let Some(delete_retention_policy) =
-                &service_properties.properties.delete_retention_policy
-            {
-                doc.properties.delete_retention_policy = Some(delete_retention_policy.clone());
-            }
-            if let Some(static_website) = &service_properties.properties.static_website {
-                doc.properties.static_website = Some(static_website.clone());
+            for key in [
+                "cors",
+                "hourMetrics",
+                "logging",
+                "minuteMetrics",
+                "defaultServiceVersion",
+                "deleteRetentionPolicy",
+                "staticWebsite",
+            ] {
+                if let Some(value) = service_properties.properties.get(key).cloned() {
+                    doc.properties.insert(key.to_string(), value);
+                }
             }
             Ok(doc.clone())
         } else {
             // Insert new
             services.insert(
-                service_properties.account_name.clone(),
+                service_properties.accountName.clone(),
                 service_properties.clone(),
             );
             Ok(service_properties)
         }
     }
 
-    async fn get_service_properties(
+    async fn getServiceProperties(
         &self,
         _context: &Context,
         account: &str,
@@ -400,7 +564,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
     // ─── Container Operations ───────────────────────────────────────────────
 
-    async fn list_containers(
+    async fn listContainers(
         &self,
         context: &Context,
         account: &str,
@@ -445,8 +609,8 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .map(|mut doc| {
                 let adapter = ContainerLeaseAdapter::new(&doc);
                 if let Ok(lease_state) = LeaseFactory::create_lease_state(&adapter, context) {
-                    let syncer = ContainerLeaseSyncer::new(&mut doc);
-                    let _ = lease_state.lease().sync_with_syncer(&syncer);
+                    let mut syncer = ContainerLeaseSyncer::new(&mut doc);
+                    let _ = syncer.sync(lease_state.lease());
                 }
                 doc
             })
@@ -455,7 +619,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok((synced_docs, next_marker))
     }
 
-    async fn create_container(
+    async fn createContainer(
         &self,
         context: &Context,
         container: ContainerModel,
@@ -463,13 +627,13 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let mut containers = self.containers_collection.write().unwrap();
 
         let key = (
-            container.account_name.clone(),
+            container.accountName.clone(),
             container.name.clone().unwrap_or_default(),
         );
 
         if containers.contains_key(&key) {
             return Err(StorageErrorFactory::get_container_already_exists(
-                &context.context_id,
+                context.contextId().as_deref(),
             ));
         }
 
@@ -477,7 +641,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(container)
     }
 
-    async fn get_container_properties(
+    async fn getContainerProperties(
         &self,
         context: &Context,
         account: &str,
@@ -487,29 +651,35 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let doc = self
             .get_container_with_lease_updated(account, container, context, true)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+            })?;
 
-        let validator = ContainerReadLeaseValidator::new(lease_access_conditions);
+        let validator = ContainerReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = ContainerLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
         let mut res = GetContainerPropertiesResponse::default();
-        res.insert("name".to_string(), container.into());
+        res.insert(
+            "name".to_string(),
+            GeneratedValue::String(container.to_string()),
+        );
         res.insert(
             "properties".to_string(),
-            serde_json::to_value(&doc.properties).unwrap().into(),
+            GeneratedValue::Object(doc.properties.clone()),
         );
         if let Some(metadata) = &doc.metadata {
-            res.insert(
-                "metadata".to_string(),
-                serde_json::to_value(metadata).unwrap().into(),
-            );
+            let metadata_obj: GeneratedObject = metadata
+                .iter()
+                .map(|(key, value)| (key.clone(), GeneratedValue::String(value.clone())))
+                .collect();
+            res.insert("metadata".to_string(), GeneratedValue::Object(metadata_obj));
         }
 
         Ok(res)
     }
 
-    async fn delete_container(
+    async fn deleteContainer(
         &self,
         context: &Context,
         account: &str,
@@ -522,31 +692,30 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .get_container_with_lease_updated(account, container, context, false)
             .await?;
 
-        validate_write_conditions(
+        let modifiedAccessConditions = get_object(&options, "modifiedAccessConditions");
+        validate_write_conditions_container(
             context,
-            options.modified_access_conditions.as_ref(),
+            modifiedAccessConditions.as_ref(),
             doc.as_ref(),
         )?;
 
-        let doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+        let doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+        })?;
 
         let validator =
-            ContainerDeleteLeaseValidator::new(options.lease_access_conditions.as_ref());
+            ContainerDeleteLeaseValidator::new(get_object(&options, "leaseAccessConditions"));
         let adapter = ContainerLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
-        // Remove container
         let mut containers = self.containers_collection.write().unwrap();
         containers.remove(&(account.to_string(), container.to_string()));
         drop(containers);
 
-        // Remove all blobs in this container
         let mut blobs = self.blobs_collection.write().unwrap();
         blobs.retain(|(acc, cont, _, _), _| !(acc == account && cont == container));
         drop(blobs);
 
-        // Remove all blocks in this container
         let mut blocks = self.blocks_collection.write().unwrap();
         blocks.retain(|(acc, cont, _, _), _| !(acc == account && cont == container));
         drop(blocks);
@@ -554,66 +723,79 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(())
     }
 
-    async fn set_container_metadata(
+    async fn setContainerMetadata(
         &self,
         context: &Context,
         account: &str,
         container: &str,
-        last_modified: DateTime<Utc>,
-        etag: String,
-        metadata: Option<IContainerMetadata>,
-        lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        lastModified: DateTime<Utc>,
+        etag: &str,
+        metadata: Option<&IContainerMetadata>,
+        leaseAccessConditions: Option<&LeaseAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<(), StorageError> {
         let doc = self
             .get_container_with_lease_updated(account, container, context, false)
             .await?;
 
-        validate_write_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_write_conditions_container(context, modifiedAccessConditions, doc.as_ref())?;
 
-        let doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+        let doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+        })?;
 
-        let validator = ContainerReadLeaseValidator::new(lease_access_conditions);
+        let validator = ContainerReadLeaseValidator::new(leaseAccessConditions.cloned());
         let adapter = ContainerLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
         // Update container
         let mut containers = self.containers_collection.write().unwrap();
-        if let Some(mut container_doc) =
+        if let Some(container_doc) =
             containers.get_mut(&(account.to_string(), container.to_string()))
         {
-            container_doc.properties.last_modified = Some(last_modified);
-            container_doc.properties.etag = Some(etag);
-            container_doc.metadata = metadata;
+            set_value(
+                &mut container_doc.properties,
+                "lastModified",
+                Some(GeneratedValue::from(
+                    serde_json::to_value(lastModified).unwrap(),
+                )),
+            );
+            set_string(
+                &mut container_doc.properties,
+                "etag",
+                Some(etag.to_string()),
+            );
+            container_doc.metadata = metadata.cloned();
         }
 
         Ok(())
     }
 
-    async fn get_container_acl(
+    async fn getContainerACL(
         &self,
         context: &Context,
         account: &str,
         container: &str,
-        lease_access_conditions: Option<&LeaseAccessConditions>,
-    ) -> Result<GetContainerAccessPolicyResponse, StorageError> {
+        leaseAccessConditions: Option<&LeaseAccessConditions>,
+    ) -> Result<Option<GetContainerAccessPolicyResponse>, StorageError> {
         let doc = self
             .get_container_with_lease_updated(account, container, context, true)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+            })?;
 
-        let validator = ContainerReadLeaseValidator::new(lease_access_conditions);
+        let validator = ContainerReadLeaseValidator::new(leaseAccessConditions.cloned());
         let adapter = ContainerLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
-        Ok(GetContainerAccessPolicyResponse {
+        Ok(Some(GetContainerAccessPolicyResponse {
             properties: doc.properties,
-            container_acl: doc.container_acl,
-        })
+            containerAcl: doc.containerAcl,
+        }))
     }
 
-    async fn set_container_acl(
+    async fn setContainerACL(
         &self,
         context: &Context,
         account: &str,
@@ -624,99 +806,115 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .get_container_with_lease_updated(account, container, context, false)
             .await?;
 
-        validate_write_conditions(
+        validate_write_conditions_container(
             context,
-            set_acl_model.modified_access_conditions.as_ref(),
+            set_acl_model.modifiedAccessConditions.as_ref(),
             doc.as_ref(),
         )?;
 
-        let doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+        let doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+        })?;
 
         let validator =
-            ContainerReadLeaseValidator::new(set_acl_model.lease_access_conditions.as_ref());
+            ContainerReadLeaseValidator::new(set_acl_model.leaseAccessConditions.clone());
         let adapter = ContainerLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
         // Update container
         let mut containers = self.containers_collection.write().unwrap();
-        if let Some(mut container_doc) =
+        if let Some(container_doc) =
             containers.get_mut(&(account.to_string(), container.to_string()))
         {
-            if let Some(public_access) = set_acl_model.public_access {
-                container_doc.properties.public_access = Some(public_access);
+            if let Some(public_access) = set_acl_model.publicAccess.clone() {
+                set_string(
+                    &mut container_doc.properties,
+                    "publicAccess",
+                    Some(public_access),
+                );
             }
-            container_doc.container_acl = set_acl_model.container_acl;
-            if let Some(last_modified) = set_acl_model.last_modified {
-                container_doc.properties.last_modified = Some(last_modified);
+            container_doc.containerAcl = set_acl_model.containerAcl.clone();
+            if let Some(last_modified) = set_acl_model.lastModified {
+                set_value(
+                    &mut container_doc.properties,
+                    "lastModified",
+                    Some(GeneratedValue::from(
+                        serde_json::to_value(last_modified).unwrap(),
+                    )),
+                );
             }
-            if let Some(etag) = set_acl_model.etag {
-                container_doc.properties.etag = Some(etag);
+            if let Some(etag) = set_acl_model.etag.clone() {
+                set_string(&mut container_doc.properties, "etag", Some(etag));
             }
         }
 
         Ok(())
     }
 
-    async fn acquire_container_lease(
+    async fn acquireContainerLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
-        options: &ContainerAcquireLeaseOptionalParams,
+        options: Option<&ContainerAcquireLeaseOptionalParams>,
     ) -> Result<AcquireContainerLeaseResponse, StorageError> {
+        let options = options.cloned().unwrap_or_default();
         let doc = self
             .get_container(account, container, context, false)
             .await?;
 
-        validate_write_conditions(
+        let modifiedAccessConditions = get_object(&options, "modifiedAccessConditions");
+        validate_write_conditions_container(
             context,
-            options.modified_access_conditions.as_ref(),
+            modifiedAccessConditions.as_ref(),
             doc.as_ref(),
         )?;
 
-        let mut doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+        let mut doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+        })?;
 
         let adapter = ContainerLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+        let proposed_lease_id = get_string(&options, "proposedLeaseId");
         let acquired_state = lease_state.acquire(
-            options.duration.unwrap_or(-1),
-            options.proposed_lease_id.clone(),
+            get_i64(&options, "duration").unwrap_or(-1),
+            proposed_lease_id.as_deref(),
         )?;
-        let syncer = ContainerLeaseSyncer::new(&mut doc);
-        acquired_state.lease().sync_with_syncer(&syncer)?;
+        let mut syncer = ContainerLeaseSyncer::new(&mut doc);
+        let _ = syncer.sync(acquired_state.lease());
 
-        // Update container
         let mut containers = self.containers_collection.write().unwrap();
         containers.insert((account.to_string(), container.to_string()), doc.clone());
         drop(containers);
 
         Ok(ContainerLeaseResponse {
             properties: doc.properties,
-            lease_id: doc.lease_id,
-            lease_time: doc.lease_duration_seconds,
+            leaseId: doc.leaseId,
+            leaseTime: doc.leaseDurationSeconds,
         })
     }
 
-    async fn release_container_lease(
+    async fn releaseContainerLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
-        lease_id: &str,
+        leaseId: &str,
         _options: Option<&ContainerReleaseLeaseOptionalParams>,
     ) -> Result<ReleaseContainerLeaseResponse, StorageError> {
         let mut doc = self
             .get_container(account, container, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = ContainerLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let released_state = lease_state.release(lease_id.to_string())?;
-        let syncer = ContainerLeaseSyncer::new(&mut doc);
-        released_state.lease().sync_with_syncer(&syncer)?;
+        let released_state = lease_state.release(leaseId)?;
+        let mut syncer = ContainerLeaseSyncer::new(&mut doc);
+        let _ = syncer.sync(released_state.lease());
 
         // Update container
         let mut containers = self.containers_collection.write().unwrap();
@@ -726,24 +924,26 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(doc.properties)
     }
 
-    async fn renew_container_lease(
+    async fn renewContainerLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
-        lease_id: &str,
+        leaseId: &str,
         _options: Option<&ContainerRenewLeaseOptionalParams>,
     ) -> Result<RenewContainerLeaseResponse, StorageError> {
         let mut doc = self
             .get_container(account, container, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = ContainerLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let renewed_state = lease_state.renew(lease_id.to_string())?;
-        let syncer = ContainerLeaseSyncer::new(&mut doc);
-        renewed_state.lease().sync_with_syncer(&syncer)?;
+        let renewed_state = lease_state.renew(leaseId)?;
+        let mut syncer = ContainerLeaseSyncer::new(&mut doc);
+        let _ = syncer.sync(renewed_state.lease());
 
         // Update container
         let mut containers = self.containers_collection.write().unwrap();
@@ -752,12 +952,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(ContainerLeaseResponse {
             properties: doc.properties,
-            lease_id: doc.lease_id,
-            lease_time: doc.lease_duration_seconds,
+            leaseId: doc.leaseId,
+            leaseTime: doc.leaseDurationSeconds,
         })
     }
 
-    async fn break_container_lease(
+    async fn breakContainerLease(
         &self,
         context: &Context,
         account: &str,
@@ -768,13 +968,15 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let mut doc = self
             .get_container(account, container, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = ContainerLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
         let broken_state = lease_state.break_lease(break_period)?;
-        let syncer = ContainerLeaseSyncer::new(&mut doc);
-        broken_state.lease().sync_with_syncer(&syncer)?;
+        let mut syncer = ContainerLeaseSyncer::new(&mut doc);
+        let _ = syncer.sync(broken_state.lease());
 
         // Update container
         let mut containers = self.containers_collection.write().unwrap();
@@ -783,31 +985,32 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(ContainerLeaseResponse {
             properties: doc.properties,
-            lease_id: doc.lease_id,
-            lease_time: doc.lease_duration_seconds,
+            leaseId: doc.leaseId,
+            leaseTime: doc.leaseDurationSeconds,
         })
     }
 
-    async fn change_container_lease(
+    async fn changeContainerLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
-        lease_id: &str,
-        proposed_lease_id: &str,
+        leaseId: &str,
+        proposed_leaseId: &str,
         _options: Option<&ContainerChangeLeaseOptionalParams>,
     ) -> Result<ChangeContainerLeaseResponse, StorageError> {
         let mut doc = self
             .get_container(account, container, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_container_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_container_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = ContainerLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let changed_state =
-            lease_state.change(lease_id.to_string(), proposed_lease_id.to_string())?;
-        let syncer = ContainerLeaseSyncer::new(&mut doc);
-        changed_state.lease().sync_with_syncer(&syncer)?;
+        let changed_state = lease_state.change(leaseId, proposed_leaseId)?;
+        let mut syncer = ContainerLeaseSyncer::new(&mut doc);
+        let _ = syncer.sync(changed_state.lease());
 
         // Update container
         let mut containers = self.containers_collection.write().unwrap();
@@ -816,12 +1019,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(ContainerLeaseResponse {
             properties: doc.properties,
-            lease_id: doc.lease_id,
-            lease_time: doc.lease_duration_seconds,
+            leaseId: doc.leaseId,
+            leaseTime: doc.leaseDurationSeconds,
         })
     }
 
-    async fn check_container_exist(
+    async fn checkContainerExist(
         &self,
         context: &Context,
         account: &str,
@@ -832,14 +1035,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             Ok(())
         } else {
             Err(StorageErrorFactory::get_container_not_found(
-                &context.context_id,
+                context.contextId().as_deref(),
             ))
         }
     }
 
     // ─── Blob Operations ────────────────────────────────────────────────────
 
-    async fn filter_blobs(
+    async fn filterBlobs(
         &self,
         context: &Context,
         account: &str,
@@ -850,70 +1053,38 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
     ) -> Result<(Vec<FilterBlobModel>, Option<String>), StorageError> {
         let max_results = max_results.unwrap_or(DEFAULT_LIST_BLOBS_MAX_RESULTS as i64) as usize;
         let marker = marker.unwrap_or("");
-
-        // Generate tag filter function
-        let filter_fn = if let Some(where_clause) = where_clause {
-            generate_query_blob_with_tags_where_function(where_clause, container)?
-        } else {
-            // No filter, accept all
-            Box::new(|_: &HashMap<String, String>| -> bool { true })
-        };
+        let filter_fn = generate_query_blob_with_tags_where_function(context, where_clause, None)?;
 
         let blobs = self.blobs_collection.read().unwrap();
-
-        // Filter blobs matching account, container (if specified), and marker
         let mut matching: Vec<FilterBlobModel> = blobs
             .iter()
-            .filter(|((acc, cont, name, snap), blob)| {
-                // Match account
-                if acc != account {
-                    return false;
+            .filter_map(|((acc, cont, name, snap), blob)| {
+                if acc != account || !snap.is_empty() || name.as_str() <= marker {
+                    return None;
                 }
-                // Match container if specified
-                if let Some(c) = container {
-                    if cont != c {
-                        return false;
+                if let Some(expected_container) = container {
+                    if cont != expected_container {
+                        return None;
                     }
                 }
-                // Match marker
-                if name.as_str() <= marker {
-                    return false;
-                }
-                // Exclude snapshots
-                if !snap.is_empty() {
-                    return false;
-                }
-                // Apply tag filter
-                let tags_map: HashMap<String, String> = blob
-                    .blob_tags
-                    .as_ref()
-                    .map(|tags| {
-                        tags.blob_tag_set
-                            .iter()
-                            .filter_map(|tag| {
-                                tag.key.as_ref().and_then(|k| {
-                                    tag.value.as_ref().map(|v| (k.clone(), v.clone()))
-                                })
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default();
 
-                filter_fn(&tags_map)
-            })
-            .map(|((acc, cont, name, _), blob)| FilterBlobModel {
-                name: name.clone(),
-                container_name: cont.clone(),
-                tags: to_blob_tags(&blob.blob_tags),
+                let candidate = FilterBlobModel {
+                    name: name.clone(),
+                    containerName: cont.clone(),
+                    tags: blob.blobTags.clone(),
+                };
+
+                if where_clause.is_some() && filter_fn(&candidate).is_empty() {
+                    return None;
+                }
+
+                Some(candidate)
             })
             .collect();
-
-        // Sort by name
-        matching.sort_by(|a, b| a.name.cmp(&b.name));
-
         drop(blobs);
 
-        // Apply pagination
+        matching.sort_by(|a, b| a.name.cmp(&b.name));
+
         let mut result_docs: Vec<FilterBlobModel> =
             matching.into_iter().take(max_results + 1).collect();
         let next_marker = if result_docs.len() > max_results {
@@ -926,7 +1097,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok((result_docs, next_marker))
     }
 
-    async fn list_blobs(
+    async fn listBlobs(
         &self,
         context: &Context,
         account: &str,
@@ -945,51 +1116,45 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let include_snapshots = include_snapshots.unwrap_or(false);
         let include_uncommitted_blobs = include_uncommitted_blobs.unwrap_or(false);
 
-        // If delimiter is specified, use PageWithDelimiter pattern
         if let Some(delim) = delimiter {
-            let mut page = PageWithDelimiter::<BlobModel, BlobPrefixModel>::new(max_results, delim);
+            let mut matching: Vec<BlobModel> = {
+                let blobs = self.blobs_collection.read().unwrap();
+                let mut items: Vec<BlobModel> = blobs
+                    .iter()
+                    .filter(|((acc, cont, name, snap), blob)| {
+                        acc == account
+                            && cont == container
+                            && name.starts_with(prefix)
+                            && name.as_str() > marker
+                            && (include_snapshots || snap.is_empty())
+                            && (include_uncommitted_blobs || blob.isCommitted != Some(false))
+                    })
+                    .map(|(_, blob)| blob.clone())
+                    .collect();
+                items.sort_by(|a, b| a.name.cmp(&b.name));
+                items
+            };
 
-            let blobs = self.blobs_collection.read().unwrap();
-            let mut matching: Vec<BlobModel> = blobs
-                .iter()
-                .filter(|((acc, cont, name, snap), blob)| {
-                    acc == account
-                        && cont == container
-                        && name.starts_with(prefix)
-                        && name.as_str() > marker
-                        && (include_snapshots || snap.is_empty())
-                        && (include_uncommitted_blobs || blob.is_committed != Some(false))
-                })
-                .map(|(_, blob)| blob.clone())
-                .collect();
-
-            // Sort by name
-            matching.sort_by(|a, b| a.name.cmp(&b.name));
-
-            for blob in matching {
-                let name = blob.name.clone().unwrap_or_default();
-                if let Some(stripped) = name.strip_prefix(prefix) {
-                    if stripped.contains(delim) {
-                        // It's a prefix
-                        let prefix_end = stripped.find(delim).unwrap() + delim.len();
-                        let prefix_name = format!("{}{}", prefix, &stripped[..prefix_end]);
-                        let prefix_model = BlobPrefixModel {
-                            name: prefix_name,
-                            persistency: None,
-                        };
-                        if !page.try_add_prefix(prefix_model) {
-                            break;
-                        }
-                    } else {
-                        // It's a blob
-                        if !page.try_add_item(blob) {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            let (items, prefixes, next_marker) = page.get_results();
+            let mut page = PageWithDelimiter::<BlobModel>::new(
+                max_results,
+                Some(delim.to_string()),
+                Some(prefix.to_string()),
+            );
+            let matching_for_page = matching.clone();
+            let (items, prefixes, next_marker) = page
+                .fill(
+                    move |offset| {
+                        let docs = matching_for_page.clone();
+                        async move { docs.into_iter().skip(offset).collect() }
+                    },
+                    |blob| blob.name.clone().unwrap_or_default(),
+                )
+                .await;
+            let next_marker = if next_marker.is_empty() {
+                None
+            } else {
+                Some(next_marker)
+            };
             Ok((items, prefixes, next_marker))
         } else {
             // No delimiter, simple list
@@ -1002,7 +1167,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                         && name.starts_with(prefix)
                         && name.as_str() > marker
                         && (include_snapshots || snap.is_empty())
-                        && (include_uncommitted_blobs || blob.is_committed != Some(false))
+                        && (include_uncommitted_blobs || blob.isCommitted != Some(false))
                 })
                 .map(|(_, blob)| blob.clone())
                 .collect();
@@ -1031,8 +1196,8 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                         let adapter = BlobLeaseAdapter::new(&doc);
                         if let Ok(lease_state) = LeaseFactory::create_lease_state(&adapter, context)
                         {
-                            let syncer = BlobLeaseSyncer::new(&mut doc);
-                            let _ = lease_state.lease().sync_with_syncer(&syncer);
+                            let mut syncer = BlobLeaseSyncer::new(&mut doc);
+                            let _ = syncer.sync(lease_state.lease());
                         }
                     }
                     doc
@@ -1043,7 +1208,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         }
     }
 
-    async fn list_all_blobs(
+    async fn listAllBlobs(
         &self,
         max_results: Option<i64>,
         marker: Option<&str>,
@@ -1062,9 +1227,9 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .filter(|((acc, cont, name, snap), blob)| {
                 // Compare full path (account/container/name) against marker
                 let full_path = format!("{}/{}/{}", acc, cont, name);
-                full_path > marker
+                full_path.as_str() > marker
                     && (include_snapshots || snap.is_empty())
-                    && (include_uncommitted_blobs || blob.is_committed != Some(false))
+                    && (include_uncommitted_blobs || blob.isCommitted != Some(false))
             })
             .map(|(_, blob)| blob.clone())
             .collect();
@@ -1073,14 +1238,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         matching.sort_by(|a, b| {
             let path_a = format!(
                 "{}/{}/{}",
-                a.account_name,
-                a.container_name,
+                a.accountName,
+                a.containerName,
                 a.name.as_ref().unwrap_or(&String::new())
             );
             let path_b = format!(
                 "{}/{}/{}",
-                b.account_name,
-                b.container_name,
+                b.accountName,
+                b.containerName,
                 b.name.as_ref().unwrap_or(&String::new())
             );
             path_a.cmp(&path_b)
@@ -1094,8 +1259,8 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             let last = result_docs.pop().unwrap();
             Some(format!(
                 "{}/{}/{}",
-                last.account_name,
-                last.container_name,
+                last.accountName,
+                last.containerName,
                 last.name.unwrap_or_default()
             ))
         } else {
@@ -1105,15 +1270,15 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok((result_docs, next_marker))
     }
 
-    async fn create_blob(
+    async fn createBlob(
         &self,
         context: &Context,
         blob: BlobModel,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<(), StorageError> {
         // Check if container exists
-        self.check_container_exist(context, &blob.account_name, &blob.container_name)
+        self.checkContainerExist(context, &blob.accountName, &blob.containerName)
             .await?;
 
         let snapshot = blob.snapshot.clone().unwrap_or_default();
@@ -1122,8 +1287,8 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // Check if blob exists
         let existing = self
             .get_blob_with_lease_updated(
-                &blob.account_name,
-                &blob.container_name,
+                &blob.accountName,
+                &blob.containerName,
                 &blob_name,
                 &snapshot,
                 context,
@@ -1132,11 +1297,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .await?;
 
         // Validate write conditions
-        validate_write_conditions(context, modified_access_conditions, existing.as_ref())?;
+        validate_write_conditions(context, modifiedAccessConditions, existing.as_ref())?;
 
         // Validate lease conditions
         if let Some(existing_blob) = &existing {
-            let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+            let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
             let adapter = BlobLeaseAdapter::new(existing_blob);
             validator.validate(&adapter, context)?;
         }
@@ -1144,8 +1309,8 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // Insert blob
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
-            blob.account_name.clone(),
-            blob.container_name.clone(),
+            blob.accountName.clone(),
+            blob.containerName.clone(),
             blob_name.clone(),
             snapshot.clone(),
         );
@@ -1154,7 +1319,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(())
     }
 
-    async fn create_snapshot(
+    async fn createSnapshot(
         &self,
         context: &Context,
         account: &str,
@@ -1162,22 +1327,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         lease_access_conditions: Option<&LeaseAccessConditions>,
         metadata: Option<&BlobMetadata>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<CreateSnapshotResponse, StorageError> {
         let base_blob = self
             .get_blob_with_lease_updated(account, container, blob, "", context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        validate_write_conditions(context, modified_access_conditions, Some(&base_blob))?;
+        validate_write_conditions(context, modifiedAccessConditions, Some(&base_blob))?;
 
-        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&base_blob);
         validator.validate(&adapter, context)?;
 
         // Generate snapshot timestamp
         let snapshot_time =
-            convert_date_time_string_ms_to_7_digital(&context.start_time.unwrap().to_rfc3339());
+            convert_date_time_string_ms_to_7_digital(&context.startTime().unwrap().to_rfc3339());
 
         // Create snapshot blob
         let mut snapshot_blob = base_blob.clone();
@@ -1202,7 +1369,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         })
     }
 
-    async fn download_blob(
+    async fn downloadBlob(
         &self,
         context: &Context,
         account: &str,
@@ -1210,37 +1377,32 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         snapshot: Option<&str>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<BlobModel, StorageError> {
         let snapshot = snapshot.unwrap_or("");
 
         let blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, true)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        validate_read_conditions(context, modified_access_conditions, Some(&blob_doc))?;
+        validate_read_conditions(
+            context,
+            modifiedAccessConditions,
+            Some(&blob_doc),
+            Some(false),
+        )?;
 
-        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         validator.validate(&adapter, context)?;
 
         Ok(blob_doc)
     }
 
-    async fn get_blob(
-        &self,
-        _context: &Context,
-        account: &str,
-        container: &str,
-        blob: &str,
-        snapshot: Option<&str>,
-    ) -> Result<Option<BlobModel>, StorageError> {
-        let snapshot = snapshot.unwrap_or("");
-        self.get_blob(account, container, blob, snapshot).await
-    }
-
-    async fn get_blob_properties(
+    async fn getBlobProperties(
         &self,
         context: &Context,
         account: &str,
@@ -1248,61 +1410,72 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         snapshot: Option<&str>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<GetBlobPropertiesRes, StorageError> {
         let snapshot = snapshot.unwrap_or("");
 
         let blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, true)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        validate_read_conditions(context, modified_access_conditions, Some(&blob_doc))?;
+        validate_read_conditions(
+            context,
+            modifiedAccessConditions,
+            Some(&blob_doc),
+            Some(false),
+        )?;
 
-        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         validator.validate(&adapter, context)?;
 
-        // Get committed block count for append blobs
-        let blob_committed_block_count =
-            if blob_doc.properties.blob_type == Some(BlobType::AppendBlob) {
-                blob_doc
-                    .committed_blocks_in_order
-                    .as_ref()
-                    .map(|blocks| blocks.len() as i64)
-            } else {
-                None
-            };
+        let blobCommittedBlockCount = if get_string(&blob_doc.properties, "blobType").as_deref()
+            == Some(BLOB_TYPE_APPEND_BLOB)
+        {
+            blob_doc
+                .committedBlocksInOrder
+                .as_ref()
+                .map(|blocks| blocks.len() as i64)
+        } else {
+            None
+        };
 
         Ok(GetBlobPropertiesRes {
             properties: blob_doc.properties,
             metadata: blob_doc.metadata,
-            blob_committed_block_count,
+            blobCommittedBlockCount,
         })
     }
 
-    async fn delete_blob(
+    async fn deleteBlob(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
-        options: &BlobDeleteMethodOptionalParams,
+        options: BlobDeleteMethodOptionalParams,
     ) -> Result<(), StorageError> {
-        let snapshot = options.snapshot.as_deref().unwrap_or("");
+        let snapshot_value = get_string(&options, "snapshot");
+        let snapshot = snapshot_value.as_deref().unwrap_or("");
 
         let blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
+        let modified_access_conditions = get_object(&options, "modifiedAccessConditions");
         validate_write_conditions(
             context,
-            options.modified_access_conditions.as_ref(),
+            modified_access_conditions.as_ref(),
             Some(&blob_doc),
         )?;
 
-        let validator = BlobWriteLeaseValidator::new(options.lease_access_conditions.as_ref());
+        let validator = BlobWriteLeaseValidator::new(get_object(&options, "leaseAccessConditions"));
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         validator.validate(&adapter, context)?;
 
@@ -1318,7 +1491,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(())
     }
 
-    async fn set_blob_http_headers(
+    async fn setBlobHTTPHeaders(
         &self,
         context: &Context,
         account: &str,
@@ -1326,46 +1499,58 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         lease_access_conditions: Option<&LeaseAccessConditions>,
         blob_http_headers: Option<&BlobHTTPHeaders>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         let mut blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, "", context, true)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        validate_write_conditions(context, modified_access_conditions, Some(&blob_doc))?;
+        validate_write_conditions(context, modifiedAccessConditions, Some(&blob_doc))?;
 
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         validator.validate(&adapter, context)?;
 
-        // Update HTTP headers
         if let Some(headers) = blob_http_headers {
-            if let Some(cache_control) = &headers.blob_cache_control {
-                blob_doc.properties.cache_control = Some(cache_control.clone());
-            }
-            if let Some(content_type) = &headers.blob_content_type {
-                blob_doc.properties.content_type = Some(content_type.clone());
-            }
-            if let Some(content_md5) = &headers.blob_content_m_d5 {
-                blob_doc.properties.content_m_d5 = Some(content_md5.clone());
-            }
-            if let Some(content_encoding) = &headers.blob_content_encoding {
-                blob_doc.properties.content_encoding = Some(content_encoding.clone());
-            }
-            if let Some(content_language) = &headers.blob_content_language {
-                blob_doc.properties.content_language = Some(content_language.clone());
-            }
-            if let Some(content_disposition) = &headers.blob_content_disposition {
-                blob_doc.properties.content_disposition = Some(content_disposition.clone());
-            }
+            set_string(
+                &mut blob_doc.properties,
+                "cacheControl",
+                get_string(headers, "blobCacheControl"),
+            );
+            set_string(
+                &mut blob_doc.properties,
+                "contentType",
+                get_string(headers, "blobContentType"),
+            );
+            set_string(
+                &mut blob_doc.properties,
+                "contentMD5",
+                get_string(headers, "blobContentMD5"),
+            );
+            set_string(
+                &mut blob_doc.properties,
+                "contentEncoding",
+                get_string(headers, "blobContentEncoding"),
+            );
+            set_string(
+                &mut blob_doc.properties,
+                "contentLanguage",
+                get_string(headers, "blobContentLanguage"),
+            );
+            set_string(
+                &mut blob_doc.properties,
+                "contentDisposition",
+                get_string(headers, "blobContentDisposition"),
+            );
         }
 
-        // Sync lease state
-        let lease_syncer = BlobWriteLeaseSyncer::new(&mut blob_doc);
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        lease_state.lease().sync_with_syncer(&lease_syncer)?;
+        let mut lease_syncer = BlobWriteLeaseSyncer::new(&mut blob_doc);
+        let _ = lease_syncer.sync(lease_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1382,7 +1567,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(blob_doc.properties)
     }
 
-    async fn set_blob_metadata(
+    async fn setBlobMetadata(
         &self,
         context: &Context,
         account: &str,
@@ -1390,27 +1575,28 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         lease_access_conditions: Option<&LeaseAccessConditions>,
         metadata: Option<&BlobMetadata>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         let mut blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, "", context, true)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        validate_write_conditions(context, modified_access_conditions, Some(&blob_doc))?;
+        validate_write_conditions(context, modifiedAccessConditions, Some(&blob_doc))?;
 
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         validator.validate(&adapter, context)?;
 
         // Update metadata
         blob_doc.metadata = metadata.cloned();
 
-        // Sync lease state
-        let lease_syncer = BlobWriteLeaseSyncer::new(&mut blob_doc);
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        lease_state.lease().sync_with_syncer(&lease_syncer)?;
+        let mut lease_syncer = BlobWriteLeaseSyncer::new(&mut blob_doc);
+        let _ = lease_syncer.sync(lease_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1429,46 +1615,46 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
     // ─── Blob Leases ────────────────────────────────────────────────────────
 
-    async fn acquire_blob_lease(
+    async fn acquireBlobLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
         duration: i64,
-        proposed_lease_id: Option<&str>,
+        proposed_leaseId: Option<&str>,
         options: Option<&BlobAcquireLeaseOptionalParams>,
     ) -> Result<AcquireBlobLeaseResponse, StorageError> {
         let options = options.cloned().unwrap_or_default();
 
-        // Snapshots cannot have leases
-        if let Some(snapshot) = &options.snapshot {
-            if !snapshot.is_empty() {
-                return Err(
-                    StorageErrorFactory::get_blob_snapshot_operation_not_supported(
-                        &context.context_id,
-                    ),
-                );
-            }
+        let snapshot = get_string(&options, "snapshot");
+        if snapshot.as_deref().is_some_and(|value| !value.is_empty()) {
+            return Err(
+                StorageErrorFactory::get_blob_snapshot_operation_not_supported(
+                    context.contextId().as_deref(),
+                ),
+            );
         }
 
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
+        let modified_access_conditions = get_object(&options, "modifiedAccessConditions");
         validate_write_conditions(
             context,
-            options.modified_access_conditions.as_ref(),
+            modified_access_conditions.as_ref(),
             Some(&blob_doc),
         )?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let acquired_state =
-            lease_state.acquire(duration, proposed_lease_id.map(|s| s.to_string()))?;
-        let syncer = BlobLeaseSyncer::new(&mut blob_doc);
-        acquired_state.lease().sync_with_syncer(&syncer)?;
+        let acquired_state = lease_state.acquire(duration, proposed_leaseId)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut blob_doc);
+        let _ = syncer.sync(acquired_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1484,30 +1670,32 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(BlobLeaseResponse {
             properties: blob_doc.properties,
-            lease_id: blob_doc.lease_id,
-            lease_time: blob_doc.lease_duration_seconds,
+            leaseId: blob_doc.leaseId,
+            leaseTime: blob_doc.leaseDurationSeconds,
         })
     }
 
-    async fn release_blob_lease(
+    async fn releaseBlobLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
-        lease_id: &str,
+        leaseId: &str,
         _options: Option<&BlobReleaseLeaseOptionalParams>,
     ) -> Result<ReleaseBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let released_state = lease_state.release(lease_id.to_string())?;
-        let syncer = BlobLeaseSyncer::new(&mut blob_doc);
-        released_state.lease().sync_with_syncer(&syncer)?;
+        let released_state = lease_state.release(leaseId)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut blob_doc);
+        let _ = syncer.sync(released_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1524,25 +1712,27 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(blob_doc.properties)
     }
 
-    async fn renew_blob_lease(
+    async fn renewBlobLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
-        lease_id: &str,
+        leaseId: &str,
         _options: Option<&BlobRenewLeaseOptionalParams>,
     ) -> Result<RenewBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let renewed_state = lease_state.renew(lease_id.to_string())?;
-        let syncer = BlobLeaseSyncer::new(&mut blob_doc);
-        renewed_state.lease().sync_with_syncer(&syncer)?;
+        let renewed_state = lease_state.renew(leaseId)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut blob_doc);
+        let _ = syncer.sync(renewed_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1558,32 +1748,33 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(BlobLeaseResponse {
             properties: blob_doc.properties,
-            lease_id: blob_doc.lease_id,
-            lease_time: blob_doc.lease_duration_seconds,
+            leaseId: blob_doc.leaseId,
+            leaseTime: blob_doc.leaseDurationSeconds,
         })
     }
 
-    async fn change_blob_lease(
+    async fn changeBlobLease(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
-        lease_id: &str,
-        proposed_lease_id: &str,
+        leaseId: &str,
+        proposed_leaseId: &str,
         _options: Option<&BlobChangeLeaseOptionalParams>,
     ) -> Result<ChangeBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let changed_state =
-            lease_state.change(lease_id.to_string(), proposed_lease_id.to_string())?;
-        let syncer = BlobLeaseSyncer::new(&mut blob_doc);
-        changed_state.lease().sync_with_syncer(&syncer)?;
+        let changed_state = lease_state.change(leaseId, proposed_leaseId)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut blob_doc);
+        let _ = syncer.sync(changed_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1599,12 +1790,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(BlobLeaseResponse {
             properties: blob_doc.properties,
-            lease_id: blob_doc.lease_id,
-            lease_time: blob_doc.lease_duration_seconds,
+            leaseId: blob_doc.leaseId,
+            leaseTime: blob_doc.leaseDurationSeconds,
         })
     }
 
-    async fn break_blob_lease(
+    async fn breakBlobLease(
         &self,
         context: &Context,
         account: &str,
@@ -1616,13 +1807,15 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
         let broken_state = lease_state.break_lease(break_period)?;
-        let syncer = BlobLeaseSyncer::new(&mut blob_doc);
-        broken_state.lease().sync_with_syncer(&syncer)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut blob_doc);
+        let _ = syncer.sync(broken_state.lease());
 
         // Update blob
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -1638,12 +1831,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         Ok(BlobLeaseResponse {
             properties: blob_doc.properties,
-            lease_id: blob_doc.lease_id,
-            lease_time: blob_doc.lease_duration_seconds,
+            leaseId: blob_doc.leaseId,
+            leaseTime: blob_doc.leaseDurationSeconds,
         })
     }
 
-    async fn check_blob_exist(
+    async fn checkBlobExist(
         &self,
         context: &Context,
         account: &str,
@@ -1661,11 +1854,13 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         )) {
             Ok(())
         } else {
-            Err(StorageErrorFactory::get_blob_not_found(&context.context_id))
+            Err(StorageErrorFactory::get_blob_not_found(
+                context.contextId().as_deref(),
+            ))
         }
     }
 
-    async fn get_blob_type(
+    async fn getBlobType(
         &self,
         _account: &str,
         _container: &str,
@@ -1677,18 +1872,18 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(None)
     }
 
-    async fn start_copy_from_url(
+    async fn startCopyFromURL(
         &self,
         context: &Context,
         source: BlobId,
         destination: BlobId,
-        copy_source: &str,
+        copySource: &str,
         metadata: Option<&BlobMetadata>,
-        tier: Option<AccessTier>,
-        options: Option<&BlobStartCopyFromURLOptionalParams>,
+        tier: Option<&str>,
+        leaseAccessConditions: Option<&BlobStartCopyFromURLOptionalParams>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         // TS: lines 1860-2047
-        let options = options.cloned().unwrap_or_default();
+        let options = leaseAccessConditions.cloned().unwrap_or_default();
 
         // Get source blob with lease updated
         let source_blob = self
@@ -1701,23 +1896,18 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 true, // forceCommitted
             )
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        // Validate source read conditions
-        let source_mac = options
-            .source_modified_access_conditions
-            .clone()
-            .unwrap_or_default();
-        let read_cond_adapter = ConditionalHeadersAdapter {
-            if_modified_since: source_mac.source_if_modified_since,
-            if_unmodified_since: source_mac.source_if_unmodified_since,
-            if_match: source_mac.source_if_match.clone(),
-            if_none_match: source_mac.source_if_none_match.clone(),
-            if_tags: source_mac.source_if_tags.clone(),
-        };
-        let resource_adapter =
-            ConditionResourceAdapter::new(&source_blob.properties, source_blob.metadata.as_ref());
-        validate_read_conditions(context, &read_cond_adapter, &resource_adapter, true)?;
+        let source_modified_access_conditions =
+            get_object(&options, "sourceModifiedAccessConditions");
+        validate_read_conditions(
+            context,
+            source_modified_access_conditions.as_ref(),
+            Some(&source_blob),
+            Some(true),
+        )?;
 
         // Get destination blob (may not exist)
         let dest_blob = self
@@ -1731,43 +1921,45 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             )
             .await?;
 
-        // Validate destination write conditions
+        let modified_access_conditions = get_object(&options, "modifiedAccessConditions");
         validate_write_conditions(
             context,
-            options.modified_access_conditions.as_ref(),
+            modified_access_conditions.as_ref(),
             dest_blob.as_ref(),
         )?;
 
-        // Copy if not exists check
-        if let Some(ref mac) = options.modified_access_conditions {
-            if mac.if_none_match.as_deref() == Some("*") && dest_blob.is_some() {
+        if let Some(mac) = modified_access_conditions.as_ref() {
+            if get_string(mac, "ifNoneMatch").as_deref() == Some("*") && dest_blob.is_some() {
                 return Err(StorageErrorFactory::get_blob_already_exists(
-                    &context.context_id,
+                    context.contextId().as_deref(),
                 ));
             }
         }
 
-        // Validate lease on destination if it exists
-        if let Some(ref dest) = dest_blob {
-            let validator = BlobWriteLeaseValidator::new(options.lease_access_conditions.as_ref());
+        if let Some(dest) = dest_blob.as_ref() {
+            let validator =
+                BlobWriteLeaseValidator::new(get_object(&options, "leaseAccessConditions"));
             let adapter = BlobLeaseAdapter::new(dest);
             validator.validate(&adapter, context)?;
         }
 
         // Validate source is committed, not deleted
-        if source_blob.deleted == Some(true) || source_blob.is_committed == Some(false) {
-            return Err(StorageErrorFactory::get_blob_not_found(&context.context_id));
+        if source_blob.deleted == Some(true) || source_blob.isCommitted == Some(false) {
+            return Err(StorageErrorFactory::get_blob_not_found(
+                context.contextId().as_deref(),
+            ));
         }
 
-        // Check if source is archived
-        if source_blob.properties.access_tier == Some(AccessTier::Archive)
+        if get_string(&source_blob.properties, "accessTier").as_deref() == Some(ACCESS_TIER_ARCHIVE)
             && (tier.is_none() || source.account != destination.account)
         {
-            return Err(StorageErrorFactory::get_blob_archived(&context.context_id));
+            return Err(StorageErrorFactory::get_blob_archived(
+                context.contextId().as_deref(),
+            ));
         }
 
         // Check container exists
-        self.check_container_exist(context, &destination.account, &destination.container)
+        self.checkContainerExist(context, &destination.account, &destination.container)
             .await?;
 
         // Deep clone source blob
@@ -1791,69 +1983,51 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             leaseBreakTime: dest_blob.as_ref().and_then(|d| d.leaseBreakTime),
             committedBlocksInOrder: source_blob.committedBlocksInOrder.clone(),
             persistency: source_blob.persistency.clone(),
-            blobTags: options
-                .blob_tags_string
-                .as_ref()
-                .map(|s| get_tags_from_string(s, &context.context_id)),
+            blobTags: match get_string(&options, "blobTagsString") {
+                Some(tags) => get_tags_from_string(&tags, &context_id(context))?,
+                None => None,
+            },
         };
 
-        // Update properties for copy
-        copied_blob.properties.creation_time = context.start_time;
-        copied_blob.properties.last_modified = context.start_time;
-        copied_blob.properties.etag = Some(new_etag());
-        copied_blob.properties.lease_status = dest_blob
-            .as_ref()
-            .and_then(|d| d.properties.lease_status.clone())
-            .or_else(|| Some("Unlocked".to_string()));
-        copied_blob.properties.lease_state = dest_blob
-            .as_ref()
-            .and_then(|d| d.properties.lease_state.clone())
-            .or_else(|| Some("Available".to_string()));
-        copied_blob.properties.lease_duration = dest_blob
-            .as_ref()
-            .and_then(|d| d.properties.lease_duration.clone());
-        copied_blob.properties.copy_id = Some(Uuid::new_v4().to_string());
-        copied_blob.properties.copy_status = Some("success".to_string());
-        copied_blob.properties.copy_source = Some(copy_source.to_string());
-        copied_blob.properties.copy_progress = source_blob
-            .properties
-            .content_length
-            .map(|len| format!("{}/{}", len, len));
-        copied_blob.properties.copy_completion_time = context.start_time;
-        copied_blob.properties.copy_status_description = None;
-        copied_blob.properties.incremental_copy = Some(false);
-        copied_blob.properties.destination_snapshot = None;
-        copied_blob.properties.deleted_time = None;
-        copied_blob.properties.remaining_retention_days = None;
-        copied_blob.properties.archive_status = None;
-        copied_blob.properties.access_tier_change_time = None;
+        apply_copy_properties(
+            &mut copied_blob.properties,
+            context,
+            &source_blob.properties,
+            dest_blob.as_ref(),
+            copySource,
+        );
 
-        // Handle AppendBlob isSealed
-        if source_blob.properties.blob_type == Some(BlobType::AppendBlob) {
-            copied_blob.properties.is_sealed = options.seal_blob;
+        if get_string(&source_blob.properties, "blobType").as_deref() == Some(BLOB_TYPE_APPEND_BLOB)
+        {
+            set_bool(
+                &mut copied_blob.properties,
+                "isSealed",
+                get_bool(&options, "sealBlob"),
+            );
         }
 
-        // Handle tier for BlockBlob
-        if copied_blob.properties.blob_type == Some(BlobType::BlockBlob) {
+        if get_string(&copied_blob.properties, "blobType").as_deref() == Some(BLOB_TYPE_BLOCK_BLOB)
+        {
             if let Some(tier_value) = tier {
-                copied_blob.properties.access_tier =
-                    Self::parse_tier(Some(&tier_value.to_string()));
-                if copied_blob.properties.access_tier.is_none() {
-                    return Err(StorageErrorFactory::get_invalid_header_value(
-                        &context.context_id,
+                let parsed_tier = Self::parse_tier(Some(tier_value));
+                if parsed_tier.is_none() {
+                    return Err(invalid_header_value(
+                        context.contextId().as_deref(),
                         "x-ms-access-tier",
-                        &tier_value.to_string(),
+                        tier_value,
                     ));
                 }
+                set_string(&mut copied_blob.properties, "accessTier", parsed_tier);
             }
         }
 
-        // PageBlob doesn't support tier in startCopyFromURL
-        if copied_blob.properties.blob_type == Some(BlobType::PageBlob) && tier.is_some() {
-            return Err(StorageErrorFactory::get_invalid_header_value(
-                &context.context_id,
+        if get_string(&copied_blob.properties, "blobType").as_deref() == Some(BLOB_TYPE_PAGE_BLOB)
+            && tier.is_some()
+        {
+            return Err(invalid_header_value(
+                context.contextId().as_deref(),
                 "x-ms-access-tier",
-                &tier.unwrap().to_string(),
+                tier.unwrap_or_default(),
             ));
         }
 
@@ -1884,18 +2058,18 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(copied_blob.properties)
     }
 
-    async fn copy_from_url(
+    async fn copyFromURL(
         &self,
         context: &Context,
         source: BlobId,
         destination: BlobId,
-        copy_source: &str,
+        copySource: &str,
         metadata: Option<&BlobMetadata>,
-        tier: Option<AccessTier>,
-        options: Option<&BlobCopyFromURLOptionalParams>,
+        tier: Option<&str>,
+        leaseAccessConditions: Option<&BlobCopyFromURLOptionalParams>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         // TS: lines 2049-2236
-        let options = options.cloned().unwrap_or_default();
+        let options = leaseAccessConditions.cloned().unwrap_or_default();
 
         // Get source blob
         let source_blob = self
@@ -1908,23 +2082,18 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 true,
             )
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        // Validate source read conditions (note: ignores x-ms-source-if-tags per TS comment)
-        let source_mac = options
-            .source_modified_access_conditions
-            .clone()
-            .unwrap_or_default();
-        let read_cond_adapter = ConditionalHeadersAdapter {
-            if_modified_since: source_mac.source_if_modified_since,
-            if_unmodified_since: source_mac.source_if_unmodified_since,
-            if_match: source_mac.source_if_match.clone(),
-            if_none_match: source_mac.source_if_none_match.clone(),
-            if_tags: None, // Ignored per TS line 2080
-        };
-        let resource_adapter =
-            ConditionResourceAdapter::new(&source_blob.properties, source_blob.metadata.as_ref());
-        validate_read_conditions(context, &read_cond_adapter, &resource_adapter, false)?;
+        let source_modified_access_conditions =
+            get_object(&options, "sourceModifiedAccessConditions");
+        validate_read_conditions(
+            context,
+            source_modified_access_conditions.as_ref(),
+            Some(&source_blob),
+            Some(false),
+        )?;
 
         // Get destination blob
         let dest_blob = self
@@ -1938,44 +2107,44 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             )
             .await?;
 
-        // Validate destination write conditions
+        let modified_access_conditions = get_object(&options, "modifiedAccessConditions");
         validate_write_conditions(
             context,
-            options.modified_access_conditions.as_ref(),
+            modified_access_conditions.as_ref(),
             dest_blob.as_ref(),
         )?;
 
-        // Copy if not exists check
-        if let Some(ref mac) = options.modified_access_conditions {
-            if mac.if_none_match.as_deref() == Some("*") && dest_blob.is_some() {
+        if let Some(mac) = modified_access_conditions.as_ref() {
+            if get_string(mac, "ifNoneMatch").as_deref() == Some("*") && dest_blob.is_some() {
                 return Err(StorageErrorFactory::get_blob_already_exists(
-                    &context.context_id,
+                    context.contextId().as_deref(),
                 ));
             }
         }
 
-        // Validate lease on destination with syncer
-        if let Some(ref dest) = dest_blob {
-            let mut dest_clone = dest.clone();
-            let lease_adapter = BlobLeaseAdapter::new(&dest_clone);
-            let syncer = BlobWriteLeaseSyncer::new(&mut dest_clone);
-            syncer.sync(&lease_adapter)?;
-
-            let validator = BlobWriteLeaseValidator::new(options.lease_access_conditions.as_ref());
+        if let Some(dest) = dest_blob.as_ref() {
+            let validator =
+                BlobWriteLeaseValidator::new(get_object(&options, "leaseAccessConditions"));
+            let lease_adapter = BlobLeaseAdapter::new(dest);
             validator.validate(&lease_adapter, context)?;
         }
 
         // Validate source is committed, not deleted, not archived
-        if source_blob.deleted == Some(true) || source_blob.is_committed == Some(false) {
-            return Err(StorageErrorFactory::get_blob_not_found(&context.context_id));
+        if source_blob.deleted == Some(true) || source_blob.isCommitted == Some(false) {
+            return Err(StorageErrorFactory::get_blob_not_found(
+                context.contextId().as_deref(),
+            ));
         }
 
-        if source_blob.properties.access_tier == Some(AccessTier::Archive) {
-            return Err(StorageErrorFactory::get_blob_archived(&context.context_id));
+        if get_string(&source_blob.properties, "accessTier").as_deref() == Some(ACCESS_TIER_ARCHIVE)
+        {
+            return Err(StorageErrorFactory::get_blob_archived(
+                context.contextId().as_deref(),
+            ));
         }
 
         // Check container exists
-        self.check_container_exist(context, &destination.account, &destination.container)
+        self.checkContainerExist(context, &destination.account, &destination.container)
             .await?;
 
         // Deep clone source blob
@@ -2002,65 +2171,42 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             blobTags: None, // Set below based on copySourceTags
         };
 
-        // Handle blob tags based on copySourceTags
-        if options.copy_source_tags == Some("COPY".to_string()) {
+        if get_string(&options, "copySourceTags").as_deref() == Some("COPY") {
             copied_blob.blobTags = source_blob.blobTags.clone();
-        } else if let Some(ref tags_str) = options.blob_tags_string {
-            copied_blob.blobTags = Some(get_tags_from_string(tags_str, &context.context_id));
+        } else if let Some(tags_str) = get_string(&options, "blobTagsString") {
+            copied_blob.blobTags = get_tags_from_string(&tags_str, &context_id(context))?;
         }
 
-        // Update properties for copy
-        copied_blob.properties.creation_time = context.start_time;
-        copied_blob.properties.last_modified = context.start_time;
-        copied_blob.properties.etag = Some(new_etag());
-        copied_blob.properties.lease_status = dest_blob
-            .as_ref()
-            .and_then(|d| d.properties.lease_status.clone())
-            .or_else(|| Some("Unlocked".to_string()));
-        copied_blob.properties.lease_state = dest_blob
-            .as_ref()
-            .and_then(|d| d.properties.lease_state.clone())
-            .or_else(|| Some("Available".to_string()));
-        copied_blob.properties.lease_duration = dest_blob
-            .as_ref()
-            .and_then(|d| d.properties.lease_duration.clone());
-        copied_blob.properties.copy_id = Some(Uuid::new_v4().to_string());
-        copied_blob.properties.copy_status = Some("success".to_string());
-        copied_blob.properties.copy_source = Some(copy_source.to_string());
-        copied_blob.properties.copy_progress = source_blob
-            .properties
-            .content_length
-            .map(|len| format!("{}/{}", len, len));
-        copied_blob.properties.copy_completion_time = context.start_time;
-        copied_blob.properties.copy_status_description = None;
-        copied_blob.properties.incremental_copy = Some(false);
-        copied_blob.properties.destination_snapshot = None;
-        copied_blob.properties.deleted_time = None;
-        copied_blob.properties.remaining_retention_days = None;
-        copied_blob.properties.archive_status = None;
-        copied_blob.properties.access_tier_change_time = None;
+        apply_copy_properties(
+            &mut copied_blob.properties,
+            context,
+            &source_blob.properties,
+            dest_blob.as_ref(),
+            copySource,
+        );
 
-        // Handle tier for BlockBlob
-        if copied_blob.properties.blob_type == Some(BlobType::BlockBlob) {
+        if get_string(&copied_blob.properties, "blobType").as_deref() == Some(BLOB_TYPE_BLOCK_BLOB)
+        {
             if let Some(tier_value) = tier {
-                copied_blob.properties.access_tier =
-                    Self::parse_tier(Some(&tier_value.to_string()));
-                if copied_blob.properties.access_tier.is_none() {
-                    return Err(StorageErrorFactory::get_invalid_header_value(
-                        &context.context_id,
+                let parsed_tier = Self::parse_tier(Some(tier_value));
+                if parsed_tier.is_none() {
+                    return Err(invalid_header_value(
+                        context.contextId().as_deref(),
                         "x-ms-access-tier",
-                        &tier_value.to_string(),
+                        tier_value,
                     ));
                 }
+                set_string(&mut copied_blob.properties, "accessTier", parsed_tier);
             }
         }
 
-        // PageBlob doesn't support tier
-        if copied_blob.properties.blob_type == Some(BlobType::PageBlob) && tier.is_some() {
-            return Err(StorageErrorFactory::get_invalid_header_value(
-                &context.context_id,
+        if get_string(&copied_blob.properties, "blobType").as_deref() == Some(BLOB_TYPE_PAGE_BLOB)
+            && tier.is_some()
+        {
+            return Err(invalid_header_value(
+                context.contextId().as_deref(),
                 "x-ms-access-tier",
-                &tier.unwrap().to_string(),
+                tier.unwrap_or_default(),
             ));
         }
 
@@ -2091,87 +2237,77 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(copied_blob.properties)
     }
 
-    async fn set_tier(
+    async fn setTier(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
-        tier: AccessTier,
-        lease_access_conditions: Option<&LeaseAccessConditions>,
-    ) -> Result<i32, StorageError> {
-        // TS: lines 2238-2311
+        tier: &str,
+        leaseAccessConditions: Option<&LeaseAccessConditions>,
+    ) -> Result<u16, StorageError> {
         let mut doc = self
             .get_blob_with_lease_updated(account, container, blob, "", context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        // Validate lease
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(leaseAccessConditions.cloned());
         let adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
-        // Cannot set tier on snapshot
-        if !doc.snapshot.as_ref().unwrap_or(&String::new()).is_empty() {
+        if !doc.snapshot.as_deref().unwrap_or_default().is_empty() {
             return Err(
-                StorageErrorFactory::get_blob_snapshot_operation_not_supported(&context.context_id),
+                StorageErrorFactory::get_blob_snapshot_operation_not_supported(
+                    context.contextId().as_deref(),
+                ),
             );
         }
 
-        // Determine response code (202 if from Archive, otherwise 200)
-        let response_code = if doc.properties.access_tier == Some(AccessTier::Archive)
-            && (tier == AccessTier::Cool || tier == AccessTier::Hot || tier == AccessTier::Cold)
+        let response_code = if get_string(&doc.properties, "accessTier").as_deref()
+            == Some(ACCESS_TIER_ARCHIVE)
+            && matches!(tier, ACCESS_TIER_COOL | ACCESS_TIER_HOT | ACCESS_TIER_COLD)
         {
             202
         } else {
             200
         };
 
-        // Validate tier based on blob type
-        match doc.properties.blob_type {
-            Some(BlobType::BlockBlob) => {
-                // BlockBlob supports Archive, Cool, Hot, Cold
-                match tier {
-                    AccessTier::Archive | AccessTier::Cool | AccessTier::Hot | AccessTier::Cold => {
-                        doc.properties.access_tier = Some(tier);
-                    }
-                    _ => {
-                        return Err(StorageErrorFactory::get_invalid_header_value(
-                            &context.context_id,
-                            "x-ms-access-tier",
-                            &tier.to_string(),
-                        ));
-                    }
-                }
-            }
-            Some(BlobType::PageBlob) => {
-                // PageBlob doesn't support tier
-                return Err(StorageErrorFactory::get_invalid_header_value(
-                    &context.context_id,
-                    "x-ms-access-tier",
-                    &tier.to_string(),
-                ));
-            }
-            _ => {
-                return Err(StorageErrorFactory::get_invalid_header_value(
-                    &context.context_id,
-                    "x-ms-access-tier",
-                    &tier.to_string(),
-                ));
-            }
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_BLOCK_BLOB) {
+            return Err(invalid_header_value(
+                context.contextId().as_deref(),
+                "x-ms-access-tier",
+                tier,
+            ));
         }
 
-        // Update properties
-        doc.properties.access_tier_inferred = Some(false);
-        doc.properties.access_tier_change_time = context.start_time;
+        if !matches!(
+            tier,
+            ACCESS_TIER_ARCHIVE | ACCESS_TIER_COOL | ACCESS_TIER_HOT | ACCESS_TIER_COLD
+        ) {
+            return Err(invalid_header_value(
+                context.contextId().as_deref(),
+                "x-ms-access-tier",
+                tier,
+            ));
+        }
 
-        // Sync lease state
+        set_string(&mut doc.properties, "accessTier", Some(tier.to_string()));
+        set_bool(&mut doc.properties, "accessTierInferred", Some(false));
+        set_value(
+            &mut doc.properties,
+            "accessTierChangeTime",
+            context
+                .startTime()
+                .map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+        );
+
         let adapter = BlobLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
         let mut syncer = BlobLeaseSyncer::new(&mut doc);
-        lease_state.lease().sync_with_syncer(&syncer)?;
+        let _ = syncer.sync(lease_state.lease());
 
-        // Update collection
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
             account.to_string(),
@@ -2180,12 +2316,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             "".to_string(),
         );
         blobs.insert(key, doc);
-        drop(blobs);
 
         Ok(response_code)
     }
 
-    async fn set_blob_tag(
+    async fn setBlobTag(
         &self,
         context: &Context,
         account: &str,
@@ -2194,7 +2329,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         snapshot: Option<&str>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
         tags: Option<&BlobTags>,
-        _modified_access_conditions: Option<&ModifiedAccessConditions>,
+        _modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<(), StorageError> {
         // TS: lines 3419-3448
         // NOTE: TS ignores modifiedAccessConditions parameter (fidelity flag from line 3419)
@@ -2203,10 +2338,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let mut doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
         // Validate lease
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
@@ -2214,7 +2351,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let adapter = BlobLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
         let mut syncer = BlobLeaseSyncer::new(&mut doc);
-        lease_state.lease().sync_with_syncer(&syncer)?;
+        let _ = syncer.sync(lease_state.lease());
 
         // Update blob tags
         doc.blobTags = tags.cloned();
@@ -2233,7 +2370,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(())
     }
 
-    async fn get_blob_tag(
+    async fn getBlobTag(
         &self,
         context: &Context,
         account: &str,
@@ -2241,7 +2378,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         snapshot: Option<&str>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<Option<BlobTags>, StorageError> {
         // TS: lines 3464-3503
         let snapshot = snapshot.unwrap_or("");
@@ -2249,41 +2386,82 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        // Validate read conditions
-        validate_read_conditions(
-            context,
-            &ConditionalHeadersAdapter::from_modified_access_conditions(modified_access_conditions),
-            &ConditionResourceAdapter::new(&doc.properties, doc.metadata.as_ref()),
-            false,
-        )?;
+        validate_read_conditions(context, modifiedAccessConditions, Some(&doc), Some(false))?;
 
         // Validate lease
-        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
         Ok(doc.blobTags)
     }
 
-    async fn seal_blob(
+    async fn sealBlob(
         &self,
-        _context: &Context,
-        _account: &str,
-        _container: &str,
-        _blob: &str,
+        context: &Context,
+        account: &str,
+        container: &str,
+        blob: &str,
         _snapshot: Option<&str>,
-        _options: Option<&AppendBlobSealOptionalParams>,
+        options: AppendBlobSealOptionalParams,
     ) -> Result<BlobPropertiesInternal, StorageError> {
-        // Placeholder
-        // TODO: Implement sealBlob from TS lines 3533-3565
-        Err(StorageError::from("sealBlob not yet implemented"))
+        let mut doc = self
+            .get_blob(account, container, blob, "")
+            .await?
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
+
+        validate_write_conditions(
+            context,
+            get_object(&options, "modifiedAccessConditions").as_ref(),
+            Some(&doc),
+        )?;
+
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_APPEND_BLOB) {
+            return Err(StorageErrorFactory::get_blob_invalid_blob_type(
+                context.contextId().as_deref(),
+            ));
+        }
+
+        let validator = BlobWriteLeaseValidator::new(get_object(&options, "leaseAccessConditions"));
+        let adapter = BlobLeaseAdapter::new(&doc);
+        validator.validate(&adapter, context)?;
+
+        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
+        let _ = syncer.sync(&adapter);
+
+        set_bool(&mut doc.properties, "isSealed", Some(true));
+        set_value(
+            &mut doc.properties,
+            "lastModified",
+            context
+                .startTime()
+                .map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+        );
+        set_string(&mut doc.properties, "etag", Some(new_etag()));
+
+        let mut blobs = self.blobs_collection.write().unwrap();
+        blobs.insert(
+            (
+                account.to_string(),
+                container.to_string(),
+                blob.to_string(),
+                "".to_string(),
+            ),
+            doc.clone(),
+        );
+
+        Ok(doc.properties)
     }
 
     // ─── Block Operations ───────────────────────────────────────────────────
 
-    async fn stage_block(
+    async fn stageBlock(
         &self,
         context: &Context,
         block: BlockModel,
@@ -2292,7 +2470,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // TS: lines 2313-2395
 
         // Check container exists
-        self.check_container_exist(context, &block.accountName, &block.containerName)
+        self.checkContainerExist(context, &block.accountName, &block.containerName)
             .await?;
 
         // Check if blob exists
@@ -2309,21 +2487,23 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         };
 
         if !blob_exists {
-            // Create new uncommitted BlockBlob
             let etag = new_etag();
+            let mut properties = BlobPropertiesInternal::default();
+            set_datetime(&mut properties, "creationTime", context.startTime());
+            set_datetime(&mut properties, "lastModified", context.startTime());
+            set_string(&mut properties, "etag", Some(etag));
+            set_i64(&mut properties, "contentLength", Some(0));
+            set_string(
+                &mut properties,
+                "blobType",
+                Some(BLOB_TYPE_BLOCK_BLOB.to_string()),
+            );
             let new_blob = BlobModel {
                 deleted: Some(false),
                 accountName: block.accountName.clone(),
                 containerName: block.containerName.clone(),
                 name: Some(block.blobName.clone()),
-                properties: BlobPropertiesInternal {
-                    creation_time: context.start_time,
-                    last_modified: context.start_time,
-                    etag: Some(etag),
-                    content_length: Some(0),
-                    blob_type: Some(BlobType::BlockBlob),
-                    ..Default::default()
-                },
+                properties,
                 snapshot: Some("".to_string()),
                 isCommitted: Some(false),
                 ..Default::default()
@@ -2337,22 +2517,22 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             let blobs = self.blobs_collection.read().unwrap();
             let blob_doc = blobs.get(&blob_key).unwrap();
 
-            // Check blob type is BlockBlob
-            if blob_doc.properties.blob_type != Some(BlobType::BlockBlob) {
+            if get_string(&blob_doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_BLOCK_BLOB)
+            {
                 return Err(StorageErrorFactory::get_blob_invalid_blob_type(
-                    &context.context_id,
+                    context.contextId().as_deref(),
                 ));
             }
 
             // Validate lease
             let adapter = BlobLeaseAdapter::new(blob_doc);
             let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-            let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+            let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
             lease_state.validate(&validator)?;
 
             let mut blob_clone = blob_doc.clone();
-            let syncer = BlobWriteLeaseSyncer::new(&mut blob_clone);
-            lease_state.lease().sync_with_syncer(&syncer)?;
+            let mut syncer = BlobWriteLeaseSyncer::new(&mut blob_clone);
+            let _ = syncer.sync(lease_state.lease());
             drop(blobs);
         }
 
@@ -2373,7 +2553,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                     let new_decoded = base64::decode(new_name).unwrap_or_default();
                     if existing_decoded.len() != new_decoded.len() {
                         return Err(StorageErrorFactory::get_invalid_blob_or_block(
-                            &context.context_id,
+                            context.contextId().as_deref(),
                         ));
                     }
                 }
@@ -2397,12 +2577,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(())
     }
 
-    async fn append_block(
+    async fn appendBlock(
         &self,
         context: &Context,
         block: BlockModel,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
         append_position_access_conditions: Option<&AppendPositionAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         // TS: lines 2397-2473
@@ -2417,25 +2597,27 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 true, // forceCommitted
             )
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
         // Validate write conditions
-        validate_write_conditions(context, modified_access_conditions, Some(&doc))?;
+        validate_write_conditions(context, modifiedAccessConditions, Some(&doc))?;
 
         // Validate lease
         let lease_adapter = BlobLeaseAdapter::new(&doc);
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         validator.validate(&lease_adapter, context)?;
 
-        // Check if blob is sealed
-        if doc.properties.is_sealed == Some(true) {
-            return Err(StorageErrorFactory::get_blob_sealed(&context.context_id));
+        if get_bool(&doc.properties, "isSealed") == Some(true) {
+            return Err(StorageErrorFactory::get_blob_sealed(
+                context.contextId().as_deref(),
+            ));
         }
 
-        // Validate blob type
-        if doc.properties.blob_type != Some(BlobType::AppendBlob) {
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_APPEND_BLOB) {
             return Err(StorageErrorFactory::get_blob_invalid_blob_type(
-                &context.context_id,
+                context.contextId().as_deref(),
             ));
         }
 
@@ -2445,39 +2627,37 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .as_ref()
             .map(|v| v.len())
             .unwrap_or(0);
-        if current_block_count >= MAX_APPEND_BLOB_BLOCK_COUNT {
+        if current_block_count >= MAX_APPEND_BLOB_BLOCK_COUNT as usize {
             return Err(StorageErrorFactory::get_block_count_exceeds_limit(
-                &context.context_id,
+                context.contextId().as_deref(),
             ));
         }
 
-        // Validate append position if specified
-        if let Some(ref apc) = append_position_access_conditions {
-            if let Some(append_position) = apc.append_position {
-                let current_length = doc.properties.content_length.unwrap_or(0);
+        if let Some(apc) = append_position_access_conditions {
+            if let Some(append_position) = get_i64(apc, "appendPosition") {
+                let current_length = get_i64(&doc.properties, "contentLength").unwrap_or(0);
                 if current_length != append_position {
                     return Err(StorageErrorFactory::get_append_position_condition_not_met(
-                        &context.context_id,
+                        context.contextId().as_deref(),
                     ));
                 }
             }
 
-            // Validate max size if specified
-            if let Some(max_size) = apc.max_size {
-                let current_length = doc.properties.content_length.unwrap_or(0);
+            if let Some(max_size) = get_i64(apc, "maxSize") {
+                let current_length = get_i64(&doc.properties, "contentLength").unwrap_or(0);
                 let block_size = block.size.unwrap_or(0);
                 if current_length + block_size > max_size {
                     return Err(StorageErrorFactory::get_max_blob_size_condition_not_met(
-                        &context.context_id,
+                        context.contextId().as_deref(),
                     ));
                 }
             }
         }
 
-        // Sync lease
         let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
         let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        syncer.sync(&lease_adapter)?;
+        let _ = syncer.sync(lease_state.lease());
 
         // Append block
         if doc.committedBlocksInOrder.is_none() {
@@ -2493,12 +2673,16 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .unwrap()
             .push(block_persistency);
 
-        // Update properties
-        doc.properties.etag = Some(new_etag());
-        doc.properties.last_modified = context.start_time;
+        set_string(&mut doc.properties, "etag", Some(new_etag()));
+        set_datetime(&mut doc.properties, "lastModified", context.startTime());
         let block_size = block.size.unwrap_or(0);
-        doc.properties.content_length =
-            Some(doc.properties.content_length.unwrap_or(0) + block_size);
+        let next_content_length =
+            get_i64(&doc.properties, "contentLength").unwrap_or(0) + block_size;
+        set_i64(
+            &mut doc.properties,
+            "contentLength",
+            Some(next_content_length),
+        );
 
         // Update collection
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -2514,13 +2698,13 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(doc.properties)
     }
 
-    async fn commit_block_list(
+    async fn commitBlockList(
         &self,
         context: &Context,
         blob: BlobModel,
         block_list: Vec<BlockListEntry>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<(), StorageError> {
         let blob_name = blob.name.clone().unwrap_or_default();
         let snapshot = blob.snapshot.clone().unwrap_or_default();
@@ -2536,30 +2720,31 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             )
             .await?;
 
-        validate_write_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
 
-        if let Some(mac) = modified_access_conditions {
-            if mac.if_none_match.as_deref() == Some("*")
+        if let Some(mac) = modifiedAccessConditions {
+            if get_string(mac, "ifNoneMatch").as_deref() == Some("*")
                 && doc
                     .as_ref()
                     .map(|existing| existing.isCommitted == Some(true))
                     .unwrap_or(false)
             {
                 return Err(StorageErrorFactory::get_blob_already_exists(
-                    &context.context_id,
+                    context.contextId().as_deref(),
                 ));
             }
         }
 
         let mut doc = doc;
         if let Some(existing) = doc.as_ref() {
-            if existing.properties.blob_type != Some(BlobType::BlockBlob) {
+            if get_string(&existing.properties, "blobType").as_deref() != Some(BLOB_TYPE_BLOCK_BLOB)
+            {
                 return Err(StorageErrorFactory::get_blob_invalid_blob_type(
-                    &context.context_id,
+                    context.contextId().as_deref(),
                 ));
             }
 
-            let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+            let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
             let adapter = BlobLeaseAdapter::new(existing);
             validator.validate(&adapter, context)?;
         }
@@ -2616,13 +2801,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                     .or_else(|| committed_blocks_map.get(&block_item.blockName)),
                 _ => {
                     return Err(StorageErrorFactory::get_invalid_block_list(
-                        &context.context_id,
+                        context.contextId().as_deref(),
                     ))
                 }
             };
 
-            let selected = selected
-                .ok_or_else(|| StorageErrorFactory::get_invalid_block_list(&context.context_id))?;
+            let selected = selected.ok_or_else(|| {
+                StorageErrorFactory::get_invalid_block_list(context.contextId().as_deref())
+            })?;
             selected_block_list.push(selected.clone());
         }
 
@@ -2640,32 +2826,85 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         let mut blobs = self.blobs_collection.write().unwrap();
         if let Some(existing) = doc.as_mut() {
-            existing.properties.blob_type = blob.properties.blob_type.clone();
-            existing.properties.last_modified = blob.properties.last_modified;
+            set_string(
+                &mut existing.properties,
+                "blobType",
+                get_string(&blob.properties, "blobType"),
+            );
+            set_datetime(
+                &mut existing.properties,
+                "lastModified",
+                get_datetime(&blob.properties, "lastModified"),
+            );
             existing.committedBlocksInOrder = Some(selected_block_list.clone());
             existing.isCommitted = Some(true);
             existing.metadata = blob.metadata.clone();
-            existing.properties.access_tier = blob.properties.access_tier.clone();
-            existing.properties.access_tier_inferred = blob.properties.access_tier_inferred;
-            existing.properties.etag = blob.properties.etag.clone();
-            existing.properties.cache_control = blob.properties.cache_control.clone();
-            existing.properties.content_type = blob.properties.content_type.clone();
-            existing.properties.content_m_d5 = blob.properties.content_m_d5.clone();
-            existing.properties.content_encoding = blob.properties.content_encoding.clone();
-            existing.properties.content_language = blob.properties.content_language.clone();
-            existing.properties.content_disposition = blob.properties.content_disposition.clone();
+            set_string(
+                &mut existing.properties,
+                "accessTier",
+                get_string(&blob.properties, "accessTier"),
+            );
+            set_bool(
+                &mut existing.properties,
+                "accessTierInferred",
+                get_bool(&blob.properties, "accessTierInferred"),
+            );
+            set_string(
+                &mut existing.properties,
+                "etag",
+                get_string(&blob.properties, "etag"),
+            );
+            set_string(
+                &mut existing.properties,
+                "cacheControl",
+                get_string(&blob.properties, "cacheControl"),
+            );
+            set_string(
+                &mut existing.properties,
+                "contentType",
+                get_string(&blob.properties, "contentType"),
+            );
+            set_string(
+                &mut existing.properties,
+                "contentMD5",
+                get_string(&blob.properties, "contentMD5"),
+            );
+            set_string(
+                &mut existing.properties,
+                "contentEncoding",
+                get_string(&blob.properties, "contentEncoding"),
+            );
+            set_string(
+                &mut existing.properties,
+                "contentLanguage",
+                get_string(&blob.properties, "contentLanguage"),
+            );
+            set_string(
+                &mut existing.properties,
+                "contentDisposition",
+                get_string(&blob.properties, "contentDisposition"),
+            );
             existing.blobTags = blob.blobTags.clone();
-            existing.properties.content_length = Some(content_length);
+            set_i64(
+                &mut existing.properties,
+                "contentLength",
+                Some(content_length),
+            );
 
             let lease_adapter = BlobLeaseAdapter::new(existing);
+            let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
             let mut syncer = BlobWriteLeaseSyncer::new(existing);
-            syncer.sync(&lease_adapter)?;
+            let _ = syncer.sync(lease_state.lease());
 
             blobs.insert(blob_key, existing.clone());
         } else {
             let mut new_blob = blob.clone();
             new_blob.committedBlocksInOrder = Some(selected_block_list);
-            new_blob.properties.content_length = Some(content_length);
+            set_i64(
+                &mut new_blob.properties,
+                "contentLength",
+                Some(content_length),
+            );
             blobs.insert(blob_key, new_blob);
         }
         drop(blobs);
@@ -2679,7 +2918,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(())
     }
 
-    async fn get_block_list(
+    async fn getBlockList(
         &self,
         context: &Context,
         account: &str,
@@ -2688,24 +2927,26 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         snapshot: Option<&str>,
         is_committed: Option<bool>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
-    ) -> Result<(BlobPropertiesInternal, Vec<Block>, Vec<Block>), StorageError> {
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
+    ) -> Result<crate::persistence::i_blob_metadata_store::GetBlockListResult, StorageError> {
         let snapshot = snapshot.unwrap_or("");
 
         let doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
             .await?
-            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+            .ok_or_else(|| {
+                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+            })?;
 
-        validate_read_conditions(context, modified_access_conditions, Some(&doc))?;
+        validate_read_conditions(context, modifiedAccessConditions, Some(&doc), Some(false))?;
 
-        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
-        if doc.properties.blob_type != Some(BlobType::BlockBlob) {
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_BLOCK_BLOB) {
             return Err(StorageErrorFactory::get_blob_invalid_blob_type(
-                &context.context_id,
+                context.contextId().as_deref(),
             ));
         }
 
@@ -2740,24 +2981,34 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             drop(blocks);
         }
 
-        Ok((doc.properties, uncommitted_blocks, committed_blocks))
+        Ok(
+            crate::persistence::i_blob_metadata_store::GetBlockListResult {
+                properties: doc.properties,
+                uncommittedBlocks: uncommitted_blocks,
+                committedBlocks: committed_blocks,
+            },
+        )
     }
 
-    async fn list_uncommitted_block_persistency_chunks(
+    async fn listUncommittedBlockPersistencyChunks(
         &self,
         _marker: Option<&str>,
         _max_results: Option<i64>,
     ) -> Result<(Vec<IExtentChunk>, Option<String>), StorageError> {
         // Placeholder - full implementation would be ~30 lines
         // TODO: Implement from TS lines 3079-3108
-        Err(StorageError::from(
-            "listUncommittedBlockPersistencyChunks not yet implemented",
+        Err(StorageError::new(
+            500,
+            "NotImplemented".to_string(),
+            "listUncommittedBlockPersistencyChunks not yet implemented".to_string(),
+            String::new(),
+            BTreeMap::new(),
         ))
     }
 
     // ─── Page Blob Operations ───────────────────────────────────────────────
 
-    async fn upload_pages(
+    async fn uploadPages(
         &self,
         context: &Context,
         blob: BlobModel,
@@ -2765,7 +3016,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         end: i64,
         persistency: IExtentChunk,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
         sequence_number_access_conditions: Option<&SequenceNumberAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         let blob_name = blob.name.clone().unwrap_or_default();
@@ -2782,23 +3033,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             )
             .await?;
 
-        validate_write_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
         validate_sequence_number_write_conditions(
             context,
             sequence_number_access_conditions,
             doc.as_ref(),
         )?;
 
-        let mut doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+        let mut doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
-        if doc.properties.blob_type != Some(BlobType::PageBlob) {
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_PAGE_BLOB) {
             return Err(StorageErrorFactory::get_blob_invalid_blob_type(
-                &context.context_id,
+                context.contextId().as_deref(),
             ));
         }
 
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         let lease_adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&lease_adapter, context)?;
 
@@ -2815,11 +3067,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         );
 
         let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
         let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        syncer.sync(&lease_adapter)?;
+        let _ = syncer.sync(lease_state.lease());
 
-        doc.properties.etag = Some(new_etag());
-        doc.properties.last_modified = context.start_time;
+        set_string(&mut doc.properties, "etag", Some(new_etag()));
+        set_datetime(&mut doc.properties, "lastModified", context.startTime());
 
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
@@ -2834,14 +3087,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(doc.properties)
     }
 
-    async fn clear_range(
+    async fn clearRange(
         &self,
         context: &Context,
         blob: BlobModel,
         start: i64,
         end: i64,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
         sequence_number_access_conditions: Option<&SequenceNumberAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         let blob_name = blob.name.clone().unwrap_or_default();
@@ -2858,17 +3111,18 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             )
             .await?;
 
-        validate_write_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
         validate_sequence_number_write_conditions(
             context,
             sequence_number_access_conditions,
             doc.as_ref(),
         )?;
 
-        let mut doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+        let mut doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         let lease_adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&lease_adapter, context)?;
 
@@ -2883,11 +3137,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .clear_range(doc.pageRangesInOrder.as_mut().unwrap(), range);
 
         let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
         let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        syncer.sync(&lease_adapter)?;
+        let _ = syncer.sync(lease_state.lease());
 
-        doc.properties.etag = Some(new_etag());
-        doc.properties.last_modified = context.start_time;
+        set_string(&mut doc.properties, "etag", Some(new_etag()));
+        set_datetime(&mut doc.properties, "lastModified", context.startTime());
 
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
@@ -2902,7 +3157,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(doc.properties)
     }
 
-    async fn get_page_ranges(
+    async fn getPageRanges(
         &self,
         context: &Context,
         account: &str,
@@ -2910,7 +3165,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         snapshot: Option<&str>,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<GetPageRangeResponse, StorageError> {
         let snapshot = snapshot.unwrap_or("");
 
@@ -2918,18 +3173,19 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
             .await?;
 
-        validate_read_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_read_conditions(context, modifiedAccessConditions, doc.as_ref(), Some(false))?;
 
-        let doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+        let doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
-        if doc.properties.blob_type != Some(BlobType::PageBlob) {
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_PAGE_BLOB) {
             return Err(StorageErrorFactory::get_blob_invalid_blob_type(
-                &context.context_id,
+                context.contextId().as_deref(),
             ));
         }
 
-        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&adapter, context)?;
 
@@ -2939,7 +3195,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         })
     }
 
-    async fn resize_page_blob(
+    async fn resizePageBlob(
         &self,
         context: &Context,
         account: &str,
@@ -2947,25 +3203,26 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         blob_content_length: i64,
         lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         let doc = self
             .get_blob_with_lease_updated(account, container, blob, "", context, false)
             .await?;
 
-        validate_write_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
 
-        let mut doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+        let mut doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
-        if doc.properties.blob_type != Some(BlobType::PageBlob) {
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_PAGE_BLOB) {
             return Err(StorageErrorFactory::get_invalid_operation(
-                &context.context_id,
+                context.contextId().as_deref(),
                 Some("Resize could only be against a page blob."),
             ));
         }
 
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
         let lease_adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&lease_adapter, context)?;
 
@@ -2973,7 +3230,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             doc.pageRangesInOrder = Some(Vec::new());
         }
 
-        if doc.properties.content_length.unwrap_or(0) > blob_content_length {
+        if get_i64(&doc.properties, "contentLength").unwrap_or(0) > blob_content_length {
             let mut range = PageRange::default();
             range.insert(
                 "start".to_string(),
@@ -2981,19 +3238,26 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             );
             range.insert(
                 "end".to_string(),
-                GeneratedValue::Number((doc.properties.content_length.unwrap_or(0) - 1) as f64),
+                GeneratedValue::Number(
+                    (get_i64(&doc.properties, "contentLength").unwrap_or(0) - 1) as f64,
+                ),
             );
             self.page_blob_ranges_manager
                 .clear_range(doc.pageRangesInOrder.as_mut().unwrap(), range);
         }
 
-        doc.properties.content_length = Some(blob_content_length);
-        doc.properties.last_modified = context.start_time;
-        doc.properties.etag = Some(new_etag());
+        set_i64(
+            &mut doc.properties,
+            "contentLength",
+            Some(blob_content_length),
+        );
+        set_datetime(&mut doc.properties, "lastModified", context.startTime());
+        set_string(&mut doc.properties, "etag", Some(new_etag()));
 
         let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
         let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        syncer.sync(&lease_adapter)?;
+        let _ = syncer.sync(lease_state.lease());
 
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
@@ -3008,95 +3272,93 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(doc.properties)
     }
 
-    async fn update_sequence_number(
+    async fn updateSequenceNumber(
         &self,
         context: &Context,
         account: &str,
         container: &str,
         blob: &str,
-        sequence_number_action: SequenceNumberActionType,
-        blob_sequence_number: Option<i64>,
-        lease_access_conditions: Option<&LeaseAccessConditions>,
-        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        sequenceNumberAction: &str,
+        blobSequenceNumber: Option<i64>,
+        leaseAccessConditions: Option<&LeaseAccessConditions>,
+        modifiedAccessConditions: Option<&ModifiedAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
         let doc = self
             .get_blob_with_lease_updated(account, container, blob, "", context, false)
             .await?;
 
-        validate_write_conditions(context, modified_access_conditions, doc.as_ref())?;
+        validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
 
-        let mut doc =
-            doc.ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+        let mut doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
-        if doc.properties.blob_type != Some(BlobType::PageBlob) {
+        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_PAGE_BLOB) {
             return Err(StorageErrorFactory::get_invalid_operation(
-                &context.context_id,
+                context.contextId().as_deref(),
                 Some("Get Page Ranges could only be against a page blob."),
             ));
         }
 
-        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let validator = BlobWriteLeaseValidator::new(leaseAccessConditions.cloned());
         let lease_adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&lease_adapter, context)?;
 
-        if doc.properties.blob_sequence_number.is_none() {
-            doc.properties.blob_sequence_number = Some(0);
-        }
-
-        match sequence_number_action.to_lowercase().as_str() {
-            "max" => {
-                let blob_sequence_number = blob_sequence_number.ok_or_else(|| {
-                    StorageErrorFactory::get_invalid_operation(
-                        &context.context_id,
-                        Some(
-                            "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to max.",
-                        ),
-                    )
-                })?;
-                doc.properties.blob_sequence_number = Some(
-                    doc.properties
-                        .blob_sequence_number
-                        .unwrap_or(0)
-                        .max(blob_sequence_number),
-                );
-            }
+        let current_sequence_number = get_i64(&doc.properties, "blobSequenceNumber").unwrap_or(0);
+        let next_sequence_number = match sequenceNumberAction.to_lowercase().as_str() {
+            "max" => current_sequence_number.max(blobSequenceNumber.ok_or_else(|| {
+                StorageErrorFactory::get_invalid_operation(
+                    context.contextId().as_deref(),
+                    Some(
+                        "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to max.",
+                    ),
+                )
+            })?),
             "increment" => {
-                if blob_sequence_number.is_some() {
+                if blobSequenceNumber.is_some() {
                     return Err(StorageErrorFactory::get_invalid_operation(
-                        &context.context_id,
+                        context.contextId().as_deref(),
                         Some(
                             "x-ms-blob-sequence-number cannot be provided when x-ms-sequence-number-action is set to increment.",
                         ),
                     ));
                 }
-                doc.properties.blob_sequence_number =
-                    Some(doc.properties.blob_sequence_number.unwrap_or(0) + 1);
+                current_sequence_number + 1
             }
-            "update" => {
-                let blob_sequence_number = blob_sequence_number.ok_or_else(|| {
-                    StorageErrorFactory::get_invalid_operation(
-                        &context.context_id,
-                        Some(
-                            "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to update.",
-                        ),
-                    )
-                })?;
-                doc.properties.blob_sequence_number = Some(blob_sequence_number);
-            }
+            "update" => blobSequenceNumber.ok_or_else(|| {
+                StorageErrorFactory::get_invalid_operation(
+                    context.contextId().as_deref(),
+                    Some(
+                        "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to update.",
+                    ),
+                )
+            })?,
             _ => {
                 return Err(StorageErrorFactory::get_invalid_operation(
-                    &context.context_id,
+                    context.contextId().as_deref(),
                     Some("Unsupported x-ms-sequence-number-action value."),
                 ))
             }
-        }
+        };
 
-        doc.properties.etag = Some(new_etag());
-        doc.properties.last_modified = context.start_time;
+        set_i64(
+            &mut doc.properties,
+            "blobSequenceNumber",
+            Some(next_sequence_number),
+        );
+        set_string(&mut doc.properties, "etag", Some(new_etag()));
+        set_value(
+            &mut doc.properties,
+            "lastModified",
+            context
+                .startTime()
+                .map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+        );
 
         let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
         let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        syncer.sync(&lease_adapter)?;
+        let _ = syncer.sync(lease_state.lease());
 
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
@@ -3112,9 +3374,17 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
     }
 }
 
-#[async_trait]
 impl IGCExtentProvider for LokiBlobMetadataStore {
-    async fn iterator_extents(&self) -> Box<dyn Iterator<Item = Vec<String>> + Send> {
-        Box::new(BlobReferredExtentsAsyncIterator::new(self))
+    fn iteratorExtents(&self) -> BoxStream<'_, Vec<String>> {
+        let iterator = BlobReferredExtentsAsyncIterator::new(Arc::new(self.clone()));
+        Box::pin(stream::unfold(Some(iterator), |state| async move {
+            let mut iterator = state?;
+            match iterator.next().await {
+                Ok((extents, true)) if extents.is_empty() => None,
+                Ok((extents, true)) => Some((extents, None)),
+                Ok((extents, false)) => Some((extents, Some(iterator))),
+                Err(_) => None,
+            }
+        }))
     }
 }

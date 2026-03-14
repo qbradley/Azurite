@@ -202,7 +202,10 @@ impl IPageBlobHandler for PageBlobHandler {
         let context_id_str = context_id.as_deref().unwrap_or("");
 
         // Explicit tier is not supported for page blobs
-        if options.contains_key("tier") {
+        if options
+            .get("tier")
+            .map_or(false, |v| !matches!(v, GeneratedValue::Null))
+        {
             return Err(Box::new(
                 StorageErrorFactory::getAccessTierNotSupportedForBlobType(context_id_str),
             ));
@@ -304,11 +307,11 @@ impl IPageBlobHandler for PageBlobHandler {
         );
         properties.insert(
             "leaseStatus".to_string(),
-            GeneratedValue::String("Unlocked".to_string()),
+            GeneratedValue::String("unlocked".to_string()),
         );
         properties.insert(
             "leaseState".to_string(),
-            GeneratedValue::String("Available".to_string()),
+            GeneratedValue::String("available".to_string()),
         );
         properties.insert("serverEncrypted".to_string(), GeneratedValue::Bool(true));
 

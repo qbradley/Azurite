@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::generated::artifacts::mappers::Mapper;
+use crate::generated::artifacts::mappers::{get_mapper, Mapper};
 use crate::generated::artifacts::models::{
     GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
 };
@@ -160,8 +160,9 @@ pub async fn serialize<R: IResponse, L: ILogger + ?Sized>(
         } else {
             let body = handlerResponse.body_value().to_json_value();
             if spec.isXML {
+                let xmlReadyBody = apply_model_mapping(&body, bodyMapper);
                 let xmlBody = stringifyXML(
-                    &body,
+                    &xmlReadyBody,
                     bodyMapper
                         .xmlName
                         .as_deref()
@@ -268,6 +269,69 @@ fn serialize_header_value(value: &GeneratedValue) -> Option<ResponseHeaderValue>
     }
 }
 
+fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(object) => {
+            if let Some(properties) = resolve_model_properties(mapper) {
+                let mapped = object
+                    .iter()
+                    .filter_map(|(key, value)| {
+                        properties.get(key).map(|property_mapper| {
+                            (
+                                mapped_name(property_mapper).unwrap_or(key).to_owned(),
+                                apply_model_mapping(value, property_mapper),
+                            )
+                        })
+                    })
+                    .collect();
+                serde_json::Value::Object(mapped)
+            } else {
+                serde_json::Value::Object(object.clone())
+            }
+        }
+        serde_json::Value::Array(values) => {
+            let mapped_values = if let Some(element_mapper) = mapper.r#type.element.as_deref() {
+                values
+                    .iter()
+                    .map(|value| apply_model_mapping(value, element_mapper))
+                    .collect()
+            } else {
+                values.clone()
+            };
+            let mapped_array = serde_json::Value::Array(mapped_values);
+            if let Some(element_name) = mapper.xmlElementName.as_ref() {
+                let mut wrapped = serde_json::Map::new();
+                wrapped.insert(element_name.clone(), mapped_array);
+                serde_json::Value::Object(wrapped)
+            } else {
+                mapped_array
+            }
+        }
+        _ => value.clone(),
+    }
+}
+
+fn resolve_model_properties(mapper: &Mapper) -> Option<&BTreeMap<String, Mapper>> {
+    if !mapper.r#type.modelProperties.is_empty() {
+        Some(&mapper.r#type.modelProperties)
+    } else {
+        mapper
+            .r#type
+            .className
+            .as_deref()
+            .and_then(get_mapper)
+            .map(|resolved| &resolved.r#type.modelProperties)
+            .filter(|properties| !properties.is_empty())
+    }
+}
+
+fn mapped_name(mapper: &Mapper) -> Option<&str> {
+    mapper
+        .xmlName
+        .as_deref()
+        .or(mapper.serializedName.as_deref())
+}
+
 pub fn setParametersValue(
     parameters: &mut GeneratedObject,
     parameterPath: &ParameterPath,
@@ -300,5 +364,133 @@ fn set_nested_value(
         if let GeneratedValue::Object(child) = entry {
             set_nested_value(child, rest, parameterValue);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{apply_model_mapping, serialize};
+    use crate::generated::artifacts::mappers::get_mapper;
+    use crate::generated::artifacts::models::{GeneratedResponse, GeneratedValue};
+    use crate::generated::artifacts::operation::Operation;
+    use crate::generated::artifacts::specifications::specification;
+    use crate::generated::context::Context;
+    use crate::generated::i_response::{GeneratedHttpResponse, IResponse};
+    use crate::generated::utils::i_logger::ILogger;
+    use serde_json::json;
+
+    #[derive(Default)]
+    struct TestLogger;
+
+    impl ILogger for TestLogger {
+        fn error(&self, _message: &str, _context_id: Option<&str>) {}
+        fn warn(&self, _message: &str, _context_id: Option<&str>) {}
+        fn info(&self, _message: &str, _context_id: Option<&str>) {}
+        fn verbose(&self, _message: &str, _context_id: Option<&str>) {}
+        fn debug(&self, _message: &str, _context_id: Option<&str>) {}
+    }
+
+    #[test]
+    fn apply_model_mapping_uses_xml_names_for_nested_composites() {
+        let mapper = get_mapper("StorageServiceProperties").unwrap();
+        let value = json!({
+            "hourMetrics": {
+                "enabled": false,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 1
+                }
+            }
+        });
+
+        let mapped = apply_model_mapping(&value, mapper);
+
+        assert_eq!(
+            mapped,
+            json!({
+                "HourMetrics": {
+                    "Enabled": false,
+                    "RetentionPolicy": {
+                        "Enabled": false,
+                        "Days": 1
+                    }
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn apply_model_mapping_wraps_sequences_with_xml_element_name() {
+        let mapper = get_mapper("StorageServiceProperties").unwrap();
+        let value = json!({
+            "cors": [
+                {
+                    "allowedOrigins": "*",
+                    "allowedMethods": "GET,PUT",
+                    "maxAgeInSeconds": 30
+                }
+            ]
+        });
+
+        let mapped = apply_model_mapping(&value, mapper);
+
+        assert_eq!(
+            mapped,
+            json!({
+                "Cors": {
+                    "CorsRule": [
+                        {
+                            "AllowedOrigins": "*",
+                            "AllowedMethods": "GET,PUT",
+                            "MaxAgeInSeconds": 30
+                        }
+                    ]
+                }
+            })
+        );
+    }
+
+    #[tokio::test]
+    async fn serialize_service_get_properties_response_uses_xml_names() {
+        let spec = specification(Operation::Service_GetProperties).unwrap();
+        let context = Context::from_holder(Context::new_holder(), "test", None, None);
+        let logger = TestLogger;
+        let mut response = GeneratedHttpResponse::default();
+        let mut handler_response = GeneratedResponse::new(200);
+
+        handler_response.insert_field(
+            "defaultServiceVersion",
+            GeneratedValue::String("2025-11-05".into()),
+        );
+        handler_response.insert_field(
+            "hourMetrics",
+            GeneratedValue::from(json!({
+                "enabled": false,
+                "retentionPolicy": { "enabled": false },
+                "version": "1.0"
+            })),
+        );
+        handler_response.insert_field("requestId", GeneratedValue::String("ignored".into()));
+        handler_response.insert_field("version", GeneratedValue::String("2025-11-05".into()));
+
+        serialize(&context, &mut response, spec, &handler_response, &logger)
+            .await
+            .unwrap();
+
+        let body = response.getBodyStream().text();
+        assert!(body.contains("<HourMetrics>"), "{body}");
+        assert!(body.contains("<Enabled>false</Enabled>"), "{body}");
+        assert!(
+            body.contains("<RetentionPolicy><Enabled>false</Enabled></RetentionPolicy>"),
+            "{body}"
+        );
+        assert!(
+            body.contains("<DefaultServiceVersion>2025-11-05</DefaultServiceVersion>"),
+            "{body}"
+        );
+        assert!(!body.contains("<hourMetrics>"), "{body}");
+        assert!(!body.contains("<enabled>false</enabled>"), "{body}");
+        assert!(!body.contains("<requestId>"), "{body}");
+        assert!(!body.contains("<version>2025-11-05</version>"), "{body}");
     }
 }

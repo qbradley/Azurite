@@ -3,12 +3,28 @@
 /// Fidelity: throws `RangeError` (mapped to a `String` error) when container
 /// `leaseState` or `leaseStatus` are missing — unlike `BlobLeaseAdapter` which
 /// silently defaults.
-use crate::lease::i_lease_state::ILease;
+use crate::lease::i_lease_state::{ILease, LeaseStateType, LeaseStatusType};
 use crate::persistence::ContainerModel;
 
 pub struct ContainerLeaseAdapter;
 
 impl ContainerLeaseAdapter {
+    /// Back-compat constructor for legacy call sites that still use `new(&container)`.
+    pub fn new(container: &ContainerModel) -> ILease {
+        Self::from_container(container).unwrap_or_else(|_| ILease {
+            leaseId: container.leaseId.clone(),
+            leaseState: Some(LeaseStateType::Available.to_string()),
+            leaseStatus: Some(LeaseStatusType::Unlocked.to_string()),
+            leaseDurationType: container
+                .properties
+                .get("leaseDuration")
+                .and_then(|v| v.as_string()),
+            leaseDurationSeconds: container.leaseDurationSeconds,
+            leaseExpireTime: container.leaseExpireTime,
+            leaseBreakTime: container.leaseBreakTime,
+        })
+    }
+
     /// Constructs an `ILease` view of the container's current lease state.
     ///
     /// Returns `Err(String)` if `leaseState` or `leaseStatus` are absent from

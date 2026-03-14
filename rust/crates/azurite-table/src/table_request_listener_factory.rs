@@ -366,7 +366,7 @@ impl TableRequestListenerFactory {
 
         Router::new()
             .route("/", any(table_request_listener))
-            .route("/*path", any(table_request_listener))
+            .route("/{*path}", any(table_request_listener))
             .with_state(state)
     }
 }
@@ -406,6 +406,11 @@ fn build_generated_request(parts: &Parts, body: &[u8]) -> GeneratedHttpRequest {
         endpoint,
         path,
         bodyStream: GeneratedReadableStream::from_bytes(body.to_vec()),
+        body: if body.is_empty() {
+            None
+        } else {
+            Some(String::from_utf8_lossy(body).into_owned())
+        },
         rawHeaders: raw_headers(&parts.headers),
         headers: header_map_to_generated(&parts.headers),
         query: form_urlencoded::parse(parts.uri.query().unwrap_or_default().as_bytes())

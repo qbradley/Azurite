@@ -121,10 +121,13 @@ impl IServiceHandler for ServiceHandler {
         let blobCtx = BlobStorageContext::new(&context);
         let accountName = blobCtx.account().unwrap_or_default();
 
+        normalize_service_properties(&mut storageServiceProperties);
+
         if let Some(body) = context.request().and_then(|request| request.getBody()) {
             let parsed_body = parseXML(&body, false).unwrap_or(serde_json::Value::Null);
             if parsed_body.get("cors").is_none() && parsed_body.get("Cors").is_none() {
                 storageServiceProperties.remove("cors");
+                storageServiceProperties.remove("Cors");
             }
         }
 
@@ -176,6 +179,7 @@ impl IServiceHandler for ServiceHandler {
             .await?
             .map(|value| value.properties)
             .unwrap_or_else(Self::default_service_properties);
+        normalize_service_properties(&mut properties);
         let default_properties = Self::default_service_properties();
         for key in [
             "cors",
@@ -502,6 +506,118 @@ impl IServiceHandler for ServiceHandler {
         }
         response.insert_field("nextMarker", string_value(next_marker.unwrap_or_default()));
         Ok(response)
+    }
+}
+
+fn normalize_service_properties(properties: &mut GeneratedObject) {
+    rename_key(properties, "Logging", "logging");
+    rename_key(properties, "HourMetrics", "hourMetrics");
+    rename_key(properties, "MinuteMetrics", "minuteMetrics");
+    rename_key(properties, "Cors", "cors");
+    rename_key(properties, "DefaultServiceVersion", "defaultServiceVersion");
+    rename_key(properties, "DeleteRetentionPolicy", "deleteRetentionPolicy");
+    rename_key(properties, "StaticWebsite", "staticWebsite");
+
+    if let Some(GeneratedValue::Object(logging)) = properties.get_mut("logging") {
+        normalize_logging(logging);
+    }
+    if let Some(GeneratedValue::Object(metrics)) = properties.get_mut("hourMetrics") {
+        normalize_metrics(metrics);
+    }
+    if let Some(GeneratedValue::Object(metrics)) = properties.get_mut("minuteMetrics") {
+        normalize_metrics(metrics);
+    }
+    if let Some(GeneratedValue::Object(retention_policy)) =
+        properties.get_mut("deleteRetentionPolicy")
+    {
+        normalize_retention_policy(retention_policy);
+    }
+    if let Some(GeneratedValue::Object(static_website)) = properties.get_mut("staticWebsite") {
+        normalize_static_website(static_website);
+    }
+    if let Some(GeneratedValue::Array(cors_rules)) = properties.get_mut("cors") {
+        for rule in cors_rules {
+            if let GeneratedValue::Object(rule) = rule {
+                normalize_cors_rule(rule);
+            }
+        }
+    }
+}
+
+fn normalize_logging(logging: &mut GeneratedObject) {
+    rename_key(logging, "Version", "version");
+    rename_key(logging, "Delete", "deleteProperty");
+    rename_key(logging, "Read", "read");
+    rename_key(logging, "Write", "write");
+    rename_key(logging, "RetentionPolicy", "retentionPolicy");
+    normalize_bool_field(logging, "deleteProperty");
+    normalize_bool_field(logging, "read");
+    normalize_bool_field(logging, "write");
+
+    if let Some(GeneratedValue::Object(retention_policy)) = logging.get_mut("retentionPolicy") {
+        normalize_retention_policy(retention_policy);
+    }
+}
+
+fn normalize_metrics(metrics: &mut GeneratedObject) {
+    rename_key(metrics, "Version", "version");
+    rename_key(metrics, "Enabled", "enabled");
+    rename_key(metrics, "IncludeAPIs", "includeAPIs");
+    rename_key(metrics, "RetentionPolicy", "retentionPolicy");
+    normalize_bool_field(metrics, "enabled");
+    normalize_bool_field(metrics, "includeAPIs");
+
+    if let Some(GeneratedValue::Object(retention_policy)) = metrics.get_mut("retentionPolicy") {
+        normalize_retention_policy(retention_policy);
+    }
+}
+
+fn normalize_static_website(static_website: &mut GeneratedObject) {
+    rename_key(static_website, "Enabled", "enabled");
+    rename_key(static_website, "IndexDocument", "indexDocument");
+    rename_key(
+        static_website,
+        "ErrorDocument404Path",
+        "errorDocument404Path",
+    );
+    rename_key(
+        static_website,
+        "DefaultIndexDocumentPath",
+        "defaultIndexDocumentPath",
+    );
+    normalize_bool_field(static_website, "enabled");
+}
+
+fn normalize_cors_rule(rule: &mut GeneratedObject) {
+    rename_key(rule, "AllowedOrigins", "allowedOrigins");
+    rename_key(rule, "AllowedMethods", "allowedMethods");
+    rename_key(rule, "AllowedHeaders", "allowedHeaders");
+    rename_key(rule, "ExposedHeaders", "exposedHeaders");
+    rename_key(rule, "MaxAgeInSeconds", "maxAgeInSeconds");
+}
+
+fn normalize_retention_policy(retention_policy: &mut GeneratedObject) {
+    rename_key(retention_policy, "Enabled", "enabled");
+    rename_key(retention_policy, "Days", "days");
+    normalize_bool_field(retention_policy, "enabled");
+}
+
+fn normalize_bool_field(object: &mut GeneratedObject, key: &str) {
+    let Some(GeneratedValue::String(value)) = object.get(key) else {
+        return;
+    };
+    let Ok(parsed) = value.parse::<bool>() else {
+        return;
+    };
+    object.insert(key.to_string(), GeneratedValue::Bool(parsed));
+}
+
+fn rename_key(object: &mut GeneratedObject, from: &str, to: &str) {
+    if object.contains_key(to) {
+        return;
+    }
+    if let Some(value) = object.remove(from) {
+        object.insert(to.to_string(), value);
     }
 }
 
