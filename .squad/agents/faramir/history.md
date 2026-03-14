@@ -8,6 +8,10 @@
 
 ## Learnings
 
+### External server mode harness learnings (2026-03-14)
+- Blob/Queue/Table integration suites only rely on a narrow server surface from the factories: `server.config.host`, `server.config.port`, `start()`, `close()`, and occasionally `clean()`. That means external-server mode can stay minimally invasive by returning a no-op stub with the same observable shape instead of restructuring the tests.
+- Table coverage has one extra coupling point beyond `TableTestServerFactory`: REST submitters and shared table test helpers read host/port from `tests/table/models/table.entity.test.config.ts` and `tests/table/utils/table.entity.test.utils.ts`. Without env-backed host/port there, external mode would still point many table suites at hardcoded `127.0.0.1:11002`.
+
 ### ARCHIVE: Phases 1-4 Analysis (2026-03-13T11:00 — 22:10)
 Completed comprehensive TypeScript analysis for Phases 1-4 (infrastructure, persistence, authentication, utilities/config):
 - **Phase 1:** 15 files analyzed. Trait object safety, naming inconsistencies (contextID/contextId), extent metadata model asymmetry (persistencyId/LastModifyInMS vs locationId/lastModifiedInMS). Decision: Preserve all naming quirks.

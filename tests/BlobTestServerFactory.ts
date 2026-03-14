@@ -13,12 +13,31 @@ export default class BlobTestServerFactory {
     https: boolean = false,
     oauth?: string
   ): BlobServer | SqlBlobServer {
+    const externalServer = process.env.AZURITE_EXTERNAL_SERVER === "1";
+    const host = process.env.AZURITE_BLOB_HOST || "127.0.0.1";
+    const port = Number(process.env.AZURITE_BLOB_PORT || "11000");
+
+    if (externalServer) {
+      return {
+        config: {
+          host,
+          port
+        },
+        async start(): Promise<void> {
+          return;
+        },
+        async close(): Promise<void> {
+          return;
+        },
+        async clean(): Promise<void> {
+          return;
+        }
+      } as unknown as BlobServer;
+    }
+
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
     const inMemoryPersistence = process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
-
-    const port = 11000;
-    const host = "127.0.0.1";
     const persistenceArray: StoreDestinationArray = [
       {
         locationId: "test",

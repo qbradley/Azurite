@@ -18,10 +18,29 @@ export default class TableTestServerFactory {
   }
 
   public createServer(params: ITableTestServerFactoryParams): TableServer {
-    const inMemoryPersistence = TableTestServerFactory.inMemoryPersistence()
+    const externalServer = process.env.AZURITE_EXTERNAL_SERVER === "1";
+    const host = process.env.AZURITE_TABLE_HOST || "127.0.0.1";
+    const port = Number(process.env.AZURITE_TABLE_PORT || "11002");
 
-    const port = 11002;
-    const host = "127.0.0.1";
+    if (externalServer) {
+      return {
+        config: {
+          host,
+          port
+        },
+        async start(): Promise<void> {
+          return;
+        },
+        async close(): Promise<void> {
+          return;
+        },
+        async clean(): Promise<void> {
+          return;
+        }
+      } as unknown as TableServer;
+    }
+
+    const inMemoryPersistence = TableTestServerFactory.inMemoryPersistence()
 
     const cert = params.https ? "tests/server.cert" : undefined;
     const key = params.https ? "tests/server.key" : undefined;

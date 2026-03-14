@@ -15,8 +15,8 @@ import { copyFile } from "fs";
 import TableTestServerFactory, { ITableTestServerFactoryParams } from "./TableTestServerFactory";
 
 export const PROTOCOL = "http";
-export const HOST = "127.0.0.1";
-export const PORT = 11002;
+export const HOST = process.env.AZURITE_TABLE_HOST || "127.0.0.1";
+export const PORT = Number(process.env.AZURITE_TABLE_PORT || "11002");
 const metadataDbPath = "__tableTestsStorage__";
 const enableDebugLog: boolean = false;
 const debugLogPath: string = "g:/debug.log";

@@ -17,10 +17,29 @@ export interface IQueueTestServerFactoryParams {
 
 export default class QueueTestServerFactory {
   public createServer(params: IQueueTestServerFactoryParams): QueueServer {
-    const inMemoryPersistence = process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
+    const externalServer = process.env.AZURITE_EXTERNAL_SERVER === "1";
+    const host = process.env.AZURITE_QUEUE_HOST || "127.0.0.1";
+    const port = Number(process.env.AZURITE_QUEUE_PORT || "11001");
 
-    const port = 11001;
-    const host = "127.0.0.1";
+    if (externalServer) {
+      return {
+        config: {
+          host,
+          port
+        },
+        async start(): Promise<void> {
+          return;
+        },
+        async close(): Promise<void> {
+          return;
+        },
+        async clean(): Promise<void> {
+          return;
+        }
+      } as unknown as QueueServer;
+    }
+
+    const inMemoryPersistence = process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
 
     const cert = params.https ? "tests/server.cert" : undefined;
     const key = params.https ? "tests/server.key" : undefined;

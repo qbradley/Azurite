@@ -154,3 +154,8 @@ Ready for:
 **Last Updated:** 2026-03-14T06:00:00Z  
 **Port Status:** STRUCTURALLY COMPLETE  
 **See Also:** `history-archive.md` for detailed phase-by-phase breakdown
+
+## Learnings
+
+- **L-Integration-Runner-Binary-Discovery:** The Rust workspace may emit the combined `azurite` binary under a target-triple path such as `rust/target/x86_64-unknown-linux-gnu/release/azurite`, so tooling should discover the built binary under `rust/target/**/release/azurite` instead of assuming `rust/target/release/azurite` exists.
+- **L-Unified-Binary-Startup-Gaps:** The current unified `azurite` binary rejects queue/table CLI flags at startup and still panics in queue startup even when launched with blob-only flags. Integration tooling should fail fast with captured startup logs rather than silently falling back to different binaries or ports.
