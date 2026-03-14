@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine as _};
-use azurite_common::utils::utils::convertRawHeadersToMetadata;
 use azurite_common::persistence::i_extent_store::IExtentChunk as CommonIExtentChunk;
+use azurite_common::utils::utils::convertRawHeadersToMetadata;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use tokio::io::AsyncReadExt;
 use url::Url;
 
@@ -19,15 +19,15 @@ use crate::generated::artifacts::models::{
     BlobDeleteImmutabilityPolicyResponse, BlobDeleteMethodOptionalParams, BlobDeleteResponse,
     BlobDownloadOptionalParams, BlobDownloadResponse, BlobExpiryOptions,
     BlobGetAccountInfoResponse, BlobGetPropertiesOptionalParams, BlobGetPropertiesResponse,
-    BlobGetTagsOptionalParams, BlobGetTagsResponse, BlobReleaseLeaseOptionalParams,
-    BlobReleaseLeaseResponse, BlobRenewLeaseOptionalParams, BlobRenewLeaseResponse,
-    BlobSetExpiryOptionalParams, BlobSetExpiryResponse, BlobSetHTTPHeadersOptionalParams,
-    BlobSetHTTPHeadersResponse, BlobSetImmutabilityPolicyOptionalParams,
-    BlobSetImmutabilityPolicyResponse, BlobSetLegalHoldOptionalParams, BlobSetLegalHoldResponse,
-    BlobSetMetadataOptionalParams, BlobSetMetadataResponse, BlobSetTagsOptionalParams,
-    BlobSetTagsResponse, BlobSetTierOptionalParams, BlobSetTierResponse,
-    BlobStartCopyFromURLOptionalParams, BlobStartCopyFromURLResponse, BlobQueryOptionalParams,
-    BlobQueryResponse, BlobUndeleteOptionalParams, BlobUndeleteResponse, GeneratedBody,
+    BlobGetTagsOptionalParams, BlobGetTagsResponse, BlobQueryOptionalParams, BlobQueryResponse,
+    BlobReleaseLeaseOptionalParams, BlobReleaseLeaseResponse, BlobRenewLeaseOptionalParams,
+    BlobRenewLeaseResponse, BlobSetExpiryOptionalParams, BlobSetExpiryResponse,
+    BlobSetHTTPHeadersOptionalParams, BlobSetHTTPHeadersResponse,
+    BlobSetImmutabilityPolicyOptionalParams, BlobSetImmutabilityPolicyResponse,
+    BlobSetLegalHoldOptionalParams, BlobSetLegalHoldResponse, BlobSetMetadataOptionalParams,
+    BlobSetMetadataResponse, BlobSetTagsOptionalParams, BlobSetTagsResponse,
+    BlobSetTierOptionalParams, BlobSetTierResponse, BlobStartCopyFromURLOptionalParams,
+    BlobStartCopyFromURLResponse, BlobUndeleteOptionalParams, BlobUndeleteResponse, GeneratedBody,
     GeneratedObject, GeneratedResponse, GeneratedValue,
 };
 use crate::generated::context::Context;
@@ -63,7 +63,10 @@ impl BlobHandler {
         base: BaseHandler,
         rangesManager: Arc<dyn IPageBlobRangesManager + Send + Sync>,
     ) -> Self {
-        Self { base, rangesManager }
+        Self {
+            base,
+            rangesManager,
+        }
     }
 }
 
@@ -113,7 +116,8 @@ impl IBlobHandler for BlobHandler {
         let blob_type = get_string(&blob.properties, "blobType");
         match blob_type.as_deref() {
             Some("BlockBlob") | Some("AppendBlob") => {
-                self.downloadBlockBlobOrAppendBlob(options, &context, blob).await
+                self.downloadBlockBlobOrAppendBlob(options, &context, blob)
+                    .await
             }
             Some("PageBlob") => self.downloadPageBlob(options, &context, blob).await,
             _ => Err(Box::new(StorageErrorFactory::getInvalidOperation(
@@ -155,11 +159,8 @@ impl IBlobHandler for BlobHandler {
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         let req = context.request();
-        let against_metadata = req
-            .as_ref()
-            .and_then(|r| r.getQuery("comp"))
-            .as_deref()
-            == Some("metadata");
+        let against_metadata =
+            req.as_ref().and_then(|r| r.getQuery("comp")).as_deref() == Some("metadata");
 
         let ctx_id = context.contextId().unwrap_or_default();
         let start_time = context.startTime();
@@ -183,8 +184,18 @@ impl IBlobHandler for BlobHandler {
         if against_metadata {
             // minimal response for ?comp=metadata
             copy_prop_field(&res.properties, &mut response, "etag", "eTag");
-            copy_prop_field(&res.properties, &mut response, "contentLength", "contentLength");
-            copy_prop_field(&res.properties, &mut response, "lastModified", "lastModified");
+            copy_prop_field(
+                &res.properties,
+                &mut response,
+                "contentLength",
+                "contentLength",
+            );
+            copy_prop_field(
+                &res.properties,
+                &mut response,
+                "lastModified",
+                "lastModified",
+            );
         } else {
             // Full properties response - spread all stored properties
             for (key, value) in &res.properties {
@@ -202,13 +213,21 @@ impl IBlobHandler for BlobHandler {
 
             response.insert_field("acceptRanges", string_value("bytes"));
             response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
-            response.insert_field("isIncrementalCopy",
-                res.properties.get("incrementalCopy").cloned().unwrap_or(GeneratedValue::Null));
+            response.insert_field(
+                "isIncrementalCopy",
+                res.properties
+                    .get("incrementalCopy")
+                    .cloned()
+                    .unwrap_or(GeneratedValue::Null),
+            );
 
             // blobCommittedBlockCount only for AppendBlob
             if get_string(&res.properties, "blobType").as_deref() == Some("AppendBlob") {
                 if let Some(cnt) = res.blobCommittedBlockCount {
-                    response.insert_field("blobCommittedBlockCount", GeneratedValue::Number(cnt as f64));
+                    response.insert_field(
+                        "blobCommittedBlockCount",
+                        GeneratedValue::Number(cnt as f64),
+                    );
                 }
             }
         }
@@ -248,7 +267,9 @@ impl IBlobHandler for BlobHandler {
         _options: BlobUndeleteOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobUndeleteResponse> {
-        Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+        Err(Box::new(NotImplementedError::new(
+            context.contextId().as_deref(),
+        )))
     }
 
     // ── setExpiry ─────────────────────────────────────────────────────────────
@@ -259,7 +280,9 @@ impl IBlobHandler for BlobHandler {
         _options: BlobSetExpiryOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobSetExpiryResponse> {
-        Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+        Err(Box::new(NotImplementedError::new(
+            context.contextId().as_deref(),
+        )))
     }
 
     // ── setHTTPHeaders ────────────────────────────────────────────────────────
@@ -325,7 +348,12 @@ impl IBlobHandler for BlobHandler {
         set_common_fields(&mut response, &context, &options, "requestId");
         copy_prop_field(&res, &mut response, "etag", "eTag");
         copy_prop_field(&res, &mut response, "lastModified", "lastModified");
-        copy_prop_field(&res, &mut response, "blobSequenceNumber", "blobSequenceNumber");
+        copy_prop_field(
+            &res,
+            &mut response,
+            "blobSequenceNumber",
+            "blobSequenceNumber",
+        );
         Ok(response)
     }
 
@@ -336,7 +364,9 @@ impl IBlobHandler for BlobHandler {
         _options: BlobSetImmutabilityPolicyOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobSetImmutabilityPolicyResponse> {
-        Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+        Err(Box::new(NotImplementedError::new(
+            context.contextId().as_deref(),
+        )))
     }
 
     // ── deleteImmutabilityPolicy ──────────────────────────────────────────────
@@ -346,7 +376,9 @@ impl IBlobHandler for BlobHandler {
         _options: BlobDeleteImmutabilityPolicyOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobDeleteImmutabilityPolicyResponse> {
-        Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+        Err(Box::new(NotImplementedError::new(
+            context.contextId().as_deref(),
+        )))
     }
 
     // ── setLegalHold ──────────────────────────────────────────────────────────
@@ -357,7 +389,9 @@ impl IBlobHandler for BlobHandler {
         _options: BlobSetLegalHoldOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobSetLegalHoldResponse> {
-        Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+        Err(Box::new(NotImplementedError::new(
+            context.contextId().as_deref(),
+        )))
     }
 
     // ── setMetadata ───────────────────────────────────────────────────────────
@@ -374,7 +408,10 @@ impl IBlobHandler for BlobHandler {
 
         // Preserve metadata key case from raw headers
         let ctx_id = context.contextId().unwrap_or_default();
-        let raw_headers = context.request().map(|r| r.getRawHeaders()).unwrap_or_default();
+        let raw_headers = context
+            .request()
+            .map(|r| r.getRawHeaders())
+            .unwrap_or_default();
         let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
@@ -422,10 +459,12 @@ impl IBlobHandler for BlobHandler {
         let blob = blobCtx.blob().unwrap_or_default();
 
         // Reject lease on snapshots (BlobHandler.ts:380-385)
-        let snapshot_qs = context
-            .request()
-            .and_then(|r| r.getQuery("snapshot"));
-        if snapshot_qs.as_deref().map(|s| !s.is_empty()).unwrap_or(false) {
+        let snapshot_qs = context.request().and_then(|r| r.getQuery("snapshot"));
+        if snapshot_qs
+            .as_deref()
+            .map(|s| !s.is_empty())
+            .unwrap_or(false)
+        {
             return Err(Box::new(StorageErrorFactory::getInvalidOperation(
                 context.contextId().as_deref(),
                 Some("A lease cannot be granted for a blob snapshot"),
@@ -453,7 +492,12 @@ impl IBlobHandler for BlobHandler {
         let mut response = GeneratedResponse::new(201);
         set_common_fields(&mut response, &context, &options, "requestId");
         copy_prop_field(&res.properties, &mut response, "etag", "eTag");
-        copy_prop_field(&res.properties, &mut response, "lastModified", "lastModified");
+        copy_prop_field(
+            &res.properties,
+            &mut response,
+            "lastModified",
+            "lastModified",
+        );
         if let Some(lid) = res.leaseId {
             response.insert_field("leaseId", string_value(lid));
         }
@@ -476,7 +520,14 @@ impl IBlobHandler for BlobHandler {
         let res = self
             .base
             .metadataStore
-            .releaseBlobLease(&context, &account, &container, &blob, &leaseId, Some(&options))
+            .releaseBlobLease(
+                &context,
+                &account,
+                &container,
+                &blob,
+                &leaseId,
+                Some(&options),
+            )
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
@@ -503,14 +554,26 @@ impl IBlobHandler for BlobHandler {
         let res = self
             .base
             .metadataStore
-            .renewBlobLease(&context, &account, &container, &blob, &leaseId, Some(&options))
+            .renewBlobLease(
+                &context,
+                &account,
+                &container,
+                &blob,
+                &leaseId,
+                Some(&options),
+            )
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         let mut response = GeneratedResponse::new(200);
         set_common_fields(&mut response, &context, &options, "requestId");
         copy_prop_field(&res.properties, &mut response, "etag", "eTag");
-        copy_prop_field(&res.properties, &mut response, "lastModified", "lastModified");
+        copy_prop_field(
+            &res.properties,
+            &mut response,
+            "lastModified",
+            "lastModified",
+        );
         if let Some(lid) = res.leaseId {
             response.insert_field("leaseId", string_value(lid));
         }
@@ -549,7 +612,12 @@ impl IBlobHandler for BlobHandler {
         let mut response = GeneratedResponse::new(200);
         set_common_fields(&mut response, &context, &options, "requestId");
         copy_prop_field(&res.properties, &mut response, "etag", "eTag");
-        copy_prop_field(&res.properties, &mut response, "lastModified", "lastModified");
+        copy_prop_field(
+            &res.properties,
+            &mut response,
+            "lastModified",
+            "lastModified",
+        );
         if let Some(lid) = res.leaseId {
             response.insert_field("leaseId", string_value(lid));
         }
@@ -573,14 +641,26 @@ impl IBlobHandler for BlobHandler {
         let res = self
             .base
             .metadataStore
-            .breakBlobLease(&context, &account, &container, &blob, break_period, Some(&options))
+            .breakBlobLease(
+                &context,
+                &account,
+                &container,
+                &blob,
+                break_period,
+                Some(&options),
+            )
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         let mut response = GeneratedResponse::new(202);
         set_common_fields(&mut response, &context, &options, "requestId");
         copy_prop_field(&res.properties, &mut response, "etag", "eTag");
-        copy_prop_field(&res.properties, &mut response, "lastModified", "lastModified");
+        copy_prop_field(
+            &res.properties,
+            &mut response,
+            "lastModified",
+            "lastModified",
+        );
         if let Some(lt) = res.leaseTime {
             response.insert_field("leaseTime", GeneratedValue::Number(lt as f64));
         }
@@ -601,7 +681,10 @@ impl IBlobHandler for BlobHandler {
 
         // Preserve metadata key case from raw headers
         let ctx_id = context.contextId().unwrap_or_default();
-        let raw_headers = context.request().map(|r| r.getRawHeaders()).unwrap_or_default();
+        let raw_headers = context
+            .request()
+            .map(|r| r.getRawHeaders())
+            .unwrap_or_default();
         let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
@@ -619,9 +702,10 @@ impl IBlobHandler for BlobHandler {
         // Also respect options.metadata field: if options has explicit metadata,
         // the caller sets it but TS code only sends it when non-empty.
         let opts_metadata = get_object(&options, "metadata");
-        let final_metadata = opts_metadata.as_ref().and_then(|m| {
-            if m.is_empty() { None } else { Some(m) }
-        }).or(metadata_to_store);
+        let final_metadata = opts_metadata
+            .as_ref()
+            .and_then(|m| if m.is_empty() { None } else { Some(m) })
+            .or(metadata_to_store);
 
         let lease_conds = get_object(&options, "leaseAccessConditions");
         let mod_conds = get_object(&options, "modifiedAccessConditions");
@@ -644,7 +728,12 @@ impl IBlobHandler for BlobHandler {
         let mut response = GeneratedResponse::new(201);
         set_common_fields(&mut response, &context, &options, "requestId");
         copy_prop_field(&res.properties, &mut response, "etag", "eTag");
-        copy_prop_field(&res.properties, &mut response, "lastModified", "lastModified");
+        copy_prop_field(
+            &res.properties,
+            &mut response,
+            "lastModified",
+            "lastModified",
+        );
         response.insert_field("snapshot", string_value(&res.snapshot));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         Ok(response)
@@ -667,7 +756,8 @@ impl IBlobHandler for BlobHandler {
         let url = new_uri_from_copy_source(&copySource, &context)?;
         let hostname = url.host_str().unwrap_or("").to_string();
         let pathname = url.path().to_string();
-        let snapshot_qs = url.query_pairs()
+        let snapshot_qs = url
+            .query_pairs()
             .find(|(k, _)| k == "snapshot")
             .map(|(_, v)| v.to_string())
             .unwrap_or_default();
@@ -678,19 +768,28 @@ impl IBlobHandler for BlobHandler {
         let (source_account, source_container, source_blob) =
             match (source_account, source_container, source_blob) {
                 (Some(a), Some(c), Some(b)) => (a, c, b),
-                _ => return Err(Box::new(StorageErrorFactory::getBlobNotFound(
-                    context.contextId().as_deref(),
-                ))),
+                _ => {
+                    return Err(Box::new(StorageErrorFactory::getBlobNotFound(
+                        context.contextId().as_deref(),
+                    )))
+                }
             };
 
         // BlobHandler.ts:644-664: validate when cross-account OR sig present
-        let sig = url.query_pairs().find(|(k, _)| k == "sig").map(|(_, v)| v.to_string());
+        let sig = url
+            .query_pairs()
+            .find(|(k, _)| k == "sig")
+            .map(|(_, v)| v.to_string());
         if source_account != account || sig.is_some() {
-            self.validateCopySource(&copySource, &source_account, &context).await?;
+            self.validateCopySource(&copySource, &source_account, &context)
+                .await?;
         }
 
         let ctx_id = context.contextId().unwrap_or_default();
-        let raw_headers = context.request().map(|r| r.getRawHeaders()).unwrap_or_default();
+        let raw_headers = context
+            .request()
+            .map(|r| r.getRawHeaders())
+            .unwrap_or_default();
         let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
@@ -712,7 +811,12 @@ impl IBlobHandler for BlobHandler {
                     blob: source_blob,
                     snapshot: Some(snapshot_qs),
                 },
-                BlobId { account, container, blob, snapshot: None },
+                BlobId {
+                    account,
+                    container,
+                    blob,
+                    snapshot: None,
+                },
                 &copySource,
                 metadata.as_ref(),
                 tier.as_deref(),
@@ -747,7 +851,8 @@ impl IBlobHandler for BlobHandler {
         let url = new_uri_from_copy_source(&copySource, &context)?;
         let hostname = url.host_str().unwrap_or("").to_string();
         let pathname = url.path().to_string();
-        let snapshot_qs = url.query_pairs()
+        let snapshot_qs = url
+            .query_pairs()
             .find(|(k, _)| k == "snapshot")
             .map(|(_, v)| v.to_string())
             .unwrap_or_default();
@@ -758,14 +863,17 @@ impl IBlobHandler for BlobHandler {
         let (source_account, source_container, source_blob) =
             match (source_account, source_container, source_blob) {
                 (Some(a), Some(c), Some(b)) => (a, c, b),
-                _ => return Err(Box::new(StorageErrorFactory::getBlobNotFound(
-                    context.contextId().as_deref(),
-                ))),
+                _ => {
+                    return Err(Box::new(StorageErrorFactory::getBlobNotFound(
+                        context.contextId().as_deref(),
+                    )))
+                }
             };
 
         // BlobHandler.ts:860-862: only validate when source account differs (stricter than startCopy)
         if source_account != account {
-            self.validateCopySource(&copySource, &source_account, &context).await?;
+            self.validateCopySource(&copySource, &source_account, &context)
+                .await?;
         }
 
         // BlobHandler.ts:864-867: COPY tag-option and explicit tags cannot coexist
@@ -780,7 +888,10 @@ impl IBlobHandler for BlobHandler {
         }
 
         let ctx_id = context.contextId().unwrap_or_default();
-        let raw_headers = context.request().map(|r| r.getRawHeaders()).unwrap_or_default();
+        let raw_headers = context
+            .request()
+            .map(|r| r.getRawHeaders())
+            .unwrap_or_default();
         let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
@@ -802,7 +913,12 @@ impl IBlobHandler for BlobHandler {
                     blob: source_blob,
                     snapshot: Some(snapshot_qs),
                 },
-                BlobId { account, container, blob, snapshot: None },
+                BlobId {
+                    account,
+                    container,
+                    blob,
+                    snapshot: None,
+                },
                 &copySource,
                 metadata.as_ref(),
                 tier.as_deref(),
@@ -901,7 +1017,14 @@ impl IBlobHandler for BlobHandler {
         let status_code = self
             .base
             .metadataStore
-            .setTier(&context, &account, &container, &blob, &tier, lease_conds.as_ref())
+            .setTier(
+                &context,
+                &account,
+                &container,
+                &blob,
+                &tier,
+                lease_conds.as_ref(),
+            )
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
@@ -949,7 +1072,9 @@ impl IBlobHandler for BlobHandler {
         _options: BlobQueryOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobQueryResponse> {
-        Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+        Err(Box::new(NotImplementedError::new(
+            context.contextId().as_deref(),
+        )))
     }
 
     // ── getTags ───────────────────────────────────────────────────────────────
@@ -1072,8 +1197,8 @@ impl BlobHandler {
             }
         };
 
-        let content_length_stored = get_number(&blob.properties, "contentLength")
-            .unwrap_or(0.0) as i64;
+        let content_length_stored =
+            get_number(&blob.properties, "contentLength").unwrap_or(0.0) as i64;
 
         let range_start = range_parts.map(|(s, _)| s).unwrap_or(0);
         let range_end_raw = range_parts.map(|(_, e)| e);
@@ -1120,9 +1245,15 @@ impl BlobHandler {
                         offset: (persistency.offset + range_start) as u64,
                         count: std::cmp::min(persistency.count, content_length) as u64,
                     };
-                    guard.readExtent(Some(&chunk), ctx_id).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    guard
+                        .readExtent(Some(&chunk), ctx_id)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
                 } else {
-                    guard.readExtent(None, ctx_id).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    guard
+                        .readExtent(None, ctx_id)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
                 };
                 read_stream_to_bytes(stream).await?
             } else {
@@ -1133,7 +1264,12 @@ impl BlobHandler {
                     .map(|b| to_common_chunk(&b.persistency))
                     .collect();
                 let stream = guard
-                    .readExtents(&chunks, range_start as u64, (range_end + 1 - range_start) as u64, ctx_id)
+                    .readExtents(
+                        &chunks,
+                        range_start as u64,
+                        (range_end + 1 - range_start) as u64,
+                        ctx_id,
+                    )
                     .await
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 read_stream_to_bytes(stream).await?
@@ -1142,14 +1278,21 @@ impl BlobHandler {
 
         // Content range header
         let content_range = if range_parts.is_some() {
-            Some(format!("bytes {}-{}/{}", range_start, range_end, content_length_stored))
+            Some(format!(
+                "bytes {}-{}/{}",
+                range_start, range_end, content_length_stored
+            ))
         } else {
             None
         };
 
         // MD5: use stored value when full blob read; compute if needed and body small enough
         let stored_md5 = get_string(&blob.properties, "contentMD5");
-        let mut content_md5: Option<String> = if !partial_read { stored_md5.clone() } else { None };
+        let mut content_md5: Option<String> = if !partial_read {
+            stored_md5.clone()
+        } else {
+            None
+        };
 
         if content_length <= 4 * 1024 * 1024 && content_md5.is_none() {
             let md5_bytes = compute_md5(&body_bytes);
@@ -1162,7 +1305,11 @@ impl BlobHandler {
             .and_then(|r| r.getHeader("x-ms-range-get-content-md5"))
             .is_some();
         let response_content_md5 = if content_range.is_some() {
-            if include_range_md5 { content_md5 } else { None }
+            if include_range_md5 {
+                content_md5
+            } else {
+                None
+            }
         } else {
             content_md5
         };
@@ -1188,7 +1335,10 @@ impl BlobHandler {
             override_prop_from_query(req_ref, &mut response, "rsct", "contentType");
         }
 
-        response.insert_field("contentLength", GeneratedValue::Number(content_length as f64));
+        response.insert_field(
+            "contentLength",
+            GeneratedValue::Number(content_length as f64),
+        );
         if let Some(cr) = &content_range {
             response.insert_field("contentRange", string_value(cr));
         }
@@ -1213,8 +1363,15 @@ impl BlobHandler {
 
         // blobCommittedBlockCount for AppendBlob
         if get_string(&blob.properties, "blobType").as_deref() == Some("AppendBlob") {
-            let count = blob.committedBlocksInOrder.as_ref().map(|b| b.len()).unwrap_or(0);
-            response.insert_field("blobCommittedBlockCount", GeneratedValue::Number(count as f64));
+            let count = blob
+                .committedBlocksInOrder
+                .as_ref()
+                .map(|b| b.len())
+                .unwrap_or(0);
+            response.insert_field(
+                "blobCommittedBlockCount",
+                GeneratedValue::Number(count as f64),
+            );
         }
 
         let gen_stream = GeneratedReadableStream::from_bytes(body_bytes);
@@ -1236,11 +1393,14 @@ impl BlobHandler {
         // Page blob range header (no 512-boundary enforcement on download, force512boundary=false)
         let range_header = req.as_ref().and_then(|r| r.getHeader("range"));
         let x_ms_range = req.as_ref().and_then(|r| r.getHeader("x-ms-range"));
-        let (range_start, range_end_raw) =
-            deserialize_page_blob_range_header(range_header.as_deref(), x_ms_range.as_deref(), false)?;
+        let (range_start, range_end_raw) = deserialize_page_blob_range_header(
+            range_header.as_deref(),
+            x_ms_range.as_deref(),
+            false,
+        )?;
 
-        let content_length_stored = get_number(&blob.properties, "contentLength")
-            .unwrap_or(0.0) as i64;
+        let content_length_stored =
+            get_number(&blob.properties, "contentLength").unwrap_or(0.0) as i64;
 
         if range_start > content_length_stored {
             return Err(Box::new(StorageErrorFactory::getInvalidPageRange2(
@@ -1271,7 +1431,10 @@ impl BlobHandler {
             vec![]
         } else {
             let mut range_map = GeneratedObject::new();
-            range_map.insert("start".to_string(), GeneratedValue::Number(range_start as f64));
+            range_map.insert(
+                "start".to_string(),
+                GeneratedValue::Number(range_start as f64),
+            );
             range_map.insert("end".to_string(), GeneratedValue::Number(range_end as f64));
             self.rangesManager.fill_zero_ranges(&page_ranges, range_map)
         };
@@ -1280,8 +1443,10 @@ impl BlobHandler {
         let ctx_id = ctx_id_opt.as_deref();
 
         let body_bytes: Vec<u8> = {
-            let chunks: Vec<CommonIExtentChunk> =
-                ranges.iter().map(|r| to_common_chunk(&r.persistency)).collect();
+            let chunks: Vec<CommonIExtentChunk> = ranges
+                .iter()
+                .map(|r| to_common_chunk(&r.persistency))
+                .collect();
             let guard = self.base.extentStore.lock().await;
             let stream = guard
                 .readExtents(&chunks, 0, content_length as u64, ctx_id)
@@ -1293,14 +1458,21 @@ impl BlobHandler {
         // Content range header: present when any range was requested
         let has_range_request = range_header.is_some() || x_ms_range.is_some();
         let content_range = if has_range_request {
-            Some(format!("bytes {}-{}/{}", range_start, range_end, content_length_stored))
+            Some(format!(
+                "bytes {}-{}/{}",
+                range_start, range_end, content_length_stored
+            ))
         } else {
             None
         };
 
         // MD5 for small non-partial reads or on request
         let stored_md5 = get_string(&blob.properties, "contentMD5");
-        let mut content_md5: Option<String> = if !partial_read { stored_md5.clone() } else { None };
+        let mut content_md5: Option<String> = if !partial_read {
+            stored_md5.clone()
+        } else {
+            None
+        };
         if content_length <= 4 * 1024 * 1024 && content_md5.is_none() {
             let md5_bytes = compute_md5(&body_bytes);
             content_md5 = Some(STANDARD.encode(&md5_bytes));
@@ -1311,7 +1483,11 @@ impl BlobHandler {
             .and_then(|r| r.getHeader("x-ms-range-get-content-md5"))
             .is_some();
         let response_content_md5 = if content_range.is_some() {
-            if include_range_md5 { content_md5 } else { None }
+            if include_range_md5 {
+                content_md5
+            } else {
+                None
+            }
         } else {
             content_md5
         };
@@ -1335,7 +1511,10 @@ impl BlobHandler {
             override_prop_from_query(req_ref, &mut response, "rsct", "contentType");
         }
 
-        response.insert_field("contentLength", GeneratedValue::Number(content_length as f64));
+        response.insert_field(
+            "contentLength",
+            GeneratedValue::Number(content_length as f64),
+        );
         if let Some(cr) = &content_range {
             response.insert_field("contentRange", string_value(cr));
         }
@@ -1420,10 +1599,7 @@ impl BlobHandler {
             .unwrap_or("")
             .to_string();
 
-        let body_text = validation_response
-            .text()
-            .await
-            .unwrap_or_default();
+        let body_text = validation_response.text().await.unwrap_or_default();
 
         if status == 404 {
             return Err(Box::new(StorageErrorFactory::getCannotVerifyCopySource(
@@ -1435,8 +1611,7 @@ impl BlobHandler {
         }
 
         // BlobHandler.ts:757-771: attempt to extract <Message> from XML error body
-        let mut message =
-            "Could not verify the copy source within the specified time.".to_string();
+        let mut message = "Could not verify the copy source within the specified time.".to_string();
         if content_type == "application/xml" {
             if let Ok(parsed) = crate::generated::utils::xml::parseXML(&body_text, false) {
                 if let Some(msg) = parsed.get("Message").and_then(|v| v.as_str()) {
@@ -1487,8 +1662,8 @@ fn extract_storage_parts_from_path(
     let normalized = decoded.strip_prefix('/').unwrap_or(&decoded);
     let parts: Vec<&str> = normalized.split('/').collect();
 
-    let is_ip = hostname.split('.').count() == 4
-        && hostname.split('.').all(|s| s.parse::<u8>().is_ok());
+    let is_ip =
+        hostname.split('.').count() == 4 && hostname.split('.').all(|s| s.parse::<u8>().is_ok());
     let is_no_account_host = hostname.eq_ignore_ascii_case(HOST_DOCKER_INTERNAL)
         || hostname.eq_ignore_ascii_case("localhost");
     let first_dot = hostname.find('.');
@@ -1512,7 +1687,11 @@ fn extract_storage_parts_from_path(
 
     let blob = if idx < parts.len() {
         let joined = parts[idx..].join("/").replace('\\', "/");
-        if joined.is_empty() { None } else { Some(joined) }
+        if joined.is_empty() {
+            None
+        } else {
+            Some(joined)
+        }
     } else {
         None
     };
@@ -1596,8 +1775,10 @@ fn deserialize_page_blob_range_header(
     x_ms_range: Option<&str>,
     force_512: bool,
 ) -> crate::generated::GeneratedResult<(i64, i64)> {
-    let parts = deserialize_range_header(range, x_ms_range)
-        .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)) as Box<dyn std::error::Error + Send + Sync>)?;
+    let parts = deserialize_range_header(range, x_ms_range).map_err(|e| {
+        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
+            as Box<dyn std::error::Error + Send + Sync>
+    })?;
     let (start, end) = parts.unwrap_or((0, i64::MAX));
 
     if force_512 {
@@ -1622,7 +1803,11 @@ fn deserialize_page_blob_range_header(
 fn get_blob_tags_count(tags: Option<&GeneratedObject>) -> Option<i64> {
     let arr = tags?.get("blobTagSet")?;
     if let GeneratedValue::Array(ref items) = arr {
-        if items.is_empty() { None } else { Some(items.len() as i64) }
+        if items.is_empty() {
+            None
+        } else {
+            Some(items.len() as i64)
+        }
     } else {
         None
     }
@@ -1645,15 +1830,17 @@ fn validate_blob_tags(
 
     for tag in &tag_set {
         let key = match tag {
-            GeneratedValue::Object(ref m) => {
-                m.get("key").and_then(GeneratedValue::as_string).unwrap_or_default()
-            }
+            GeneratedValue::Object(ref m) => m
+                .get("key")
+                .and_then(GeneratedValue::as_string)
+                .unwrap_or_default(),
             _ => String::new(),
         };
         let value = match tag {
-            GeneratedValue::Object(ref m) => {
-                m.get("value").and_then(GeneratedValue::as_string).unwrap_or_default()
-            }
+            GeneratedValue::Object(ref m) => m
+                .get("value")
+                .and_then(GeneratedValue::as_string)
+                .unwrap_or_default(),
             _ => String::new(),
         };
 
@@ -1673,10 +1860,8 @@ fn validate_blob_tags(
 
 /// Allowed characters in blob tag keys/values.
 fn contains_invalid_tag_character(s: &str) -> bool {
-    !s.chars().all(|c| {
-        c.is_ascii_alphanumeric()
-            || " +-.:=_/@#&'\"!$%^*(){}[]\\<>?`~,;|".contains(c)
-    })
+    !s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || " +-.:=_/@#&'\"!$%^*(){}[]\\<>?`~,;|".contains(c))
 }
 
 /// Read all bytes from an async stream.
@@ -1732,7 +1917,12 @@ fn json_value<T: serde::Serialize>(value: T) -> GeneratedValue {
 
 /// Copy a field from a properties map to a response with a possibly different field name.
 /// Used to map e.g. `etag` → `eTag`.
-fn copy_prop_field(props: &GeneratedObject, response: &mut GeneratedResponse, src_key: &str, dst_key: &str) {
+fn copy_prop_field(
+    props: &GeneratedObject,
+    response: &mut GeneratedResponse,
+    src_key: &str,
+    dst_key: &str,
+) {
     if let Some(value) = props.get(src_key).cloned() {
         response.insert_field(dst_key, value);
     }

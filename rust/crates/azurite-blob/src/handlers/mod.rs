@@ -1,5 +1,6 @@
 pub mod append_blob_handler;
 pub mod base_handler;
+pub mod batch_handlers_bundle;
 pub mod blob_batch_handler;
 pub mod blob_batch_sub_request;
 pub mod blob_batch_sub_response;
