@@ -136,3 +136,29 @@ For modules not yet translated, placeholder tests are marked `#[ignore]` instead
 **Fidelity flags for Phase 10 implementation:** (1) `QueryParser` documents unary `not` but does not implement it. (2) `LokiBlobMetadataStore` normalizes snapshot lease state/status to `Available/Unlocked` despite TODOs. (3) `setBlobTag()` ignores `modifiedAccessConditions`.
 **Why:** Preserves exact TS semantics and keeps team coordination clear on phase boundaries.
 
+## 2026-03-14: Phase 9-10 Translation Decisions
+**By:** Aragorn (Rust Expert)
+**What:**
+
+1. **D-FilterBlobModel-Concrete:** Made `FilterBlobModel` a concrete struct with typed fields (`name: String`, `containerName: String`, `tags: Option<BlobTags>`) rather than aliasing to `FilterBlobItem` (GeneratedObject). Conditions validators and query interpreter need typed access to these fields. The TS type `FilterBlobModel = FilterBlobItem` is actually just `{ name, containerName, tags }` in practice.
+
+2. **D-IQueryNode-TraitObject:** Query AST nodes use `Box<dyn IQueryNode>` trait-object dispatch, consistent with Phase 8's `ILeaseState` pattern. `BinaryOperatorNode` is a concrete struct (not a trait) that holds `left`/`right` children; each comparison node (Equals, GreaterThan, etc.) wraps it via composition.
+
+3. **D-IBlobMetadataStore-Expanded:** Expanded the `IBlobMetadataStore` trait from Phase 8's minimal 2-method surface to the full ~40 method interface matching TypeScript. Added `leaseAccessConditions` parameter to `getContainerACL()`, breaking 2 existing callers (fixed in same changeset). This is a backward-incompatible trait change but necessary for fidelity.
+
+4. **D-QueryParser-NotGrammar-Preserved:** The TS `QueryParser` documents a grammar production for unary `not` but the `visitUnary()` method never consumes the `not` keyword. Preserved this exact behavior — the Rust parser skips `visitUnary` to `visitExpressionGroup` without checking for `not`.
+
+5. **D-PageWithDelimiter-InsertionOrder:** Used `Vec<String>` + `BTreeSet<String>` to track prefix insertion order, preserving TS `Set` iteration semantics (insertion order). A plain `BTreeSet` alone would give sorted order, which happens to be equivalent for sorted input but the dual tracking makes the fidelity explicit.
+
+**Why:** These decisions preserve TS fidelity while adapting to Rust's type system. Each was chosen to minimize behavioral divergence from the TypeScript source per project directive.
+
+**Status:** ACTIVE
+**Scope:** Phase 9 conditions + Phase 10 persistence (excluding 10.7 LokiBlobMetadataStore)
+
+## 2026-03-14: Clippy + Fmt Mandatory Pre-Commit Directive
+**By:** Quetzal Bradley (via Copilot)
+**What:** Before committing any Rust changes, all agents must run `cargo clippy --all-targets` and fix all clippy issues, then run `cargo fmt`. This is a mandatory pre-commit hygiene step for all agents.
+**Why:** User request — maintains code quality and consistent formatting across the entire Rust port.
+**Status:** ACTIVE
+**Scope:** All Rust commits
+
