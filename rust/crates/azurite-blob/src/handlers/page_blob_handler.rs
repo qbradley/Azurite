@@ -202,7 +202,7 @@ impl IPageBlobHandler for PageBlobHandler {
         let context_id_str = context_id.as_deref().unwrap_or("");
 
         // Explicit tier is not supported for page blobs
-        if options.get("tier").is_some() {
+        if options.contains_key("tier") {
             return Err(Box::new(
                 StorageErrorFactory::getAccessTierNotSupportedForBlobType(context_id_str),
             ));

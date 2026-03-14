@@ -128,15 +128,13 @@ impl IServiceHandler for ServiceHandler {
             }
         }
 
-        if let Some(cors_rules) = storageServiceProperties.get_mut("cors") {
-            if let GeneratedValue::Array(rules) = cors_rules {
-                for rule in rules {
-                    if let GeneratedValue::Object(rule) = rule {
-                        rule.entry("allowedHeaders".into())
-                            .or_insert_with(|| GeneratedValue::String(String::new()));
-                        rule.entry("exposedHeaders".into())
-                            .or_insert_with(|| GeneratedValue::String(String::new()));
-                    }
+        if let Some(GeneratedValue::Array(rules)) = storageServiceProperties.get_mut("cors") {
+            for rule in rules {
+                if let GeneratedValue::Object(rule) = rule {
+                    rule.entry("allowedHeaders".into())
+                        .or_insert_with(|| GeneratedValue::String(String::new()));
+                    rule.entry("exposedHeaders".into())
+                        .or_insert_with(|| GeneratedValue::String(String::new()));
                 }
             }
         }

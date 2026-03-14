@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 #[cfg(test)]
 mod phase12_middleware_config_tests {
     use azurite_blob::blob_configuration::BlobConfiguration;
@@ -76,8 +78,8 @@ mod phase12_middleware_config_tests {
         assert_eq!(config.base.keepAliveTimeout, 10);
         assert_eq!(config.metadataDBPath, "/custom/metadata.json");
         assert_eq!(config.extentDBPath, "/custom/extent.json");
-        assert_eq!(config.base.loose, true);
-        assert_eq!(config.base.skipApiVersionCheck, true);
+        assert!(config.base.loose);
+        assert!(config.base.skipApiVersionCheck);
     }
 
     #[test]
@@ -129,16 +131,14 @@ mod phase12_middleware_config_tests {
         let env = BlobEnvironment::new(args).expect("Failed to parse args");
 
         // Use non-async methods from IBlobEnvironment
-        assert_eq!(<BlobEnvironment as IBlobEnvironment>::silent(&env), true);
-        assert_eq!(<BlobEnvironment as IBlobEnvironment>::loose(&env), true);
-        assert_eq!(
-            <BlobEnvironment as IBlobEnvironment>::skipApiVersionCheck(&env),
-            true
-        );
-        assert_eq!(
-            <BlobEnvironment as IBlobEnvironment>::inMemoryPersistence(&env),
-            true
-        );
+        assert!(<BlobEnvironment as IBlobEnvironment>::silent(&env));
+        assert!(<BlobEnvironment as IBlobEnvironment>::loose(&env));
+        assert!(<BlobEnvironment as IBlobEnvironment>::skipApiVersionCheck(
+            &env
+        ));
+        assert!(<BlobEnvironment as IBlobEnvironment>::inMemoryPersistence(
+            &env
+        ));
     }
 
     #[tokio::test]

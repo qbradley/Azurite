@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
@@ -113,19 +115,19 @@ impl IAccountDataStore for TestAccountStore {
 
 #[derive(Default)]
 struct TestBlobMetadataStore {
-    container_acls: Mutex<
-        HashMap<(String, String), Result<Option<GetContainerAccessPolicyResponse>, StorageError>>,
-    >,
-    blob_types:
-        Mutex<HashMap<(String, String, String), Result<Option<BlobTypeResult>, StorageError>>>,
+    container_acls: Mutex<HashMap<(String, String), ContainerAclResult>>,
+    blob_types: Mutex<HashMap<(String, String, String), BlobTypeResultWrapper>>,
 }
+
+type ContainerAclResult = Result<Option<GetContainerAccessPolicyResponse>, StorageError>;
+type BlobTypeResultWrapper = Result<Option<BlobTypeResult>, StorageError>;
 
 impl TestBlobMetadataStore {
     fn with_container_acl(
         self,
         account: &str,
         container: &str,
-        response: Result<Option<GetContainerAccessPolicyResponse>, StorageError>,
+        response: ContainerAclResult,
     ) -> Self {
         self.container_acls
             .lock()
@@ -139,7 +141,7 @@ impl TestBlobMetadataStore {
         account: &str,
         container: &str,
         blob: &str,
-        response: Result<Option<BlobTypeResult>, StorageError>,
+        response: BlobTypeResultWrapper,
     ) -> Self {
         self.blob_types.lock().unwrap().insert(
             (account.to_owned(), container.to_owned(), blob.to_owned()),
