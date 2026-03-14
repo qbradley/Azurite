@@ -2,6 +2,8 @@ mod apis;
 mod generated_framework;
 mod phase10_7_and_11_handlers;
 mod phase10_persistence;
+mod phase12_middleware_config;
+mod phase13_gc;
 mod phase6_errors;
 mod phase7_authentication;
 mod phase8_lease;

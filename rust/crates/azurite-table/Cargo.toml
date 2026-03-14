@@ -8,9 +8,11 @@ rust-version.workspace = true
 [dependencies]
 azurite-common = { path = "../azurite-common" }
 axum.workspace = true
+base64 = "0.22"
 bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
+regex = "1.10"
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

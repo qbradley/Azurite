@@ -1,0 +1,53 @@
+# Phase 16.1: src/azurite.ts
+# Combined binary entry point — orchestrates blob, queue, and table services
+
+source_file: src/azurite.ts
+rust_target: rust/crates/azurite/src/main.rs
+phase: 16
+status: ported
+complexity: medium
+typescript_loc: 189
+rust_loc: ~200
+
+dependencies:
+  - src/common/Environment.ts
+  - src/blob/BlobServerFactory.ts
+  - src/queue/QueueConfiguration.ts
+  - src/queue/QueueServer.ts
+  - src/table/TableConfiguration.ts
+  - src/table/TableServer.ts
+  - src/common/ConfigurationBase.ts
+  - src/common/Logger.ts
+  - src/common/Telemetry.ts
+
+translation_notes:
+  - "Combined binary wires blob, queue, and table servers together"
+  - "Environment parses CLI args shared across all services"
+  - "Each service gets its own configuration with service-specific defaults"
+  - "Global logger configured from blob config (first service)"
+  - "Extent memory limit set before starting services"
+  - "Telemetry initialized after all services start"
+  - "Graceful shutdown via CTRL+C signal handler"
+
+fidelity_notes:
+  - "BlobServer stub: start/close not implemented yet (Phase 12 incomplete)"
+  - "TableServer stub: minimal implementation (Phase 15 concurrent)"
+  - "Only QueueServer fully functional with start/close/getHttpServerAddress"
+  - "SIGTERM and IPC message handling deferred (TS uses process.once for both)"
+  - "DEFAULT_TABLE_LOKI_DB_PATH hardcoded (will import from table crate when available)"
+
+rust_patterns:
+  - "Split main() from main_impl() to use ? operator"
+  - "PathBuf::from().join().display().to_string() for path construction"
+  - "tokio::signal::ctrl_c() for shutdown signal"
+  - "BlobServerFactory::createServer(None) creates default BlobEnvironment"
+  - "Placeholder messages for blob/table until start/close implemented"
+
+decisions:
+  - "D-016-placeholder-services: Accept incomplete blob/table implementations, preserve combined binary structure"
+  - "D-016-signal-handling: Use tokio::signal::ctrl_c only, defer SIGTERM/IPC"
+  - "D-016-environment-passthrough: Pass None to blob factory instead of concrete Environment"
+  - "D-016-unused-constants: Mark table constants as dead_code until Phase 15 exports them"
+
+reviewed_by: Aragorn
+reviewed_date: 2026-03-14

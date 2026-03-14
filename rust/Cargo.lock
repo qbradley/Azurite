@@ -174,12 +174,10 @@ name = "azurite"
 version = "0.1.0"
 dependencies = [
  "azurite-blob",
+ "azurite-common",
  "azurite-queue",
  "azurite-table",
- "clap",
  "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -280,10 +278,12 @@ dependencies = [
  "assert_matches",
  "axum",
  "azurite-common",
+ "base64",
  "bytes",
  "chrono",
  "clap",
  "pretty_assertions",
+ "regex",
  "serde",
  "serde_json",
  "tokio",
