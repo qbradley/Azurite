@@ -39,3 +39,37 @@ Completed comprehensive TypeScript analysis for Phases 1-4 (infrastructure, pers
 - **Boromir Phase 4 insight:** 3 parity bugs fixed (date Z-suffix, URL fragments, CLI arg order). Language-boundary fragility requires explicit TS-equivalent paths. Date/time and URL parsing are fragile; do not use idiomatic Rust shortcuts.
 - **Faramir action:** Phase 6-7 findings guide implementation. StorageErrorFactory case-sensitivity, ANY-member sentinels, IP range asymmetry all critical. Error context chain must be exact.
 - **Project metrics:** 153 Rust files, 91 porting-db records, 67 tests passing. Phase 5-7 analysis cascaded to all three agent histories.
+
+### Phase 8 lease + Phase 10 persistence analysis completed (2026-03-14)
+- Confirmed current scheduling mismatch: `rust/porting-db/PORTING-ORDER.md` defines **Phase 8 = blob lease subsystem**, **Phase 9 = blob conditions**, and **Phase 10 = blob persistence**. Quetzal explicitly asked for lease plus persistence coverage, so I analyzed Phase 8 together with the Phase 10 persistence/query set and seeded records anyway.
+- **Deliverable:** 38 new porting-db records under `rust/porting-db/src/blob/lease/` and `rust/porting-db/src/blob/persistence/` (including `QueryInterpreter/QueryNodes/`). Aragorn now has per-file fidelity notes for the full lease state machine and Loki/query persistence stack.
+- **Critical fidelity findings:**
+  1. Lease timing is entirely lazy. `LeaseFactory` is the only timer/expiry engine, and `LokiBlobMetadataStore.getContainerWithLeaseUpdated()` / `getBlobWithLeaseUpdated()` are the chokepoints that convert `Leased→Expired` and `Breaking→Broken` from `context.startTime`.
+  2. The lease state machine has real behavioral quirks that should not be “cleaned up” accidentally: `LeaseExpiredState.renew()` ignores the caller-supplied lease ID, `LeaseLeasedState.change()` accepts either the current or proposed ID, and infinite-lease `break()` skips the fixed-lease 1..60 validation path.
+  3. Persistence/query layer has multiple compatibility-sensitive seams: `IBlobMetadataStore` aliases `ReleaseBlobLeaseResponse` to `Models.ContainerProperties`, `QueryParser` documents unary `not` but never consumes it, snapshot lease fields are forcibly normalized to `Available/Unlocked` even though TODOs say they should be `undefined`, and `setBlobTag()` ignores `modifiedAccessConditions`.
+- **TS patterns for Aragorn:**
+  - Port the lease subsystem as one unit: explicit state enum/trait dispatch, immutable transition returns, adapter/validator/syncer helpers, and no background timers.
+  - Query evaluation returns witness arrays (`TagContent[]`), not booleans. Logical nodes concatenate witnesses, and comparison nodes rely on plain JS string ordering while returning the operand that carried a `key`.
+  - `LokiBlobMetadataStore` is metadata-only. Blob bytes remain external via `IExtentChunk`, while `PageWithDelimiter`, `FilterBlobPage`, and `BlobReferredExtentsAsyncIterator` encode the observable pagination/GC traversal rules.
+
+## 2026-03-14T00:00 — Phase 8-10 Analysis Complete
+
+**Phase 8 (Lease) + Phase 10 (Persistence) Analysis — 38 porting-db records seeded.**
+
+**Phase 8 Key Findings:**
+- Lease timing is lazy and factory-driven; no background timer
+- `LeaseExpiredState.renew()` ignores caller-supplied lease ID
+- Records: `rust/porting-db/src/blob/lease/`
+
+**Phase 10 Key Findings:**
+- `QueryParser` documents unary `not` but does not implement it
+- `LokiBlobMetadataStore` normalizes snapshot lease state/status to `Available/Unlocked` despite TODOs
+- `setBlobTag()` ignores `modifiedAccessConditions`
+- Records: `rust/porting-db/src/blob/persistence/`
+
+**Scope Note:** Analyzed Phase 8+10 together to satisfy Quetzal's "Phase 8 and Phase 9" request while keeping Aragorn ahead on files explicitly called out. Future coordination should refer to persistence as **Phase 10**.
+
+**Concurrent work:** Aragorn completed Phase 6-7 translation (19 files), Boromir completed Phase 5 tests with XML fix.
+
+**Next:** Ready for Phase 8 implementation.
+

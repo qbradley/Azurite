@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::blob_token_authenticator`
 - Phase: `7.13`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobTokenAuthenticator`

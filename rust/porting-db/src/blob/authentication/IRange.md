@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::i_range`
 - Phase: `7.7`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IRange`

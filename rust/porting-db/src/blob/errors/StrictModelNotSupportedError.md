@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `errors::strict_model_error`
 - Phase: `6.4`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `StrictModelNotSupportedError`

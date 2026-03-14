@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::i_authentication_context`
 - Phase: `7.2`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IAuthenticationContext`

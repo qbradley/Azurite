@@ -1,0 +1,162 @@
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
+use crate::generated::artifacts::operation::Operation;
+
+use super::container_sas_permissions::ContainerSASPermission;
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct OperationBlobSASPermission {
+    pub permission: String,
+}
+
+impl OperationBlobSASPermission {
+    pub fn new(permission: &str) -> Self {
+        Self {
+            permission: String::from(permission),
+        }
+    }
+
+    pub fn validate(&self, permissions: &str) -> bool {
+        self.validatePermissions(permissions)
+    }
+
+    #[allow(non_snake_case)]
+    pub fn validatePermissions(&self, permissions: &str) -> bool {
+        if self.permission == ContainerSASPermission::Any.as_str() {
+            return !permissions.is_empty();
+        }
+        for p in self.permission.chars() {
+            if permissions.contains(p) {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+pub static OPERATION_BLOB_SAS_BLOB_PERMISSIONS: LazyLock<HashMap<Operation, OperationBlobSASPermission>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert(Operation::Service_SetProperties, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetProperties, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetStatistics, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_ListContainersSegment, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetAccountInfo, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetAccountInfoWithHead, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_Create, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_GetProperties, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_GetPropertiesWithHead, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_Delete, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_SetMetadata, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_GetAccessPolicy, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_SetAccessPolicy, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_AcquireLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ReleaseLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_RenewLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_BreakLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ChangeLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ListBlobFlatSegment, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ListBlobHierarchySegment, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_GetAccountInfo, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Container_GetAccountInfoWithHead, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_Download, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_GetProperties, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_Delete, OperationBlobSASPermission::new("d"));
+    map.insert(Operation::Blob_Undelete, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_SetHTTPHeaders, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_SetMetadata, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_AcquireLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_ReleaseLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_RenewLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_ChangeLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_BreakLease, OperationBlobSASPermission::new("dw"));
+    map.insert(Operation::Blob_CreateSnapshot, OperationBlobSASPermission::new("cw"));
+    map.insert(Operation::Blob_StartCopyFromURL, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::Blob_AbortCopyFromURL, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_CopyFromURL, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::Blob_SetTier, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_GetAccountInfo, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_GetAccountInfoWithHead, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::PageBlob_Create, OperationBlobSASPermission::new("cw"));
+    map.insert(Operation::PageBlob_UploadPages, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_ClearPages, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_GetPageRanges, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::PageBlob_GetPageRangesDiff, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::PageBlob_Resize, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_UpdateSequenceNumber, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_CopyIncremental, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::AppendBlob_Create, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::AppendBlob_AppendBlock, OperationBlobSASPermission::new("aw"));
+    map.insert(Operation::BlockBlob_Upload, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::BlockBlob_StageBlock, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::BlockBlob_StageBlockFromURL, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::BlockBlob_CommitBlockList, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::BlockBlob_GetBlockList, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_SetTags, OperationBlobSASPermission::new("t"));
+    map.insert(Operation::Blob_GetTags, OperationBlobSASPermission::new("t"));
+    map
+});
+
+pub static OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS: LazyLock<HashMap<Operation, OperationBlobSASPermission>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert(Operation::Service_SetProperties, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetProperties, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetStatistics, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_ListContainersSegment, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetAccountInfo, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Service_GetAccountInfoWithHead, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_Create, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_GetProperties, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_GetPropertiesWithHead, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_Delete, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_SetMetadata, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_SubmitBatch, OperationBlobSASPermission::new("AnyPermission"));
+    map.insert(Operation::Container_GetAccessPolicy, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_SetAccessPolicy, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_AcquireLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ReleaseLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_RenewLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_BreakLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ChangeLease, OperationBlobSASPermission::new(""));
+    map.insert(Operation::Container_ListBlobFlatSegment, OperationBlobSASPermission::new("l"));
+    map.insert(Operation::Container_FilterBlobs, OperationBlobSASPermission::new("f"));
+    map.insert(Operation::Container_ListBlobHierarchySegment, OperationBlobSASPermission::new("l"));
+    map.insert(Operation::Container_GetAccountInfo, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Container_GetAccountInfoWithHead, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_Download, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_GetProperties, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_Delete, OperationBlobSASPermission::new("d"));
+    map.insert(Operation::Blob_Undelete, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_SetHTTPHeaders, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_SetMetadata, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_AcquireLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_ReleaseLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_RenewLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_ChangeLease, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_BreakLease, OperationBlobSASPermission::new("wd"));
+    map.insert(Operation::Blob_CreateSnapshot, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::Blob_StartCopyFromURL, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::Blob_AbortCopyFromURL, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_CopyFromURL, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::Blob_SetTier, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::Blob_GetAccountInfo, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_GetAccountInfoWithHead, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::PageBlob_Create, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::PageBlob_UploadPages, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_ClearPages, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_GetPageRanges, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::PageBlob_GetPageRangesDiff, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::PageBlob_Resize, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_UpdateSequenceNumber, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::PageBlob_CopyIncremental, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::AppendBlob_Create, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::AppendBlob_AppendBlock, OperationBlobSASPermission::new("aw"));
+    map.insert(Operation::BlockBlob_Upload, OperationBlobSASPermission::new("wc"));
+    map.insert(Operation::BlockBlob_StageBlock, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::BlockBlob_StageBlockFromURL, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::BlockBlob_CommitBlockList, OperationBlobSASPermission::new("w"));
+    map.insert(Operation::BlockBlob_GetBlockList, OperationBlobSASPermission::new("r"));
+    map.insert(Operation::Blob_SetTags, OperationBlobSASPermission::new("t"));
+    map.insert(Operation::Blob_GetTags, OperationBlobSASPermission::new("t"));
+    map
+});

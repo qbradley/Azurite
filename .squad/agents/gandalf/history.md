@@ -98,3 +98,30 @@ rust/
 - porting-db records stay close to Rust implementations (in same `rust/` subtree)
 - Easy for Aragorn/Faramir to reference strategy docs while implementing features
 - Clear boundary: TypeScript source in `/src`, Rust port in `/rust`
+
+## 2026-03-14T00:00 — Batch Completion: Phase 6-7 + Phase 8-10 + Phase 5 QA
+
+**Summary:** Three concurrent agent batches completed. 174 Rust files, 129 porting-db records, 78 passing tests.
+
+**Batch 1 — Aragorn (Phase 6-7 Implementation):**
+- 19 blob error/auth files translated
+- Decision: Preserve existing blob-authentication quirks for contract fidelity
+- cargo check passing
+
+**Batch 2 — Faramir (Phase 8-10 Analysis):**
+- 38 porting-db records seeded (lease + persistence)
+- Key findings: lazy lease timers, LeaseExpiredState.renew() quirks, QueryParser `not` gap, LokiBlobMetadataStore normalization
+- Phase numbering clarified: Phase 8 = lease, Phase 10 = persistence (not Phase 9 as briefly discussed)
+
+**Batch 3 — Boromir (Phase 5 QA + XML Fix):**
+- 78 tests passing
+- Fixed quick_xml root element serialization bug
+- Metadata-driven parity strategy established
+
+**Cross-Agent Learning:**
+- Aragorn ready for Phase 8 implementation
+- Boromir can expand test coverage incrementally as implementations land
+- Faramir's fidelity flags (lazy timers, renew() quirks, QueryParser gap, metadata normalization) now documented for Aragorn's Phase 8-10 work
+
+**Next:** Continuous pipeline — Phase 8 (lease) implementation scheduled to follow.
+

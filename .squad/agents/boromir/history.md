@@ -88,3 +88,28 @@ Workspace status: ✅ `cargo check` passes, ✅ `cargo test` passes (9 active + 
 - **Boromir action:** Phase 4 parity tests confirmed passing. Phase 5+ test placeholders `#[ignore]` ready to unignore incrementally.
 - **Metrics update:** 67 active tests, 4 ignored (true Phase 5+ unimplementables), 91 porting-db records, 153 Rust source files, D-012 recorded.
 - **Key learning:** Language boundary fragility — date/time parsing and URL handling require explicit TS-equivalent paths; do not rely on idiomatic Rust shortcuts.
+
+### Phase 5 Generated Framework Parity Tests Added (2026-03-14)
+- Added `rust/crates/azurite-blob/tests/blob/generated_framework.rs` and wired it into `tests/blob/mod.rs` so the Phase 5 blob framework now has active parity coverage instead of only ignored scaffolds.
+- The suite is metadata-driven: it checks the six-stage middleware order, operation enum/mapping alignment against generated JSON snapshots, handler interface coverage counts, dispatch routing, shared `Context` state, request/response serialization wire format, stream handling, and `any`-narrowing into concrete `GeneratedValue` variants.
+- Found and fixed a real generated-framework parity bug in `rust/crates/azurite-blob/src/generated/utils/xml.rs`: XML serialization must use `quick_xml::se::to_string_with_root()` when a root tag is supplied, otherwise map bodies fail with `cannot serialize map without defined root tag`.
+- Validation note: because the shared checkout contains unrelated in-progress Rust work, I validated this batch in a clean temporary worktree copied from `HEAD`; `cd rust && cargo test --workspace --quiet` passed there with the new blob parity suite active.
+
+## 2026-03-14T00:00 — Phase 5 Completion + Bug Fix
+
+**Phase 5 Blob Generated Parity Tests — 78 tests passing, XML serialization bug fixed.**
+
+**Accomplishment:**
+- Fixed XML serialization bug in quick_xml root element handling
+- Protected generated blob framework parity with metadata-driven contract tests
+- Snapshot metadata (`operations.generated.json`, `handler_mappers.generated.json`, `handler_interfaces.generated.json`) now serve as executable parity fixtures
+- Direct behavioral tests for middleware/context/serializer wire format in place
+
+**Test Strategy:** For future development with shared checkout noise, run final `cargo test --workspace` in clean temporary worktree based on HEAD and copy only QA-owned files, keeping verdicts isolated.
+
+**Bug Fix Details:** XML serialization root element now correctly round-trips through deserialization.
+
+**Concurrent work:** Aragorn completed Phase 6-7 translation (19 files), Faramir completed Phase 8-10 analysis (38 porting-db records).
+
+**Next:** Ready to expand test coverage as Phase 6-10 implementations land.
+

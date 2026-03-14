@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `context::blob_storage_context`
 - Phase: `6.5`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobStorageContext`

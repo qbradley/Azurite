@@ -9,6 +9,7 @@ rust-version.workspace = true
 azurite-common = { path = "../azurite-common" }
 async-trait.workspace = true
 axum.workspace = true
+base64.workspace = true
 bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true

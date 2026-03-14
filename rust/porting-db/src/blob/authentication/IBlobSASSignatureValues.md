@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::i_blob_sas_signature_values`
 - Phase: `7.3`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Interface `IBlobSASSignatureValues`

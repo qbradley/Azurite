@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::blob_sas_authenticator`
 - Phase: `7.12`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobSASAuthenticator`

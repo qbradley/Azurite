@@ -146,11 +146,11 @@ Autorest-generated code for blob. Establishes patterns for queue and table.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 6.1 | `src/blob/errors/StorageError.ts` | `azurite-blob/src/errors/storage_error.rs` | ~66 | M | 5.13 | ⬜ |
-| 6.2 | `src/blob/errors/StorageErrorFactory.ts` | `azurite-blob/src/errors/storage_error_factory.rs` | ~854 | H | 6.1 | ⬜ |
-| 6.3 | `src/blob/errors/NotImplementedError.ts` | `azurite-blob/src/errors/not_implemented_error.rs` | ~15 | L | — | ⬜ |
-| 6.4 | `src/blob/errors/StrictModelNotSupportedError.ts` | `azurite-blob/src/errors/strict_model_error.rs` | ~15 | L | — | ⬜ |
-| 6.5 | `src/blob/context/BlobStorageContext.ts` | `azurite-blob/src/context/blob_storage_context.rs` | ~80 | M | 5.7 | ⬜ |
+| 6.1 | `src/blob/errors/StorageError.ts` | `azurite-blob/src/errors/storage_error.rs` | ~66 | M | 5.13 | ✅ |
+| 6.2 | `src/blob/errors/StorageErrorFactory.ts` | `azurite-blob/src/errors/storage_error_factory.rs` | ~854 | H | 6.1 | ✅ |
+| 6.3 | `src/blob/errors/NotImplementedError.ts` | `azurite-blob/src/errors/not_implemented_error.rs` | ~15 | L | — | ✅ |
+| 6.4 | `src/blob/errors/StrictModelNotSupportedError.ts` | `azurite-blob/src/errors/strict_model_error.rs` | ~15 | L | — | ✅ |
+| 6.5 | `src/blob/context/BlobStorageContext.ts` | `azurite-blob/src/context/blob_storage_context.rs` | ~80 | M | 5.7 | ✅ |
 
 ---
 
@@ -158,20 +158,20 @@ Autorest-generated code for blob. Establishes patterns for queue and table.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 7.1 | `src/blob/authentication/IAuthenticator.ts` | `azurite-blob/src/authentication/i_authenticator.rs` | ~15 | L | — | ⬜ |
-| 7.2 | `src/blob/authentication/IAuthenticationContext.ts` | `azurite-blob/src/authentication/i_authentication_context.rs` | ~20 | L | — | ⬜ |
-| 7.3 | `src/blob/authentication/IBlobSASSignatureValues.ts` | `azurite-blob/src/authentication/i_blob_sas_signature_values.rs` | ~818 | H | 3.5 | ⬜ |
-| 7.4 | `src/blob/authentication/BlobSASPermissions.ts` | `azurite-blob/src/authentication/blob_sas_permissions.rs` | ~80 | M | — | ⬜ |
-| 7.5 | `src/blob/authentication/BlobSASResourceType.ts` | `azurite-blob/src/authentication/blob_sas_resource_type.rs` | ~30 | L | — | ⬜ |
-| 7.6 | `src/blob/authentication/ContainerSASPermissions.ts` | `azurite-blob/src/authentication/container_sas_permissions.rs` | ~60 | L | — | ⬜ |
-| 7.7 | `src/blob/authentication/IRange.ts` | `azurite-blob/src/authentication/i_range.rs` | ~15 | L | — | ⬜ |
-| 7.8 | `src/blob/authentication/OperationAccountSASPermission.ts` | `azurite-blob/src/authentication/operation_account_sas_permission.rs` | ~660 | H | 3.2 | ⬜ |
-| 7.9 | `src/blob/authentication/OperationBlobSASPermission.ts` | `azurite-blob/src/authentication/operation_blob_sas_permission.rs` | ~548 | H | 7.4 | ⬜ |
-| 7.10 | `src/blob/authentication/BlobSharedKeyAuthenticator.ts` | `azurite-blob/src/authentication/blob_shared_key_authenticator.rs` | ~200 | M | 7.1 | ⬜ |
-| 7.11 | `src/blob/authentication/AccountSASAuthenticator.ts` | `azurite-blob/src/authentication/account_sas_authenticator.rs` | ~200 | M | 7.1, 7.3 | ⬜ |
-| 7.12 | `src/blob/authentication/BlobSASAuthenticator.ts` | `azurite-blob/src/authentication/blob_sas_authenticator.rs` | ~627 | H | 7.1, 7.3 | ⬜ |
-| 7.13 | `src/blob/authentication/BlobTokenAuthenticator.ts` | `azurite-blob/src/authentication/blob_token_authenticator.rs` | ~100 | M | 7.1 | ⬜ |
-| 7.14 | `src/blob/authentication/PublicAccessAuthenticator.ts` | `azurite-blob/src/authentication/public_access_authenticator.rs` | ~80 | M | 7.1 | ⬜ |
+| 7.1 | `src/blob/authentication/IAuthenticator.ts` | `azurite-blob/src/authentication/i_authenticator.rs` | ~15 | L | — | ✅ |
+| 7.2 | `src/blob/authentication/IAuthenticationContext.ts` | `azurite-blob/src/authentication/i_authentication_context.rs` | ~20 | L | — | ✅ |
+| 7.3 | `src/blob/authentication/IBlobSASSignatureValues.ts` | `azurite-blob/src/authentication/i_blob_sas_signature_values.rs` | ~818 | H | 3.5 | ✅ |
+| 7.4 | `src/blob/authentication/BlobSASPermissions.ts` | `azurite-blob/src/authentication/blob_sas_permissions.rs` | ~80 | M | — | ✅ |
+| 7.5 | `src/blob/authentication/BlobSASResourceType.ts` | `azurite-blob/src/authentication/blob_sas_resource_type.rs` | ~30 | L | — | ✅ |
+| 7.6 | `src/blob/authentication/ContainerSASPermissions.ts` | `azurite-blob/src/authentication/container_sas_permissions.rs` | ~60 | L | — | ✅ |
+| 7.7 | `src/blob/authentication/IRange.ts` | `azurite-blob/src/authentication/i_range.rs` | ~15 | L | — | ✅ |
+| 7.8 | `src/blob/authentication/OperationAccountSASPermission.ts` | `azurite-blob/src/authentication/operation_account_sas_permission.rs` | ~660 | H | 3.2 | ✅ |
+| 7.9 | `src/blob/authentication/OperationBlobSASPermission.ts` | `azurite-blob/src/authentication/operation_blob_sas_permission.rs` | ~548 | H | 7.4 | ✅ |
+| 7.10 | `src/blob/authentication/BlobSharedKeyAuthenticator.ts` | `azurite-blob/src/authentication/blob_shared_key_authenticator.rs` | ~200 | M | 7.1 | ✅ |
+| 7.11 | `src/blob/authentication/AccountSASAuthenticator.ts` | `azurite-blob/src/authentication/account_sas_authenticator.rs` | ~200 | M | 7.1, 7.3 | ✅ |
+| 7.12 | `src/blob/authentication/BlobSASAuthenticator.ts` | `azurite-blob/src/authentication/blob_sas_authenticator.rs` | ~627 | H | 7.1, 7.3 | ✅ |
+| 7.13 | `src/blob/authentication/BlobTokenAuthenticator.ts` | `azurite-blob/src/authentication/blob_token_authenticator.rs` | ~100 | M | 7.1 | ✅ |
+| 7.14 | `src/blob/authentication/PublicAccessAuthenticator.ts` | `azurite-blob/src/authentication/public_access_authenticator.rs` | ~80 | M | 7.1 | ✅ |
 
 ---
 

@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::i_authenticator`
 - Phase: `7.1`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IAuthenticator`

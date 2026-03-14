@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::blob_sas_resource_type`
 - Phase: `7.5`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Enum `BlobSASResourceType`

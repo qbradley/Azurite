@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::public_access_authenticator`
 - Phase: `7.14`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `PublicAccessAuthenticator`

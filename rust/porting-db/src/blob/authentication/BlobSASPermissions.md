@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::blob_sas_permissions`
 - Phase: `7.4`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Enum `BlobSASPermission`

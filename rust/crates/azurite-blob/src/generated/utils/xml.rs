@@ -2,12 +2,11 @@ pub fn stringifyXML(
     obj: &serde_json::Value,
     rootName: Option<&str>,
 ) -> Result<String, quick_xml::se::SeError> {
-    let wrapped = if let Some(rootName) = rootName {
-        serde_json::json!({ rootName: obj })
+    if let Some(rootName) = rootName {
+        quick_xml::se::to_string_with_root(rootName, obj)
     } else {
-        obj.clone()
-    };
-    quick_xml::se::to_string(&wrapped)
+        quick_xml::se::to_string(obj)
+    }
 }
 
 pub fn parseXML(

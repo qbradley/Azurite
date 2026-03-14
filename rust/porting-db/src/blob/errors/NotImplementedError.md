@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `errors::not_implemented_error`
 - Phase: `6.3`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `NotImplementedError`

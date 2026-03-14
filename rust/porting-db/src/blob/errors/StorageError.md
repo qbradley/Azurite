@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `errors::storage_error`
 - Phase: `6.1`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `StorageError`

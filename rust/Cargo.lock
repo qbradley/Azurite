@@ -190,6 +190,7 @@ dependencies = [
  "async-trait",
  "axum",
  "azurite-common",
+ "base64",
  "bytes",
  "chrono",
  "clap",

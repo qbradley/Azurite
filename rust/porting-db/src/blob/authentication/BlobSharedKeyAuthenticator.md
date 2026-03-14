@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `authentication::blob_shared_key_authenticator`
 - Phase: `7.10`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobSharedKeyAuthenticator`

@@ -103,3 +103,25 @@ Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in pla
 - **Cross-team insight:** Generated framework order-sensitivity is critical; enum member ordering in Operation, specifications coupling, handler lookup tables must preserve exact TS structure. Any reordering silently reroutes requests.
 - **Boromir's Phase 4-5 parity update:** 3 bugs fixed (date Z-handling, URL fragment stripping, CLI arg registration). Test suite now at 67 active + 4 ignored. Phase 5+ test placeholders ready.
 - **Project metrics update:** 153 Rust source files, 91 porting-db records, 67 tests passing. D-012 (Phase 5 Translation) recorded.
+
+### Phase 6-7 blob errors/context/authentication ported (2026-03-14)
+- Ported the Phase 6 blob error/context files and Phase 7 blob authentication modules into `rust/crates/azurite-blob/src/`, wiring the new modules through `errors/mod.rs`, `context/mod.rs`, `authentication/mod.rs`, and a minimal `persistence::i_blob_metadata_store` trait seam needed by the authenticators.
+- Preserved the TypeScript fidelity hazards Faramir flagged: `StorageError` still eagerly materializes the XML error payload and headers, `StorageErrorFactory` keeps the odd status/code/message combinations, blob/account SAS permission checks still use the ANY-character sentinel tables, `BlobSnapshot` still validates through the container SAS permission map, protocol/IP validation stays intentionally loose, and token auth keeps the non-verifying BASIC JWT decode path.
+- Validation after cleanup: `cargo check -p azurite-blob`, `cargo check`, and `cargo test -p azurite-blob --lib` all succeed from `rust/`.
+
+## 2026-03-14T00:00 — Phase 6-7 Completion
+
+**Phase 6-7 Blob Errors/Auth Translation — 19 files completed, cargo check passing.**
+
+- StorageError, StorageErrorFactory, NotImplementedError, StrictModelNotSupportedError
+- BlobStorageContext
+- IAuthenticator, IAuthenticationContext, IBlobSASSignatureValues, BlobSASPermissions, BlobSASResourceType, ContainerSASPermissions, IRange
+- OperationAccountSASPermission, OperationBlobSASPermission
+- BlobSharedKeyAuthenticator, AccountSASAuthenticator, BlobSASAuthenticator, BlobTokenAuthenticator, PublicAccessAuthenticator
+
+**Decision:** Preserved existing blob-authentication quirks (permissive SAS rules, loose BASIC-token path, eager XML construction) to maintain observable Azurite contract for future TS change propagation.
+
+**Concurrent work:** Faramir completed Phase 8-10 analysis (38 porting-db records), Boromir completed Phase 5 tests with XML fix.
+
+**Next:** Phase 8 (lease subsystem) ready when scheduled.
+
