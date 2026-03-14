@@ -1,0 +1,155 @@
+PHASE 2 PORTING QUICK REFERENCE
+================================
+
+FILE STATISTICS
+---------------
+OperationQueue.ts         | 124 lines | 2.1 | Concurrency queue; EventEmitter-based
+MemoryExtentStore.ts      | 395 lines | 2.2 | In-memory extent storage; SharedChunkStore singleton
+FSExtentStore.ts          | 677 lines | 2.3 | FS-backed storage; file descriptor caching; pool management
+LokiExtentMetadataStore   | 218 lines | 2.4 | Loki DB metadata; pagination; GC filtering
+AllExtentsAsyncIterator   |  46 lines | 2.5 | Async iterator; snapshot time; batch pagination
+ZeroBytesStream.ts        |  31 lines | 2.6 | Zero-filled stream; extends Readable
+Mutex.ts                  |  76 lines | 2.7 | Static per-key lock manager; event-driven callbacks
+
+TOTAL: 1,567 lines analyzed
+
+CRITICAL IMPORTS & PORTING STATUS
+----------------------------------
+IOperationQueue (1.15)    ✓ analyzed
+IExtentStore (1.13)       ✓ analyzed
+IExtentMetadataStore (1.14) ✓ analyzed
+ILogger (Phase 2)         ✓ analyzed
+IDataStore (Phase 1)      ✓ analyzed
+ICleaner (Phase 1)        ✓ analyzed
+ZeroBytesStream (2.6)     ✓ in this phase
+AllExtentsAsyncIterator (2.5) ✓ in this phase
+OperationQueue (2.1)      ✓ in this phase
+Mutex (2.7)               ✓ in this phase
+
+EXTERNAL DEPS
+UUID                      → uuid crate (v4)
+EventEmitter              → tokio::sync::Semaphore or channels
+Loki DB                   → sled or rocksdb
+multistream               → futures::stream combinator
+fs.* (Node.js)            → tokio::fs
+stream.Readable/Writable  → tokio::io async traits
+Buffer                    → bytes::Bytes or Vec<u8>
+os.totalmem()             → sysinfo crate
+
+KEY RUST TYPE MAPPINGS
+----------------------
+EventEmitter
+  → tokio::sync::Semaphore + Arc<Mutex<VecDeque<T>>>
+  → OR: tokio::sync::mpsc channel
+
+IAppendExtent (mutable pool)
+  → Arc<Mutex<AppendExtent>>
+
+Promise<T> | Promise<NodeJS.ReadableStream>
+  → Result<T, StorageError> in async fn
+
+Map<string, T>
+  → Arc<RwLock<HashMap<String, T>>>
+
+() => Promise<T>
+  → Box<dyn FnOnce() -> Pin<Box<dyn Future<...>>>>
+
+Node.js stream events
+  → tokio async polling + explicit error handling
+
+CONTROL FLOW HIGHLIGHTS
+-----------------------
+OperationQueue:
+  • Lazy callback enqueue → semaphore acquire → execute → event notify next
+
+MemoryExtentStore:
+  • Stream→Buffer accumulation → size-check insert → metadata update
+  • multistream composition for range reads
+
+FSExtentStore:
+  • Pool selection → file open/reuse → streamPipe + fdatasync → metadata update
+  • Error: truncate → mark idle
+  • Active extent tracking via linear search
+
+LokiExtentMetadataStore:
+  • init: stat file → load/create → collection ensure → save
+  • updateExtent: find by id → upsert or insert
+  • listExtents: build filters → query → pagination marker extraction
+
+AllExtentsAsyncIterator:
+  • Constructor: snapshot time
+  • next(): call listExtents with batch size 1000 → check nextMarker → set done
+
+ZeroBytesStream:
+  • _read(size) → emit min(leftBytes, size, 512) zeros → decrement leftBytes → EOF when 0
+
+Mutex:
+  • lock(key): check keys map → LOCKED→immediate, UNLOCKED→register callback→wait
+  • unlock(key): remove from keys → emit event via setImmediate → callback re-enters lock()
+
+ASYNC/CONCURRENCY PATTERNS
+---------------------------
+OperationQueue:          Semaphore-based FIFO queue; configurable max concurrency
+FSExtentStore:           Two queues (append, read) with different concurrency limits
+MemoryExtentStore:       Shared RwLock for in-memory chunks; atomic size tracking
+LokiExtentMetadataStore: Arc<Mutex<HashMap>> for metadata; callback-based persistence
+Mutex:                   oneshot channels for FIFO waiter signaling
+
+HIGHEST-RISK AREAS
+-------------------
+1. FSExtentStore (2.3) - largest, hottest path
+   • File descriptor lifecycle management
+   • Stream piping + explicit sync coordination
+   • Pool resource allocation and selection
+   • Error handling with state cleanup
+
+2. OperationQueue (2.1) - foundational, heavily used
+   • EventEmitter semantics → tokio equivalent
+   • Lazy callback execution preservation
+   • Concurrency limit enforcement fairness
+
+3. LokiExtentMetadataStore (2.4) - complex pagination
+   • Loki replacement (sled vs rocksdb vs in-memory)
+   • Pagination state machine correctness
+   • Query filter chain (id + time + marker)
+
+RECOMMENDED PORTING ORDER
+--------------------------
+1. ZeroBytesStream (2.6) - standalone, smallest, no queue deps
+2. OperationQueue (2.1) - foundational; used by others
+3. Mutex (2.7) - independent utility
+4. MemoryExtentStore (2.2) - medium complexity; optional in some configs
+5. LokiExtentMetadataStore (2.4) - metadata persistence; needs sled integration
+6. AllExtentsAsyncIterator (2.5) - depends on LokiExtentMetadataStore
+7. FSExtentStore (2.3) - everything depends on this; port last
+
+INTEGRATION HOOKS
+-----------------
+• IExtentStore interface (Phase 1.13)
+  → Implemented by MemoryExtentStore, FSExtentStore
+  
+• IExtentMetadataStore interface (Phase 1.14)
+  → Implemented by LokiExtentMetadataStore
+  
+• IOperationQueue interface (Phase 1.15)
+  → Implemented by OperationQueue
+  → Used by FSExtentStore (two instances: appendQueue, readQueue)
+  
+• ZeroBytesStream (2.6)
+  → Used by MemoryExtentStore, FSExtentStore for empty reads
+  
+• AllExtentsAsyncIterator (2.5)
+  → Created by LokiExtentMetadataStore.iteratorExtents()
+  → Consumed by GC managers
+  
+• Mutex (2.7)
+  → Global per-key lock manager; used by blob/queue services
+
+SHARED CONSTANTS
+----------------
+DEFAULT_EXTENT_MEMORY_LIMIT    = Math.trunc(totalmem() * 0.5)  [MemoryExtentStore]
+DEFAULT_MAX_EXTENT_SIZE        = (from constants.ts)            [FSExtentStore]
+DEFAULT_READ_CONCURRENCY       = (from constants.ts)            [FSExtentStore]
+DEFAULT_EXTENT_GC_PROTECT_TIME = (from constants.ts)            [AllExtentsAsyncIterator]
+ZERO_EXTENT_ID                 = (from IBlobMetadataStore)      [MemoryExtentStore, FSExtentStore]
+

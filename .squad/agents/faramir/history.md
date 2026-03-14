@@ -59,3 +59,9 @@ All analysis phases 0-9 completed before 2026-03-14:
 - Phase 8: Lease subsystem analysis (15 Rust files)
 - Phase 9-10: Condition/persistence analysis (42 porting-db records)
 
+### Integration/E2E test infrastructure investigation completed (2026-03-14)
+- Azurite already has a strong reusable black-box test bed: 41 TypeScript integration/E2E suites under `tests/blob/`, `tests/queue/`, and `tests/table/`, plus table-specific cross-language conformance coverage in `tests/table/dotnet/AzuriteTableTest/*.cs` and `tests/table/go/main.go`.
+- The reusable suites mostly drive Azurite through official Azure SDKs (`@azure/storage-blob`, `@azure/storage-queue`, `@azure/data-tables`, legacy `azure-storage`) and therefore validate observable protocol behavior rather than TS internals.
+- Main blocker for Rust reuse is harness shape, not test quality: Blob/Queue/Table test factories directly start TypeScript server objects on hardcoded ports `11000/11001/11002`, and some table helpers/raw REST payloads also hardcode endpoint details (`tests/table/models/table.entity.test.config.ts`, `tests/table/apis/table.entity.rest.test.ts`).
+- Best reuse strategy is a thin external-server mode in the existing TS harness so the same Mocha suites can point at Rust without rewriting assertions. Recommended execution order remains blob first, queue second, table third; use table .NET/Go conformance only after table API parity stabilizes.
+
