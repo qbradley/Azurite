@@ -125,3 +125,40 @@ rust/
 
 **Next:** Continuous pipeline — Phase 8 (lease) implementation scheduled to follow.
 
+
+## 2026-03-14: QUICKSTART.md for Rust Azurite Created
+
+**By:** Gandalf (Lead Architect)
+
+**What:** Created `/rust/QUICKSTART.md` — a comprehensive end-user guide for Rust Azurite. The guide covers:
+- Prerequisites (Rust 1.77+) with installation and verification instructions
+- Building release binaries (`cargo build --release`) with binary location guidance
+- Running combined services and individual services (blob, queue, table separately)
+- Common options: custom ports/host, in-memory mode, silent/debug logging, loose mode, SSL/HTTPS, OAuth
+- Client connection examples: Python SDK, Node.js SDK, .NET SDK, Azure CLI, curl REST API
+- Implementation status matrix (Blob ✓, Queue ✓, Table in progress) with known limitations
+- Troubleshooting guide and Docker containerization example
+- Links to main README and porting-db for deeper technical details
+
+**Key Design Decisions:**
+- Friendly, practical tone assuming Rust installed but not Azurite internals
+- Heavy use of code blocks with realistic examples in bash, Python, JavaScript, C#
+- All CLI options documented with practical examples and default values
+- Default ports (10000/10001/10002) and development credentials explicitly documented
+- Both `cargo run` and direct binary execution documented side-by-side
+- Clear distinction between combined vs individual service execution patterns
+- Pre-flight troubleshooting section (port conflicts, workspace errors, connection failures)
+
+**Why:** End-user documentation is critical for successful adoption of the Rust port. Developers need practical, clear guidance to:
+1. Set up and build the project
+2. Run services locally (combined or individually)
+3. Connect from their applications (all major SDKs)
+4. Configure for their specific use case (custom ports, HTTPS, logging)
+5. Troubleshoot common issues
+
+Well-written documentation reduces support burden, improves developer experience, and accelerates adoption. This guide follows the style and structure of the main README.md but optimized for hands-on, getting-started scenarios.
+
+**Scope:** Public-facing documentation for Azurite Rust end-users. Complements the technical porting-db records maintained for implementers.
+
+**Impact:** Azurite Rust is now ready for end-user adoption with comprehensive, practical guidance covering all common use cases and client library integrations.
+
