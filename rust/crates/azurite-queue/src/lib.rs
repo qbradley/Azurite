@@ -27,5 +27,6 @@ pub mod queue_configuration;
 pub mod queue_environment;
 pub mod queue_request_listener_factory;
 pub mod queue_server;
+pub mod utils;
 
 pub use queue_server::QueueServer;

@@ -1,0 +1,152 @@
+[
+  {
+    "operation": "Service_SetProperties",
+    "handler": "serviceHandler",
+    "method": "setProperties",
+    "arguments": [
+      "storageServiceProperties",
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_GetProperties",
+    "handler": "serviceHandler",
+    "method": "getProperties",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_GetStatistics",
+    "handler": "serviceHandler",
+    "method": "getStatistics",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Service_ListQueuesSegment",
+    "handler": "serviceHandler",
+    "method": "listQueuesSegment",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_Create",
+    "handler": "queueHandler",
+    "method": "create",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_Delete",
+    "handler": "queueHandler",
+    "method": "delete",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_GetProperties",
+    "handler": "queueHandler",
+    "method": "getProperties",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_GetPropertiesWithHead",
+    "handler": "queueHandler",
+    "method": "getPropertiesWithHead",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_SetMetadata",
+    "handler": "queueHandler",
+    "method": "setMetadata",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_GetAccessPolicy",
+    "handler": "queueHandler",
+    "method": "getAccessPolicy",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_GetAccessPolicyWithHead",
+    "handler": "queueHandler",
+    "method": "getAccessPolicyWithHead",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Queue_SetAccessPolicy",
+    "handler": "queueHandler",
+    "method": "setAccessPolicy",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Messages_Dequeue",
+    "handler": "messagesHandler",
+    "method": "dequeue",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Messages_Clear",
+    "handler": "messagesHandler",
+    "method": "clear",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "Messages_Enqueue",
+    "handler": "messagesHandler",
+    "method": "enqueue",
+    "arguments": [
+      "queueMessage",
+      "options"
+    ]
+  },
+  {
+    "operation": "Messages_Peek",
+    "handler": "messagesHandler",
+    "method": "peek",
+    "arguments": [
+      "options"
+    ]
+  },
+  {
+    "operation": "MessageId_Update",
+    "handler": "messageIdHandler",
+    "method": "update",
+    "arguments": [
+      "queueMessage",
+      "popReceipt",
+      "visibilitytimeout",
+      "options"
+    ]
+  },
+  {
+    "operation": "MessageId_Delete",
+    "handler": "messageIdHandler",
+    "method": "delete",
+    "arguments": [
+      "popReceipt",
+      "options"
+    ]
+  }
+]

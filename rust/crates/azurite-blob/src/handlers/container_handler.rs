@@ -298,7 +298,7 @@ impl IContainerHandler for ContainerHandler {
                 .containerAcl
                 .unwrap_or_default()
                 .into_iter()
-                .map(|item| GeneratedValue::Object(item))
+                .map(GeneratedValue::Object)
                 .collect(),
         )));
         response.insert_field(

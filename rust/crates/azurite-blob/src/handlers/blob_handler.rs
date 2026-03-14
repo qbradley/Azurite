@@ -1191,10 +1191,8 @@ impl BlobHandler {
         let range_parts = {
             let range_hdr = req.as_ref().and_then(|r| r.getHeader("range"));
             let x_ms_range = req.as_ref().and_then(|r| r.getHeader("x-ms-range"));
-            match deserialize_range_header(range_hdr.as_deref(), x_ms_range.as_deref()) {
-                Ok(r) => r,
-                Err(_) => None,
-            }
+            deserialize_range_header(range_hdr.as_deref(), x_ms_range.as_deref())
+                .unwrap_or_default()
         };
 
         let content_length_stored =

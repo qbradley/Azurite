@@ -123,7 +123,7 @@ impl IServiceHandler for ServiceHandler {
 
         if let Some(body) = context.request().and_then(|request| request.getBody()) {
             let parsed_body = parseXML(&body, false).unwrap_or(serde_json::Value::Null);
-            if !parsed_body.get("cors").is_some() && !parsed_body.get("Cors").is_some() {
+            if parsed_body.get("cors").is_none() && parsed_body.get("Cors").is_none() {
                 storageServiceProperties.remove("cors");
             }
         }

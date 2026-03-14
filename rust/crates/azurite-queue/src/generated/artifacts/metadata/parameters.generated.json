@@ -1,0 +1,274 @@
+{
+  "comp0": {
+    "parameterPath": "comp",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "comp",
+      "defaultValue": "properties",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "comp1": {
+    "parameterPath": "comp",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "comp",
+      "defaultValue": "stats",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "comp2": {
+    "parameterPath": "comp",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "comp",
+      "defaultValue": "list",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "comp3": {
+    "parameterPath": "comp",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "comp",
+      "defaultValue": "metadata",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "comp4": {
+    "parameterPath": "comp",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "comp",
+      "defaultValue": "acl",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "include": {
+    "parameterPath": [
+      "options",
+      "include"
+    ],
+    "mapper": {
+      "serializedName": "include",
+      "type": {
+        "name": "Sequence",
+        "element": {
+          "type": {
+            "name": "Enum",
+            "allowedValues": [
+              "metadata"
+            ]
+          }
+        }
+      }
+    },
+    "collectionFormat": ","
+  },
+  "marker": {
+    "parameterPath": [
+      "options",
+      "marker"
+    ],
+    "mapper": {
+      "serializedName": "marker",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "maxresults": {
+    "parameterPath": [
+      "options",
+      "maxresults"
+    ],
+    "mapper": {
+      "serializedName": "maxresults",
+      "constraints": {
+        "InclusiveMinimum": 1
+      },
+      "type": {
+        "name": "Number"
+      }
+    }
+  },
+  "messageTimeToLive": {
+    "parameterPath": [
+      "options",
+      "messageTimeToLive"
+    ],
+    "mapper": {
+      "serializedName": "messagettl",
+      "constraints": {
+        "InclusiveMinimum": -1
+      },
+      "type": {
+        "name": "Number"
+      }
+    }
+  },
+  "metadata": {
+    "parameterPath": [
+      "options",
+      "metadata"
+    ],
+    "mapper": {
+      "serializedName": "x-ms-meta",
+      "type": {
+        "name": "Dictionary",
+        "value": {
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      "headerCollectionPrefix": "x-ms-meta-"
+    }
+  },
+  "numberOfMessages": {
+    "parameterPath": [
+      "options",
+      "numberOfMessages"
+    ],
+    "mapper": {
+      "serializedName": "numofmessages",
+      "constraints": {
+        "InclusiveMinimum": 1
+      },
+      "type": {
+        "name": "Number"
+      }
+    }
+  },
+  "peekonly": {
+    "parameterPath": "peekonly",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "peekonly",
+      "defaultValue": "true",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "popReceipt": {
+    "parameterPath": "popReceipt",
+    "mapper": {
+      "required": true,
+      "serializedName": "popreceipt",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "prefix": {
+    "parameterPath": [
+      "options",
+      "prefix"
+    ],
+    "mapper": {
+      "serializedName": "prefix",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "requestId": {
+    "parameterPath": [
+      "options",
+      "requestId"
+    ],
+    "mapper": {
+      "serializedName": "x-ms-client-request-id",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "restype": {
+    "parameterPath": "restype",
+    "mapper": {
+      "required": true,
+      "isConstant": true,
+      "serializedName": "restype",
+      "defaultValue": "service",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "timeout": {
+    "parameterPath": [
+      "options",
+      "timeout"
+    ],
+    "mapper": {
+      "serializedName": "timeout",
+      "constraints": {
+        "InclusiveMinimum": 0
+      },
+      "type": {
+        "name": "Number"
+      }
+    }
+  },
+  "url": {
+    "parameterPath": "url",
+    "mapper": {
+      "required": true,
+      "serializedName": "url",
+      "defaultValue": "",
+      "type": {
+        "name": "String"
+      }
+    },
+    "skipEncoding": true
+  },
+  "version": {
+    "parameterPath": "version",
+    "mapper": {
+      "serializedName": "x-ms-version",
+      "type": {
+        "name": "String"
+      }
+    }
+  },
+  "visibilitytimeout0": {
+    "parameterPath": [
+      "options",
+      "visibilitytimeout"
+    ],
+    "mapper": {
+      "serializedName": "visibilitytimeout",
+      "type": {
+        "name": "Number"
+      }
+    }
+  },
+  "visibilitytimeout1": {
+    "parameterPath": "visibilitytimeout",
+    "mapper": {
+      "required": true,
+      "serializedName": "visibilitytimeout",
+      "type": {
+        "name": "Number"
+      }
+    }
+  }
+}

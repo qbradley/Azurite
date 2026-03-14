@@ -1,0 +1,20 @@
+[
+  "Service_SetProperties",
+  "Service_GetProperties",
+  "Service_GetStatistics",
+  "Service_ListQueuesSegment",
+  "Queue_Create",
+  "Queue_Delete",
+  "Queue_GetProperties",
+  "Queue_GetPropertiesWithHead",
+  "Queue_SetMetadata",
+  "Queue_GetAccessPolicy",
+  "Queue_GetAccessPolicyWithHead",
+  "Queue_SetAccessPolicy",
+  "Messages_Dequeue",
+  "Messages_Clear",
+  "Messages_Enqueue",
+  "Messages_Peek",
+  "MessageId_Update",
+  "MessageId_Delete"
+]

@@ -21,7 +21,6 @@ use azurite_blob::handlers::base_handler::BaseHandler;
 use azurite_blob::handlers::container_handler::ContainerHandler;
 use azurite_blob::handlers::page_blob_ranges_manager::PageBlobRangesManager;
 use azurite_blob::handlers::service_handler::ServiceHandler;
-use pretty_assertions::assert_eq;
 
 // ============================================================================
 // Phase 11.1: BaseHandler - Stores references to metadata/extent/logger/loose

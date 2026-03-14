@@ -264,20 +264,20 @@ Wire everything together into a running service.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 12.1 | `src/blob/utils/constants.ts` | `azurite-blob/src/utils/constants.rs` | ~50 | L | — | ⬜ |
-| 12.2 | `src/blob/utils/utils.ts` | `azurite-blob/src/utils/utils.rs` | ~100 | M | — | ⬜ |
-| 12.3 | `src/blob/middlewares/blobStorageContext.middleware.ts` | `azurite-blob/src/middlewares/blob_storage_context.rs` | ~80 | M | 6.5 | ⬜ |
-| 12.4 | `src/blob/middlewares/AuthenticationMiddlewareFactory.ts` | `azurite-blob/src/middlewares/authentication_middleware_factory.rs` | ~100 | M | Phase 7 | ⬜ |
-| 12.5 | `src/blob/middlewares/PreflightMiddlewareFactory.ts` | `azurite-blob/src/middlewares/preflight_middleware_factory.rs` | ~465 | H | — | ⬜ |
-| 12.6 | `src/blob/middlewares/StrictModelMiddlewareFactory.ts` | `azurite-blob/src/middlewares/strict_model_middleware_factory.rs` | ~80 | M | — | ⬜ |
-| 12.7 | `src/blob/middlewares/telemetry.middleware.ts` | `azurite-blob/src/middlewares/telemetry.rs` | ~50 | L | — | ⬜ |
-| 12.8 | `src/blob/IBlobEnvironment.ts` | `azurite-blob/src/i_blob_environment.rs` | ~50 | L | 1.11 | ⬜ |
-| 12.9 | `src/blob/BlobEnvironment.ts` | `azurite-blob/src/blob_environment.rs` | ~100 | M | 12.8 | ⬜ |
-| 12.10 | `src/blob/BlobConfiguration.ts` | `azurite-blob/src/blob_configuration.rs` | ~50 | L | 4.7 | ⬜ |
-| 12.11 | `src/blob/BlobRequestListenerFactory.ts` | `azurite-blob/src/blob_request_listener_factory.rs` | ~200 | H | Phase 5, 12.3-12.7 | ⬜ |
-| 12.12 | `src/blob/BlobServer.ts` | `azurite-blob/src/blob_server.rs` | ~245 | H | 4.8, 12.10, 12.11 | ⬜ |
-| 12.13 | `src/blob/BlobServerFactory.ts` | `azurite-blob/src/blob_server_factory.rs` | ~60 | M | 12.12 | ⬜ |
-| 12.14 | `src/blob/main.ts` | `azurite-blob/src/main.rs` | ~80 | M | 12.13 | ⬜ |
+| 12.1 | `src/blob/utils/constants.ts` | `azurite-blob/src/utils/constants.rs` | ~50 | L | — | ✅ |
+| 12.2 | `src/blob/utils/utils.ts` | `azurite-blob/src/utils/utils.rs` | ~100 | M | — | ✅ |
+| 12.3 | `src/blob/middlewares/blobStorageContext.middleware.ts` | `azurite-blob/src/middlewares/blob_storage_context.rs` | ~80 | M | 6.5 | ✅ |
+| 12.4 | `src/blob/middlewares/AuthenticationMiddlewareFactory.ts` | `azurite-blob/src/middlewares/authentication_middleware_factory.rs` | ~100 | M | Phase 7 | ✅ |
+| 12.5 | `src/blob/middlewares/PreflightMiddlewareFactory.ts` | `azurite-blob/src/middlewares/preflight_middleware_factory.rs` | ~465 | H | — | ✅ |
+| 12.6 | `src/blob/middlewares/StrictModelMiddlewareFactory.ts` | `azurite-blob/src/middlewares/strict_model_middleware_factory.rs` | ~80 | M | — | ✅ |
+| 12.7 | `src/blob/middlewares/telemetry.middleware.ts` | `azurite-blob/src/middlewares/telemetry.rs` | ~50 | L | — | ✅ |
+| 12.8 | `src/blob/IBlobEnvironment.ts` | `azurite-blob/src/i_blob_environment.rs` | ~50 | L | 1.11 | ✅ |
+| 12.9 | `src/blob/BlobEnvironment.ts` | `azurite-blob/src/blob_environment.rs` | ~100 | M | 12.8 | ✅ |
+| 12.10 | `src/blob/BlobConfiguration.ts` | `azurite-blob/src/blob_configuration.rs` | ~50 | L | 4.7 | ✅ |
+| 12.11 | `src/blob/BlobRequestListenerFactory.ts` | `azurite-blob/src/blob_request_listener_factory.rs` | ~200 | H | Phase 5, 12.3-12.7 | ✅ |
+| 12.12 | `src/blob/BlobServer.ts` | `azurite-blob/src/blob_server.rs` | ~245 | H | 4.8, 12.10, 12.11 | ✅ |
+| 12.13 | `src/blob/BlobServerFactory.ts` | `azurite-blob/src/blob_server_factory.rs` | ~60 | M | 12.12 | ✅ |
+| 12.14 | `src/blob/main.ts` | `azurite-blob/src/main.rs` | ~80 | M | 12.13 | ✅ |
 
 ---
 
@@ -285,7 +285,7 @@ Wire everything together into a running service.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 13.1 | `src/blob/gc/BlobGCManager.ts` | `azurite-blob/src/gc/blob_gc_manager.rs` | ~293 | H | 1.10, 10.1 | ⬜ |
+| 13.1 | `src/blob/gc/BlobGCManager.ts` | `azurite-blob/src/gc/blob_gc_manager.rs` | ~293 | H | 1.10, 10.1 | ✅ |
 
 **🏁 MILESTONE: Blob service fully ported — integration tests can begin for blob.**
 

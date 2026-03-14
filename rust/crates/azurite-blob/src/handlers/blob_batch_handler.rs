@@ -290,7 +290,7 @@ impl<H: IHandlers + 'static> BlobBatchHandler<H> {
             self.disable_product_style,
         );
 
-        dispatch_middleware(&context, req, self.logger.as_ref()).map_err(|e| e)?;
+        dispatch_middleware(&context, req, self.logger.as_ref())?;
 
         context
             .operation()
@@ -689,7 +689,7 @@ impl<H: IHandlers + 'static> BlobBatchHandler<H> {
                 };
                 // If the original error is already a StorageError, use it directly
                 let final_err: Box<dyn std::error::Error + Send + Sync> =
-                    if let Some(se) = err.downcast::<StorageError>().ok() {
+                    if let Ok(se) = err.downcast::<StorageError>() {
                         se
                     } else if let Some(se) = storage_err {
                         Box::new(se)
