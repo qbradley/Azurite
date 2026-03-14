@@ -291,6 +291,9 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                             let mapped_value = apply_model_mapping(value, property_mapper);
                             result.insert(mapped_key, mapped_value);
                         }
+                    } else if resolve_additional_properties(mapper).is_some() {
+                        // additionalProperties: pass through extra keys as-is
+                        result.insert(key.clone(), value.clone());
                     }
                 }
                 serde_json::Value::Object(result)
@@ -353,6 +356,26 @@ fn resolve_model_properties(mapper: &Mapper) -> Option<&BTreeMap<String, Mapper>
             .and_then(get_mapper)
             .map(|resolved| &resolved.r#type.modelProperties)
             .filter(|properties| !properties.is_empty())
+    }
+}
+
+fn resolve_additional_properties(mapper: &Mapper) -> Option<&Mapper> {
+    mapper.r#type.additionalProperties.as_deref().or_else(|| {
+        mapper
+            .r#type
+            .className
+            .as_deref()
+            .and_then(get_mapper)
+            .and_then(|resolved| resolved.r#type.additionalProperties.as_deref())
+    })
+}
+
+#[allow(dead_code)]
+fn capitalize_first(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
     }
 }
 

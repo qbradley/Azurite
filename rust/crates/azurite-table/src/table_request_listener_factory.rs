@@ -417,7 +417,6 @@ fn build_generated_request(parts: &Parts, body: &[u8]) -> GeneratedHttpRequest {
             .into_owned()
             .collect::<BTreeMap<_, _>>(),
         protocol,
-        ..GeneratedHttpRequest::default()
     }
 }
 

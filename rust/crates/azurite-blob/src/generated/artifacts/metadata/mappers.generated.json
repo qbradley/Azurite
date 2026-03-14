@@ -1107,6 +1107,25 @@
             "modelProperties": {}
           }
         }
+      },
+      "additionalProperties": {
+        "__name": null,
+        "serializedName": null,
+        "required": false,
+        "isConstant": false,
+        "defaultValue": null,
+        "xmlName": null,
+        "xmlElementName": null,
+        "xmlIsWrapped": false,
+        "headerCollectionPrefix": null,
+        "type": {
+          "name": "String",
+          "className": null,
+          "allowedValues": [],
+          "element": null,
+          "value": null,
+          "modelProperties": {}
+        }
       }
     }
   },

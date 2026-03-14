@@ -1,7 +1,8 @@
 use async_trait::async_trait;
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use futures::stream::{self, BoxStream};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
@@ -14,7 +15,6 @@ use azurite_common::utils::utils::{
     newEtag as new_etag,
 };
 
-use crate::conditions::conditional_headers_adapter::ConditionalHeadersAdapter;
 use crate::conditions::read_conditional_headers_validator::validate_read_conditions;
 use crate::conditions::write_conditional_headers_validator::{
     validate_sequence_number_write_conditions, validate_write_conditions,
@@ -22,16 +22,15 @@ use crate::conditions::write_conditional_headers_validator::{
 };
 use crate::errors::{StorageError, StorageErrorFactory};
 use crate::generated::artifacts::models::{
-    AccessPolicy, AccessTier, AppendBlobSealOptionalParams, AppendPositionAccessConditions,
-    BlobAcquireLeaseOptionalParams, BlobBreakLeaseOptionalParams, BlobChangeLeaseOptionalParams,
-    BlobCopyFromURLOptionalParams, BlobDeleteMethodOptionalParams, BlobHTTPHeaders, BlobMetadata,
-    BlobPropertiesInternal, BlobReleaseLeaseOptionalParams, BlobRenewLeaseOptionalParams,
+    AppendBlobSealOptionalParams, AppendPositionAccessConditions, BlobAcquireLeaseOptionalParams,
+    BlobBreakLeaseOptionalParams, BlobChangeLeaseOptionalParams, BlobCopyFromURLOptionalParams,
+    BlobDeleteMethodOptionalParams, BlobHTTPHeaders, BlobMetadata, BlobPropertiesInternal,
+    BlobReleaseLeaseOptionalParams, BlobRenewLeaseOptionalParams,
     BlobStartCopyFromURLOptionalParams, BlobTags, Block, ContainerAcquireLeaseOptionalParams,
     ContainerBreakLeaseOptionalParams, ContainerChangeLeaseOptionalParams,
-    ContainerDeleteMethodOptionalParams, ContainerProperties, ContainerReleaseLeaseOptionalParams,
+    ContainerDeleteMethodOptionalParams, ContainerReleaseLeaseOptionalParams,
     ContainerRenewLeaseOptionalParams, GeneratedObject, GeneratedValue, LeaseAccessConditions,
-    ModifiedAccessConditions, PageRange, SequenceNumberAccessConditions, SignedIdentifier,
-    StorageServiceProperties,
+    ModifiedAccessConditions, PageRange, SequenceNumberAccessConditions,
 };
 use crate::generated::context::Context;
 use crate::handlers::page_blob_ranges_manager::PageBlobRangesManager;
@@ -41,7 +40,6 @@ use crate::lease::{
     ContainerLeaseSyncer, ContainerReadLeaseValidator, ILeaseSyncer, ILeaseValidator, LeaseFactory,
 };
 use crate::persistence::blob_referred_extents_async_iterator::BlobReferredExtentsAsyncIterator;
-use crate::persistence::filter_blob_page::FilterBlobPage;
 use crate::persistence::i_blob_metadata_store::{
     AcquireBlobLeaseResponse, AcquireContainerLeaseResponse, BlobId, BlobLeaseResponse, BlobModel,
     BlobPrefixModel, BlobTypeResult, BlockListEntry, BlockModel, BreakBlobLeaseResponse,
@@ -51,19 +49,14 @@ use crate::persistence::i_blob_metadata_store::{
     GetPageRangeResponse, IBlobMetadataStore, IContainerMetadata, IExtentChunk,
     PersistencyBlockModel, PersistencyPageRange, ReleaseBlobLeaseResponse,
     ReleaseContainerLeaseResponse, RenewBlobLeaseResponse, RenewContainerLeaseResponse,
-    ServicePropertiesModel, SetContainerAccessPolicyOptions, ZERO_EXTENT_ID,
+    ServicePropertiesModel, SetContainerAccessPolicyOptions,
 };
 use crate::persistence::page_with_delimiter::PageWithDelimiter;
-use crate::persistence::query_interpreter::query_interpreter::{
-    execute_query, generate_query_blob_with_tags_where_function,
-};
+use crate::persistence::query_interpreter::query_interpreter::generate_query_blob_with_tags_where_function;
 use crate::utils::constants::{
     DEFAULT_LIST_BLOBS_MAX_RESULTS, DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
 };
-use crate::utils::{
-    getBlobTagsCount as get_blob_tags_count, getTagsFromString as get_tags_from_string,
-    MAX_APPEND_BLOB_BLOCK_COUNT,
-};
+use crate::utils::{getTagsFromString as get_tags_from_string, MAX_APPEND_BLOB_BLOCK_COUNT};
 
 const BLOB_TYPE_APPEND_BLOB: &str = "AppendBlob";
 const BLOB_TYPE_BLOCK_BLOB: &str = "BlockBlob";
@@ -72,8 +65,6 @@ const ACCESS_TIER_ARCHIVE: &str = "Archive";
 const ACCESS_TIER_COLD: &str = "Cold";
 const ACCESS_TIER_COOL: &str = "Cool";
 const ACCESS_TIER_HOT: &str = "Hot";
-const PUBLIC_ACCESS_BLOB: &str = "blob";
-const PUBLIC_ACCESS_CONTAINER: &str = "container";
 
 fn get_string(map: &GeneratedObject, key: &str) -> Option<String> {
     map.get(key).and_then(GeneratedValue::as_string)
@@ -93,6 +84,7 @@ fn get_object(map: &GeneratedObject, key: &str) -> Option<GeneratedObject> {
     map.get(key).and_then(GeneratedValue::as_object).cloned()
 }
 
+#[allow(dead_code)]
 fn get_object_ref<'a>(map: &'a GeneratedObject, key: &str) -> Option<&'a GeneratedObject> {
     map.get(key).and_then(GeneratedValue::as_object)
 }
@@ -124,6 +116,7 @@ fn set_bool(map: &mut GeneratedObject, key: &str, value: Option<bool>) {
     set_value(map, key, value.map(GeneratedValue::Bool));
 }
 
+#[allow(dead_code)]
 fn set_object(map: &mut GeneratedObject, key: &str, value: Option<GeneratedObject>) {
     set_value(map, key, value.map(GeneratedValue::Object));
 }
@@ -227,6 +220,7 @@ fn invalid_header_value(context_id: Option<&str>, header: &str, value: &str) -> 
 ///                           // Unique document properties: accountName, containerName, blobName, name, isCommitted
 #[derive(Clone)]
 pub struct LokiBlobMetadataStore {
+    #[allow(dead_code)]
     loki_db_path: PathBuf,
     in_memory: bool,
     initialized: bool,
@@ -311,6 +305,7 @@ impl LokiBlobMetadataStore {
     }
 
     /// Private helper: Escape regex special characters.
+    #[allow(dead_code)]
     fn escape_regex(s: &str) -> String {
         s.replace("\\", "\\\\")
             .replace(".", "\\.")
@@ -332,7 +327,7 @@ impl LokiBlobMetadataStore {
     /// In TS, Loki JSON persistence loses typed arrays, so reads must restore them.
     /// In Rust, we'll assume binary fields are already Vec<u8> or similar, but keep the pattern.
     fn restore_uint8_array(value: Option<&Vec<u8>>) -> Option<Vec<u8>> {
-        value.map(|v| v.clone())
+        value.cloned()
     }
 
     /// Private helper: Get container with lease updated.
@@ -597,7 +592,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let mut result_docs: Vec<ContainerModel> =
             matching.into_iter().take(max_results + 1).collect();
         let next_marker = if result_docs.len() > max_results {
-            let last = result_docs.pop();
+            let _ = result_docs.pop();
             result_docs.last().and_then(|doc| doc.name.clone())
         } else {
             None
@@ -986,7 +981,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(ContainerLeaseResponse {
             properties: doc.properties,
             leaseId: doc.leaseId,
-            leaseTime: doc.leaseDurationSeconds,
+            leaseTime: doc.leaseBreakTime.map(|break_time| {
+                (break_time - context.startTime().unwrap_or_else(Utc::now))
+                    .num_seconds()
+                    .max(0)
+            }),
         })
     }
 
@@ -1103,7 +1102,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         account: &str,
         container: &str,
         delimiter: Option<&str>,
-        blob: Option<&str>,
+        _blob: Option<&str>,
         prefix: Option<&str>,
         max_results: Option<i64>,
         marker: Option<&str>,
@@ -1117,7 +1116,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let include_uncommitted_blobs = include_uncommitted_blobs.unwrap_or(false);
 
         if let Some(delim) = delimiter {
-            let mut matching: Vec<BlobModel> = {
+            let matching: Vec<BlobModel> = {
                 let blobs = self.blobs_collection.read().unwrap();
                 let mut items: Vec<BlobModel> = blobs
                     .iter()
@@ -1299,6 +1298,17 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // Validate write conditions
         validate_write_conditions(context, modifiedAccessConditions, existing.as_ref())?;
 
+        // ifNoneMatch=* means "only create if blob does not exist" → 409 if it does
+        if existing.is_some() {
+            if let Some(mac) = modifiedAccessConditions {
+                if get_string(mac, "ifNoneMatch").as_deref() == Some("*") {
+                    return Err(StorageErrorFactory::getBlobAlreadyExists(
+                        context.contextId().as_deref(),
+                    ));
+                }
+            }
+        }
+
         // Validate lease conditions
         if let Some(existing_blob) = &existing {
             let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
@@ -1342,9 +1352,10 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let adapter = BlobLeaseAdapter::new(&base_blob);
         validator.validate(&adapter, context)?;
 
-        // Generate snapshot timestamp
-        let snapshot_time =
-            convert_date_time_string_ms_to_7_digital(&context.startTime().unwrap().to_rfc3339());
+        // Generate snapshot timestamp — must use Z suffix (not +00:00) to match Azure format
+        let start = context.startTime().unwrap();
+        let ms_str = start.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+        let snapshot_time = convert_date_time_string_ms_to_7_digital(&ms_str);
 
         // Create snapshot blob
         let mut snapshot_blob = base_blob.clone();
@@ -1832,7 +1843,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(BlobLeaseResponse {
             properties: blob_doc.properties,
             leaseId: blob_doc.leaseId,
-            leaseTime: blob_doc.leaseDurationSeconds,
+            leaseTime: blob_doc.leaseBreakTime.map(|break_time| {
+                (break_time - context.startTime().unwrap_or_else(Utc::now))
+                    .num_seconds()
+                    .max(0)
+            }),
         })
     }
 
@@ -2549,8 +2564,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 // Decode base64 block IDs and compare lengths
                 if let (Some(ref existing_name), Some(ref new_name)) = (&existing.name, &block.name)
                 {
-                    let existing_decoded = base64::decode(existing_name).unwrap_or_default();
-                    let new_decoded = base64::decode(new_name).unwrap_or_default();
+                    let existing_decoded = base64::engine::general_purpose::STANDARD
+                        .decode(existing_name)
+                        .unwrap_or_default();
+                    let new_decoded = base64::engine::general_purpose::STANDARD
+                        .decode(new_name)
+                        .unwrap_or_default();
                     if existing_decoded.len() != new_decoded.len() {
                         return Err(StorageErrorFactory::get_invalid_blob_or_block(
                             context.contextId().as_deref(),

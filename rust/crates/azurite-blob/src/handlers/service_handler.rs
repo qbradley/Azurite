@@ -632,10 +632,15 @@ fn json_value<T: serde::Serialize>(value: T) -> GeneratedValue {
 /// Convert a `ContainerModel` to a flat `GeneratedObject` suitable for response serialization.
 /// Spreads `item.properties` and adds `name` and (optionally already present) `metadata`.
 fn container_model_to_obj(item: &crate::persistence::ContainerModel) -> GeneratedObject {
-    let mut obj = item.properties.clone();
+    let mut obj = GeneratedObject::new();
     if let Some(name) = &item.name {
         obj.insert("name".to_string(), GeneratedValue::String(name.clone()));
     }
+    // Nest container properties under "properties" key as expected by ContainerItem mapper
+    obj.insert(
+        "properties".to_string(),
+        GeneratedValue::Object(item.properties.clone()),
+    );
     if let Some(meta) = &item.metadata {
         let meta_map: GeneratedObject = meta
             .iter()

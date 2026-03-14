@@ -75,6 +75,10 @@ impl IContainerHandler for ContainerHandler {
         let blobCtx = BlobStorageContext::new(&context);
         let accountName = blobCtx.account().unwrap_or_default();
         let containerName = blobCtx.container().unwrap_or_default();
+
+        // Validate container name
+        validate_container_name(&containerName, &context)?;
+
         let lastModified = context.startTime().unwrap_or_else(Utc::now);
         let etag = newEtag();
         let ctx_id = context.contextId().unwrap_or_default();
@@ -1003,4 +1007,42 @@ fn get_signed_identifier_array(map: &GeneratedObject, key: &str) -> Option<Vec<S
         ),
         _ => None,
     }
+}
+
+/// Validate container name per Azure Storage naming rules.
+fn validate_container_name(
+    name: &str,
+    context: &Context,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let ctx_id = context.contextId();
+
+    // Length check first (only for non-empty names)
+    if !name.is_empty() && (name.len() < 3 || name.len() > 63) {
+        return Err(
+            Box::new(StorageErrorFactory::getOutOfRangeName(ctx_id.as_deref()))
+                as Box<dyn std::error::Error + Send + Sync>,
+        );
+    }
+
+    // Pattern: start/end with lowercase alphanumeric, middle can have hyphens, no double hyphens
+    let first_ok = name
+        .as_bytes()
+        .first()
+        .is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit());
+    let last_ok = name
+        .as_bytes()
+        .last()
+        .is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit());
+    let chars_ok = name
+        .bytes()
+        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    let no_double_hyphen = !name.contains("--");
+    let valid = name.len() >= 3 && first_ok && last_ok && chars_ok && no_double_hyphen;
+
+    if !valid {
+        return Err(Box::new(StorageErrorFactory::getInvalidResourceName(
+            ctx_id.as_deref(),
+        )) as Box<dyn std::error::Error + Send + Sync>);
+    }
+    Ok(())
 }

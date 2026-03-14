@@ -204,7 +204,7 @@ impl IPageBlobHandler for PageBlobHandler {
         // Explicit tier is not supported for page blobs
         if options
             .get("tier")
-            .map_or(false, |v| !matches!(v, GeneratedValue::Null))
+            .is_some_and(|v| !matches!(v, GeneratedValue::Null))
         {
             return Err(Box::new(
                 StorageErrorFactory::getAccessTierNotSupportedForBlobType(context_id_str),
@@ -901,10 +901,12 @@ impl IPageBlobHandler for PageBlobHandler {
         let context_id = context.contextId();
         let context_id_str = context_id.as_deref().unwrap_or("");
 
-        let blob_sequence_number_opt = options
-            .get("blobSequenceNumber")
-            .and_then(GeneratedValue::as_number)
-            .map(|v| v as i64);
+        // Only use blobSequenceNumber if the header was actually present in the request
+        // (the deserializer fills in defaultValue=0 when absent)
+        let blob_sequence_number_opt = context
+            .request()
+            .and_then(|r| r.getHeader("x-ms-blob-sequence-number"))
+            .and_then(|v| v.parse::<i64>().ok());
 
         let lease_access_conditions = options
             .get("leaseAccessConditions")

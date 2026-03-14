@@ -16,6 +16,8 @@ pub struct MapperType {
     pub value: Option<Box<Mapper>>,
     #[serde(default)]
     pub modelProperties: BTreeMap<String, Mapper>,
+    #[serde(default)]
+    pub additionalProperties: Option<Box<Mapper>>,
 }
 
 #[allow(non_snake_case)]
