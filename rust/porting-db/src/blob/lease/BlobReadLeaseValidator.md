@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::blob_read_lease_validator`
 - Phase: `8.13`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobReadLeaseValidator`

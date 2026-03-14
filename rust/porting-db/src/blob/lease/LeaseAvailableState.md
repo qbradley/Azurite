@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::lease_available_state`
 - Phase: `8.3`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `LeaseAvailableState`

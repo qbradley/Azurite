@@ -125,3 +125,37 @@ Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in pla
 
 **Next:** Phase 8 (lease subsystem) ready when scheduled.
 
+
+### Phase 8 Blob Lease Subsystem Ported (2026-03-14)
+- Ported all 17 Phase 8 lease files under `rust/crates/azurite-blob/src/lease/`, wiring them through `lease/mod.rs`.
+- Added `BlobModel` and `ContainerModel` structs to `persistence/i_blob_metadata_store.rs` (minimal fields for lease subsystem; remaining BlobItemInternal fields can be extended when Phase 10/11 handlers land).
+- **Key design decision:** `ILeaseState` Rust trait is object-safe (`Box<dyn ILeaseState>`) by omitting the generic `sync<T>()` method; callers instead call `syncer.sync(state.lease())` directly.  The `lease()` method is added to the trait so adapters and syncers can access the `ILease` without generics on the trait boundary.
+- **Fidelity preserved:** (1) LeaseFactory is lazy — no background timer. (2) `LeaseExpiredState::renew()` ignores caller-supplied `lease_id` and uses stored ID/duration. (3) `LeaseBreakingState::change()` only checks the first argument against the stored leaseId (matching TS parameter-count mismatch). (4) `LeaseBrokenState::renew()` match=IsBrokenAndCannotBeRenewed, mismatch=IdMismatch. (5) `LeaseExpiredState` constructor normalises expired-Leased → Expired. (6) Infinite-lease break with `None`/`0` → `LeaseBrokenState`. (7) `BlobLeaseAdapter` silently defaults missing state/status; `ContainerLeaseAdapter` throws. (8) `ContainerDeleteLeaseValidator` collapses JS `null`/`undefined` to Rust `None` per note.
+- Validation: `cargo check -p azurite-blob` passes (0 errors, only pre-existing non-snake_case warnings).
+
+## 2026-03-14 — Phase 8 Completion
+
+**Phase 8 Blob Lease Subsystem — 17 files completed, cargo check passing.**
+
+- ILeaseState, LeaseStateBase
+- LeaseAvailableState, LeaseLeasedState, LeaseBreakingState, LeaseBrokenState, LeaseExpiredState
+- LeaseFactory
+- BlobLeaseAdapter, ContainerLeaseAdapter
+- BlobLeaseSyncer, ContainerLeaseSyncer
+- BlobReadLeaseValidator, BlobWriteLeaseValidator, BlobWriteLeaseSyncer
+- ContainerReadLeaseValidator, ContainerDeleteLeaseValidator
+
+**Coupled change:** Added `BlobModel` and `ContainerModel` structs to `persistence/i_blob_metadata_store.rs`.
+
+**Next:** Phase 9 (blob conditions subsystem) ready when scheduled.
+
+### Phase 8 Lease Subsystem Translation Complete (2026-03-14)
+**Status:** ✅ Cargo check passes
+
+- **Deliverable:** 15 Rust files ported. `ILeaseState`, `LeaseStateFactory`, 8 state implementations (Available, Leased, Breaking, Broken, Expired), `ILease`, `LeaseImpl`, `IBlobMetadataStore` (minimal model), `ILeaseSyncer`, `ILeaseValidator`, `ILeaseActions`.
+- **Design decisions applied:** D-ILeaseState-ObjectSafety (trait object dispatch via `Box<dyn>` + `lease()` accessor), D-BlobModel-ContainerModel-Minimal (deferred bulk fields to Phase 10), D-LeaseStateConstants (const &str modules vs enums), D-ContainerDeleteLeaseValidator-NullCollapse (intentional null/absent key collapse).
+- **Preserved TypeScript quirk:** `LeaseExpiredState.renew()` lazy timer model exactly as TS observable.
+- **Cross-phase:** Foundation for Phase 10 handler integration. Minimal persistence model unblocks but doesn't advance blob model beyond what lease subsystem requires.
+- **Coupled change:** Seeded 27 porting-db records for Phase 11-12 (from Faramir analysis). Received Phase 11-12 linked translation unit strategy from Faramir (page range core → batch pipeline → server assembly).
+
+**Next:** Phase 9 (blob conditions) ready when scheduled; Phase 10 handler work awaits Phase 8 integration validation.

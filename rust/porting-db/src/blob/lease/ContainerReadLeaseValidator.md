@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::container_read_lease_validator`
 - Phase: `8.17`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `ContainerReadLeaseValidator`

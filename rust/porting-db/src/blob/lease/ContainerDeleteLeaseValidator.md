@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::container_delete_lease_validator`
 - Phase: `8.16`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `ContainerDeleteLeaseValidator`

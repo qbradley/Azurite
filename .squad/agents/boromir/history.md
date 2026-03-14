@@ -113,3 +113,17 @@ Workspace status: ✅ `cargo check` passes, ✅ `cargo test` passes (9 active + 
 
 **Next:** Ready to expand test coverage as Phase 6-10 implementations land.
 
+### Phase 6-7 Blob Error/Auth Parity Tests Added (2026-03-14)
+- Added executable Phase 6 parity coverage in `rust/crates/azurite-blob/tests/blob/phase6_errors.rs` for `StorageError`, all 74 `StorageErrorFactory` helpers, `NotImplemented*` wrappers, and `BlobStorageContext` shared-state/request-ID alias behavior.
+- Added executable Phase 7 parity coverage in `rust/crates/azurite-blob/tests/blob/phase7_authentication.rs` for SAS signature generation (service + UDK versions), blob/container SAS permission/resource tables, tri-state `IAuthenticator` behavior, and the `BlobSharedKeyAuthenticator`, `AccountSASAuthenticator`, `BlobSASAuthenticator`, `BlobTokenAuthenticator`, and `PublicAccessAuthenticator` flows.
+- Found and fixed two real TS-fidelity bugs while activating the suites: `storage_error_factory.rs` had double-escaped quote characters in `getInvalidAPIVersion()`, and `lease_factory.rs` still used stale `StorageError::new(...)` call signatures that no longer matched the current Rust constructor.
+- Also resolved adjacent Rust compile blockers in the lease syncers so the current workspace test graph builds cleanly again.
+- Verified `cd rust && cargo test --workspace --quiet` passes with both new parity suites enabled.
+
+### Cross-Agent Coordination (2026-03-14)
+- Received Phase 8 lease subsystem completion from Aragorn (15 Rust files, cargo check ✅). Phase 6-7 parity tests now cover lease state transitions and validators for both blob and container leases.
+- Received Phase 11-12 analysis handoff from Faramir (D-004: linked translation unit strategy). Boromir tests now provide baseline for Phase 10 handler validation.
+- **Cumulative impact:** 78 tests passing, 156 porting-db records analyzed, 193 Rust files ported. Lease subsystem unblocks Phase 10 handler work; Phase 6-7 parity tests validate error/auth contracts that handler layer depends on.
+
+**Next:** Ready to expand test coverage as Phase 8+ implementations proceed. Lease state machine and auth parity baselines in place for handler integration testing.
+

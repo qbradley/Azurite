@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::blob_write_lease_syncer`
 - Phase: `8.15`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobWriteLeaseSyncer`

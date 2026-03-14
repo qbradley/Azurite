@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::lease_factory`
 - Phase: `8.8`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `LeaseFactory`

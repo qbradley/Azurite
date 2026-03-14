@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::lease_expired_state`
 - Phase: `8.7`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `LeaseExpiredState`

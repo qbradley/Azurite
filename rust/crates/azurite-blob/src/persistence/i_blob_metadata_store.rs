@@ -1,8 +1,40 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 
 use crate::errors::StorageError;
-use crate::generated::artifacts::models::{AccessPolicy, ContainerProperties, SignedIdentifier};
+use crate::generated::artifacts::models::{
+    AccessPolicy, BlobPropertiesInternal, ContainerProperties, SignedIdentifier,
+};
 use crate::generated::context::Context;
+
+/// Mirrors TypeScript `IBlobAdditionalProperties & ... & BlobItemInternal`.
+/// Holds only the fields the lease subsystem needs; other BlobItemInternal
+/// fields are carried in `properties` (BlobPropertiesInternal = GeneratedObject).
+#[allow(non_snake_case)]
+#[derive(Clone, Debug, Default)]
+pub struct BlobModel {
+    pub properties: BlobPropertiesInternal,
+    pub leaseId: Option<String>,
+    pub leaseDurationSeconds: Option<i64>,
+    pub leaseExpireTime: Option<DateTime<Utc>>,
+    pub leaseBreakTime: Option<DateTime<Utc>>,
+    /// Remaining BlobItemInternal / IBlobAdditionalProperties fields.
+    pub accountName: String,
+    pub containerName: String,
+}
+
+/// Mirrors TypeScript `ContainerItem & IContainerAdditionalProperties`.
+#[allow(non_snake_case)]
+#[derive(Clone, Debug, Default)]
+pub struct ContainerModel {
+    pub properties: ContainerProperties,
+    pub leaseId: Option<String>,
+    pub leaseDurationSeconds: Option<i64>,
+    pub leaseExpireTime: Option<DateTime<Utc>>,
+    pub leaseBreakTime: Option<DateTime<Utc>>,
+    pub accountName: String,
+    pub containerAcl: Option<Vec<SignedIdentifier>>,
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct GetContainerAccessPolicyResponse {

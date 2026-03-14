@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::i_lease_state`
 - Phase: `8.1`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Interface `ILease`

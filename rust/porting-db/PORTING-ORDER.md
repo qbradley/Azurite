@@ -181,23 +181,23 @@ State machine pattern — important to port as a unit.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 8.1 | `src/blob/lease/ILeaseState.ts` | `azurite-blob/src/lease/i_lease_state.rs` | ~31 | L | — | ⬜ |
-| 8.2 | `src/blob/lease/LeaseStateBase.ts` | `azurite-blob/src/lease/lease_state_base.rs` | ~29 | L | 8.1 | ⬜ |
-| 8.3 | `src/blob/lease/LeaseAvailableState.ts` | `azurite-blob/src/lease/lease_available_state.rs` | ~50 | M | 8.2 | ⬜ |
-| 8.4 | `src/blob/lease/LeaseLeasedState.ts` | `azurite-blob/src/lease/lease_leased_state.rs` | ~80 | M | 8.2 | ⬜ |
-| 8.5 | `src/blob/lease/LeaseBreakingState.ts` | `azurite-blob/src/lease/lease_breaking_state.rs` | ~60 | M | 8.2 | ⬜ |
-| 8.6 | `src/blob/lease/LeaseBrokenState.ts` | `azurite-blob/src/lease/lease_broken_state.rs` | ~50 | M | 8.2 | ⬜ |
-| 8.7 | `src/blob/lease/LeaseExpiredState.ts` | `azurite-blob/src/lease/lease_expired_state.rs` | ~50 | M | 8.2 | ⬜ |
-| 8.8 | `src/blob/lease/LeaseFactory.ts` | `azurite-blob/src/lease/lease_factory.rs` | ~63 | M | 8.3-8.7 | ⬜ |
-| 8.9 | `src/blob/lease/BlobLeaseAdapter.ts` | `azurite-blob/src/lease/blob_lease_adapter.rs` | ~40 | L | 8.1 | ⬜ |
-| 8.10 | `src/blob/lease/ContainerLeaseAdapter.ts` | `azurite-blob/src/lease/container_lease_adapter.rs` | ~40 | L | 8.1 | ⬜ |
-| 8.11 | `src/blob/lease/BlobLeaseSyncer.ts` | `azurite-blob/src/lease/blob_lease_syncer.rs` | ~40 | L | 8.1 | ⬜ |
-| 8.12 | `src/blob/lease/ContainerLeaseSyncer.ts` | `azurite-blob/src/lease/container_lease_syncer.rs` | ~40 | L | 8.1 | ⬜ |
-| 8.13 | `src/blob/lease/BlobReadLeaseValidator.ts` | `azurite-blob/src/lease/blob_read_lease_validator.rs` | ~50 | M | 8.1 | ⬜ |
-| 8.14 | `src/blob/lease/BlobWriteLeaseValidator.ts` | `azurite-blob/src/lease/blob_write_lease_validator.rs` | ~50 | M | 8.1 | ⬜ |
-| 8.15 | `src/blob/lease/BlobWriteLeaseSyncer.ts` | `azurite-blob/src/lease/blob_write_lease_syncer.rs` | ~40 | L | 8.1 | ⬜ |
-| 8.16 | `src/blob/lease/ContainerDeleteLeaseValidator.ts` | `azurite-blob/src/lease/container_delete_lease_validator.rs` | ~40 | L | 8.1 | ⬜ |
-| 8.17 | `src/blob/lease/ContainerReadLeaseValidator.ts` | `azurite-blob/src/lease/container_read_lease_validator.rs` | ~40 | L | 8.1 | ⬜ |
+| 8.1 | `src/blob/lease/ILeaseState.ts` | `azurite-blob/src/lease/i_lease_state.rs` | ~31 | L | — | ✅ |
+| 8.2 | `src/blob/lease/LeaseStateBase.ts` | `azurite-blob/src/lease/lease_state_base.rs` | ~29 | L | 8.1 | ✅ |
+| 8.3 | `src/blob/lease/LeaseAvailableState.ts` | `azurite-blob/src/lease/lease_available_state.rs` | ~50 | M | 8.2 | ✅ |
+| 8.4 | `src/blob/lease/LeaseLeasedState.ts` | `azurite-blob/src/lease/lease_leased_state.rs` | ~80 | M | 8.2 | ✅ |
+| 8.5 | `src/blob/lease/LeaseBreakingState.ts` | `azurite-blob/src/lease/lease_breaking_state.rs` | ~60 | M | 8.2 | ✅ |
+| 8.6 | `src/blob/lease/LeaseBrokenState.ts` | `azurite-blob/src/lease/lease_broken_state.rs` | ~50 | M | 8.2 | ✅ |
+| 8.7 | `src/blob/lease/LeaseExpiredState.ts` | `azurite-blob/src/lease/lease_expired_state.rs` | ~50 | M | 8.2 | ✅ |
+| 8.8 | `src/blob/lease/LeaseFactory.ts` | `azurite-blob/src/lease/lease_factory.rs` | ~63 | M | 8.3-8.7 | ✅ |
+| 8.9 | `src/blob/lease/BlobLeaseAdapter.ts` | `azurite-blob/src/lease/blob_lease_adapter.rs` | ~40 | L | 8.1 | ✅ |
+| 8.10 | `src/blob/lease/ContainerLeaseAdapter.ts` | `azurite-blob/src/lease/container_lease_adapter.rs` | ~40 | L | 8.1 | ✅ |
+| 8.11 | `src/blob/lease/BlobLeaseSyncer.ts` | `azurite-blob/src/lease/blob_lease_syncer.rs` | ~40 | L | 8.1 | ✅ |
+| 8.12 | `src/blob/lease/ContainerLeaseSyncer.ts` | `azurite-blob/src/lease/container_lease_syncer.rs` | ~40 | L | 8.1 | ✅ |
+| 8.13 | `src/blob/lease/BlobReadLeaseValidator.ts` | `azurite-blob/src/lease/blob_read_lease_validator.rs` | ~50 | M | 8.1 | ✅ |
+| 8.14 | `src/blob/lease/BlobWriteLeaseValidator.ts` | `azurite-blob/src/lease/blob_write_lease_validator.rs` | ~50 | M | 8.1 | ✅ |
+| 8.15 | `src/blob/lease/BlobWriteLeaseSyncer.ts` | `azurite-blob/src/lease/blob_write_lease_syncer.rs` | ~40 | L | 8.1 | ✅ |
+| 8.16 | `src/blob/lease/ContainerDeleteLeaseValidator.ts` | `azurite-blob/src/lease/container_delete_lease_validator.rs` | ~40 | L | 8.1 | ✅ |
+| 8.17 | `src/blob/lease/ContainerReadLeaseValidator.ts` | `azurite-blob/src/lease/container_read_lease_validator.rs` | ~40 | L | 8.1 | ✅ |
 
 ---
 

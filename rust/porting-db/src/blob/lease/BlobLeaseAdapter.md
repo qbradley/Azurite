@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::blob_lease_adapter`
 - Phase: `8.9`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobLeaseAdapter`

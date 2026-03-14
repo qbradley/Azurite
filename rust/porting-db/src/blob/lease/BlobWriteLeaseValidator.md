@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `lease::blob_write_lease_validator`
 - Phase: `8.14`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobWriteLeaseValidator`
