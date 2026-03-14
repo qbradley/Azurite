@@ -50,16 +50,23 @@
 - Linked translation unit strategy: (1) PageBlobRangesManager core, (2) Batch pipeline isolated, (3) Server assembly with bootstrap quirks
 - Decision D-004: Follow linked strategy to prevent silent behavior normalization
 
+## Core Context
+
+**Phases 0-8 completed.** Workspace scaffold, common interfaces, persistence, authentication, utilities, blob framework, errors/auth, and lease subsystem all ported. 193 Rust files, 78 tests passing, 156 porting-db records. Phase 9-10 conditions/persistence in progress; Phase 11-12 analysis complete. Decision directives: preserve TS fidelity (D-001/D-002/D-003), linked translation strategy (D-004), mandatory clippy+fmt (new). Continuous pipeline execution per Quetzal directive. Lazy lease timing, permissive SAS rules, eager error XML, and strict middleware order all preserved from TS.
+
 ## Current Status
 - **Cumulative:** 78 tests passing, 156 porting-db records, 193 Rust files
-- **Next phases:** Phase 9 (conditions) when scheduled; Phase 10 (handlers) pending Phase 8 validation
+- **Phase 10.7 (LokiBlobMetadataStore):** 35/51 methods implemented; clippy + fmt verified and committed
+- **Next phases:** Phase 10.7 completion → Phase 11 handlers/server; continuous pipeline
 
 ## Decision Log
 - D-001: Account-SAS compatibility structure (ACTIVE)
 - D-002: Preserve Phase 4 observable quirks (PENDING_APPROVAL)
 - D-003: Phase 8 lease subsystem design choices (ACTIVE)
 - D-004: Phase 11/12 linked translation unit strategy (ACTIVE)
-- **Samwise:** Phase 3 translation complete, Phase 4 analysis ready. Overall: 44 tests passing, 38 porting-db records, 108 Rust source files.
+- D-FilterBlobModel-Concrete: Conditions/persistence models (ACTIVE)
+- D-IQueryNode-TraitObject: Query AST dispatch pattern (ACTIVE)
+- Clippy + fmt mandatory pre-commit (NEW, Quetzal 2026-03-14)
 
 ### Phase 4 common utilities/config/logger/environment ported (2026-03-13)
 - Ported the 11 Phase 4 common files into `rust/crates/azurite-common/src/`, including shared utils/constants, `BufferStream`, runtime-configurable logging, clap-backed `Environment`, axum-based `ServerBase`, `AccountDataStore`, and the telemetry singleton.
