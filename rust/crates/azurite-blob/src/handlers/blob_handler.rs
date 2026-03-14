@@ -1121,15 +1121,12 @@ impl IBlobHandler for BlobHandler {
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
-        let blob_tag_set = tags
-            .as_ref()
-            .and_then(|t| t.get("blobTagSet"))
-            .cloned()
-            .unwrap_or(GeneratedValue::Array(vec![]));
+        // Tags are stored in XML-parsed format: { "TagSet": { "Tag": [...] } }
+        // Normalize to model format: [ { "key": "k", "value": "v" }, ... ]
+        let blob_tag_set = normalize_blob_tags_for_response(tags.as_ref());
 
         let mut response = GeneratedResponse::new(200);
         set_common_fields(&mut response, &context, &options, "requestId");
-        // blobTagSet goes into fields so body_value() returns it for XML serialization
         response.insert_field("blobTagSet", blob_tag_set);
         Ok(response)
     }
@@ -1147,6 +1144,9 @@ impl IBlobHandler for BlobHandler {
         let blob = blobCtx.blob().unwrap_or_default();
 
         let tags = get_object(&options, "tags");
+
+        // Normalize tags from XML-parsed format to model format
+        let tags = tags.map(|t| normalize_tags_to_model(&t));
 
         // Validate tags (BlobHandler.ts:1317-1319)
         if let Some(ref t) = tags {
@@ -1224,7 +1224,7 @@ impl BlobHandler {
 
         // Clamp rangeEnd to blob length; handle zero-length blob edge case
         let range_end = match range_end_raw {
-            Some(e) if e + 1 >= content_length_stored => {
+            Some(e) if e >= content_length_stored || e == i64::MAX => {
                 if content_length_stored == 0 && e != 0 {
                     return Err(Box::new(StorageErrorFactory::getInvalidPageRange2(
                         context.contextId().as_deref().unwrap_or(""),
@@ -1358,6 +1358,9 @@ impl BlobHandler {
         if let Some(cr) = &content_range {
             response.insert_field("contentRange", string_value(cr));
         }
+        // Remove the contentMD5 that was spread from blob properties —
+        // we only return it conditionally based on range/header logic above.
+        response.fields.remove("contentMD5");
         if let Some(md5) = response_content_md5 {
             response.insert_field("contentMD5", string_value(md5));
         }
@@ -1539,6 +1542,9 @@ impl BlobHandler {
         if let Some(cr) = &content_range {
             response.insert_field("contentRange", string_value(cr));
         }
+        // Remove the contentMD5 that was spread from blob properties —
+        // we only return it conditionally based on range/header logic above.
+        response.fields.remove("contentMD5");
         if let Some(md5) = response_content_md5 {
             response.insert_field("contentMD5", string_value(md5));
         }
@@ -1831,6 +1837,89 @@ fn get_blob_tags_count(tags: Option<&GeneratedObject>) -> Option<i64> {
         }
     } else {
         None
+    }
+}
+
+/// Normalize tags from XML-parsed format to model format for storage.
+/// XML: { "TagSet": { "Tag": [/single { "Key": {"$text":"k"}, "Value": {"$text":"v"} }] } }
+/// Model: { "blobTagSet": [{ "key": "k", "value": "v" }] }
+fn normalize_tags_to_model(tags: &GeneratedObject) -> GeneratedObject {
+    // If already in model format, return as-is
+    if tags.contains_key("blobTagSet") {
+        return tags.clone();
+    }
+    let normalized = normalize_blob_tags_for_response(Some(tags));
+    let mut result = BTreeMap::new();
+    result.insert("blobTagSet".to_string(), normalized);
+    result
+}
+
+/// Normalize blob tags from XML-parsed format to model format for response serialization.
+/// XML-parsed: { "TagSet": { "Tag": [{ "Key": {"$text": "k"}, "Value": {"$text": "v"} }] } }
+/// or single tag (non-array): { "TagSet": { "Tag": { "Key": {"$text": "k"}, "Value": {"$text": "v"} } } }
+/// Model format: [{ "key": "k", "value": "v" }]
+fn normalize_blob_tags_for_response(tags: Option<&GeneratedObject>) -> GeneratedValue {
+    let tags = match tags {
+        Some(t) => t,
+        None => return GeneratedValue::Array(vec![]),
+    };
+
+    // Try model name first (blobTagSet), then XML name (TagSet)
+    let tag_set = tags.get("blobTagSet").or_else(|| tags.get("TagSet"));
+
+    let tag_set = match tag_set {
+        Some(ts) => ts,
+        None => return GeneratedValue::Array(vec![]),
+    };
+
+    // Get the "Tag" array (or single object) from the TagSet
+    let tag_items = match tag_set {
+        GeneratedValue::Array(arr) => arr.clone(),
+        GeneratedValue::Object(obj) => {
+            if let Some(tag_val) = obj.get("Tag") {
+                match tag_val {
+                    GeneratedValue::Array(arr) => arr.clone(),
+                    GeneratedValue::Object(_) => vec![tag_val.clone()],
+                    _ => vec![],
+                }
+            } else {
+                // Already in model format array
+                return GeneratedValue::Object(obj.clone());
+            }
+        }
+        _ => return GeneratedValue::Array(vec![]),
+    };
+
+    // Convert each tag from XML format to model format
+    let result: Vec<GeneratedValue> = tag_items
+        .iter()
+        .filter_map(|item| {
+            let obj = item.as_object()?;
+            // Extract key - may be { "Key": { "$text": "k" } } or { "key": "k" }
+            let key = extract_text_value(obj, "Key").or_else(|| extract_text_value(obj, "key"));
+            let value =
+                extract_text_value(obj, "Value").or_else(|| extract_text_value(obj, "value"));
+            let mut tag = BTreeMap::new();
+            tag.insert("key".to_string(), GeneratedValue::String(key?));
+            tag.insert(
+                "value".to_string(),
+                GeneratedValue::String(value.unwrap_or_default()),
+            );
+            Some(GeneratedValue::Object(tag))
+        })
+        .collect();
+
+    GeneratedValue::Array(result)
+}
+
+/// Extract text value from an object field that may be either a plain string
+/// or a `{ "$text": "val" }` wrapper (from quick_xml parsing).
+fn extract_text_value(obj: &GeneratedObject, key: &str) -> Option<String> {
+    let val = obj.get(key)?;
+    match val {
+        GeneratedValue::String(s) => Some(s.clone()),
+        GeneratedValue::Object(inner) => inner.get("$text").and_then(|v| v.as_string()),
+        _ => None,
     }
 }
 

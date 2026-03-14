@@ -982,9 +982,9 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             properties: doc.properties,
             leaseId: doc.leaseId,
             leaseTime: doc.leaseBreakTime.map(|break_time| {
-                (break_time - context.startTime().unwrap_or_else(Utc::now))
-                    .num_seconds()
-                    .max(0)
+                let diff = break_time - context.startTime().unwrap_or_else(Utc::now);
+                // TS uses Math.round(); num_milliseconds()/1000 with rounding matches
+                ((diff.num_milliseconds() as f64 / 1000.0).round() as i64).max(0)
             }),
         })
     }
@@ -1486,18 +1486,63 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             Some(&blob_doc),
         )?;
 
+        let against_base_blob = snapshot.is_empty();
+        let delete_snapshots = get_string(&options, "deleteSnapshots");
+
+        // Check bad requests: deleteSnapshots header on a snapshot target
+        if !against_base_blob && delete_snapshots.is_some() {
+            return Err(StorageErrorFactory::getInvalidOperation(
+                context.contextId().as_deref(),
+                Some("Invalid operation against a blob snapshot."),
+            ));
+        }
+
         let validator = BlobWriteLeaseValidator::new(get_object(&options, "leaseAccessConditions"));
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         validator.validate(&adapter, context)?;
 
-        // Delete blob
         let mut blobs = self.blobs_collection.write().unwrap();
-        blobs.remove(&(
-            account.to_string(),
-            container.to_string(),
-            blob.to_string(),
-            snapshot.to_string(),
-        ));
+
+        // Scenario: Delete base blob only (no deleteSnapshots header)
+        if against_base_blob && delete_snapshots.is_none() {
+            let count = blobs
+                .keys()
+                .filter(|(a, c, n, _)| a == account && c == container && n == blob)
+                .count();
+            if count > 1 {
+                return Err(StorageErrorFactory::getSnapshotsPresent(
+                    context.contextId().as_deref().unwrap_or(""),
+                ));
+            }
+            blobs.remove(&(
+                account.to_string(),
+                container.to_string(),
+                blob.to_string(),
+                "".to_string(),
+            ));
+        }
+
+        // Scenario: Delete one snapshot only
+        if !against_base_blob {
+            blobs.remove(&(
+                account.to_string(),
+                container.to_string(),
+                blob.to_string(),
+                snapshot.to_string(),
+            ));
+        }
+
+        // Scenario: Delete base blob and all snapshots
+        if against_base_blob && delete_snapshots.as_deref() == Some("include") {
+            blobs.retain(|k, _| !(k.0 == account && k.1 == container && k.2 == blob));
+        }
+
+        // Scenario: Delete all snapshots only (keep base blob)
+        if against_base_blob && delete_snapshots.as_deref() == Some("only") {
+            blobs.retain(|k, _| {
+                !(k.0 == account && k.1 == container && k.2 == blob && !k.3.is_empty())
+            });
+        }
 
         Ok(())
     }
@@ -1844,9 +1889,9 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             properties: blob_doc.properties,
             leaseId: blob_doc.leaseId,
             leaseTime: blob_doc.leaseBreakTime.map(|break_time| {
-                (break_time - context.startTime().unwrap_or_else(Utc::now))
-                    .num_seconds()
-                    .max(0)
+                let diff = break_time - context.startTime().unwrap_or_else(Utc::now);
+                // TS uses Math.round(); num_milliseconds()/1000 with rounding matches
+                ((diff.num_milliseconds() as f64 / 1000.0).round() as i64).max(0)
             }),
         })
     }
