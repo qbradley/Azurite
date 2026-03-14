@@ -1,0 +1,246 @@
+use async_trait::async_trait;
+use serde_json::Value;
+
+use crate::context::TableStorageContext;
+use crate::errors::StorageErrorFactory;
+use crate::generated::artifacts::models::{
+    GeneratedObject, GeneratedResponse, GeneratedValue, ServiceGetPropertiesOptionalParams,
+    ServiceGetPropertiesResponse, ServiceGetStatisticsOptionalParams, ServiceGetStatisticsResponse,
+    ServiceSetPropertiesOptionalParams, ServiceSetPropertiesResponse, StorageServiceProperties,
+};
+use crate::generated::context::Context;
+use crate::generated::handlers::i_service_handler::IServiceHandler;
+use crate::generated::i_request::IRequest;
+use crate::generated::utils::xml::parseXML;
+use crate::persistence::ServicePropertiesModel;
+use crate::utils::constants::TABLE_API_VERSION;
+
+use super::base_handler::{
+    get_string, json_value, normalize_cors_rule, rename_key, string_value, BaseHandler,
+};
+
+#[derive(Clone)]
+pub struct ServiceHandler {
+    pub base: BaseHandler,
+}
+
+impl ServiceHandler {
+    pub fn new(base: BaseHandler) -> Self {
+        Self { base }
+    }
+
+    fn default_service_properties() -> StorageServiceProperties {
+        let retention_policy =
+            GeneratedObject::from([(String::from("enabled"), GeneratedValue::Bool(false))]);
+        let hour_metrics = GeneratedObject::from([
+            (String::from("enabled"), GeneratedValue::Bool(false)),
+            (
+                String::from("retentionPolicy"),
+                GeneratedValue::Object(retention_policy.clone()),
+            ),
+            (String::from("version"), string_value("1.0")),
+        ]);
+        let logging = GeneratedObject::from([
+            (String::from("deleteProperty"), GeneratedValue::Bool(true)),
+            (String::from("read"), GeneratedValue::Bool(true)),
+            (
+                String::from("retentionPolicy"),
+                GeneratedValue::Object(retention_policy.clone()),
+            ),
+            (String::from("version"), string_value("1.0")),
+            (String::from("write"), GeneratedValue::Bool(true)),
+        ]);
+        let minute_metrics = GeneratedObject::from([
+            (String::from("enabled"), GeneratedValue::Bool(false)),
+            (
+                String::from("retentionPolicy"),
+                GeneratedValue::Object(retention_policy),
+            ),
+            (String::from("version"), string_value("1.0")),
+        ]);
+
+        GeneratedObject::from([
+            (String::from("cors"), GeneratedValue::Array(Vec::new())),
+            (
+                String::from("defaultServiceVersion"),
+                string_value(TABLE_API_VERSION),
+            ),
+            (
+                String::from("hourMetrics"),
+                GeneratedValue::Object(hour_metrics),
+            ),
+            (String::from("logging"), GeneratedValue::Object(logging)),
+            (
+                String::from("minuteMetrics"),
+                GeneratedValue::Object(minute_metrics),
+            ),
+        ])
+    }
+}
+
+#[async_trait]
+impl IServiceHandler for ServiceHandler {
+    async fn setProperties(
+        &self,
+        mut storageServiceProperties: StorageServiceProperties,
+        options: ServiceSetPropertiesOptionalParams,
+        context: Context,
+    ) -> Result<ServiceSetPropertiesResponse, crate::errors::StorageError> {
+        let table_ctx = TableStorageContext::new(&context);
+        let account_name = table_ctx.account().unwrap_or_default();
+
+        normalize_service_properties(&mut storageServiceProperties);
+
+        if let Some(body) = context.request().and_then(|request| request.getBody()) {
+            let parsed_body = parseXML(&body, false).unwrap_or(Value::Null);
+            if parsed_body.get("cors").is_none() && parsed_body.get("Cors").is_none() {
+                storageServiceProperties.remove("cors");
+                storageServiceProperties.remove("Cors");
+            }
+        }
+
+        if let Some(GeneratedValue::Array(cors_rules)) = storageServiceProperties.get_mut("cors") {
+            for rule in cors_rules {
+                if let GeneratedValue::Object(rule) = rule {
+                    normalize_cors_rule(rule);
+                    rule.entry(String::from("allowedHeaders"))
+                        .or_insert_with(|| string_value(""));
+                    rule.entry(String::from("exposedHeaders"))
+                        .or_insert_with(|| string_value(""));
+                }
+            }
+        }
+
+        self.base
+            .metadataStore
+            .setServiceProperties(
+                &context,
+                ServicePropertiesModel {
+                    accountName: account_name,
+                    properties: storageServiceProperties,
+                },
+            )
+            .await?;
+
+        let mut response = GeneratedResponse::new(202);
+        self.base
+            .add_response_metadata(&mut response, &options, &context, false);
+        Ok(response)
+    }
+
+    async fn getProperties(
+        &self,
+        options: ServiceGetPropertiesOptionalParams,
+        context: Context,
+    ) -> Result<ServiceGetPropertiesResponse, crate::errors::StorageError> {
+        let table_ctx = TableStorageContext::new(&context);
+        let account_name = table_ctx.account().unwrap_or_default();
+
+        let mut properties = self
+            .base
+            .metadataStore
+            .getServiceProperties(&context, &account_name)
+            .await?
+            .map(|properties| properties.properties)
+            .unwrap_or_else(Self::default_service_properties);
+        normalize_service_properties(&mut properties);
+
+        let defaults = Self::default_service_properties();
+        for key in [
+            "cors",
+            "hourMetrics",
+            "logging",
+            "minuteMetrics",
+            "defaultServiceVersion",
+        ] {
+            if !properties.contains_key(key) {
+                if let Some(value) = defaults.get(key) {
+                    properties.insert(key.to_string(), value.clone());
+                }
+            }
+        }
+
+        let mut response = GeneratedResponse::new(200);
+        response.fields.extend(properties);
+        self.base
+            .add_response_metadata(&mut response, &options, &context, false);
+        Ok(response)
+    }
+
+    async fn getStatistics(
+        &self,
+        options: ServiceGetStatisticsOptionalParams,
+        context: Context,
+    ) -> Result<ServiceGetStatisticsResponse, crate::errors::StorageError> {
+        let table_ctx = TableStorageContext::new(&context);
+        if table_ctx.isSecondary() != Some(true) {
+            return Err(StorageErrorFactory::getInvalidQueryParameterValue(
+                &context, None,
+            ));
+        }
+
+        let mut geo_replication = GeneratedObject::new();
+        geo_replication.insert(String::from("status"), string_value("live"));
+        geo_replication.insert(
+            String::from("lastSyncTime"),
+            json_value(BaseHandler::start_time(&context)),
+        );
+
+        let mut response = GeneratedResponse::new(200);
+        response.insert_field("geoReplication", GeneratedValue::Object(geo_replication));
+        self.base
+            .add_response_metadata(&mut response, &options, &context, true);
+        Ok(response)
+    }
+}
+
+fn normalize_service_properties(properties: &mut GeneratedObject) {
+    rename_key(properties, "Logging", "logging");
+    rename_key(properties, "HourMetrics", "hourMetrics");
+    rename_key(properties, "MinuteMetrics", "minuteMetrics");
+    rename_key(properties, "Cors", "cors");
+    rename_key(properties, "DefaultServiceVersion", "defaultServiceVersion");
+
+    if let Some(GeneratedValue::Object(logging)) = properties.get_mut("logging") {
+        rename_key(logging, "Version", "version");
+        rename_key(logging, "Delete", "deleteProperty");
+        rename_key(logging, "Read", "read");
+        rename_key(logging, "Write", "write");
+        rename_key(logging, "RetentionPolicy", "retentionPolicy");
+        if let Some(GeneratedValue::Object(retention)) = logging.get_mut("retentionPolicy") {
+            rename_key(retention, "Enabled", "enabled");
+            rename_key(retention, "Days", "days");
+        }
+    }
+    if let Some(GeneratedValue::Object(metrics)) = properties.get_mut("hourMetrics") {
+        normalize_metrics(metrics);
+    }
+    if let Some(GeneratedValue::Object(metrics)) = properties.get_mut("minuteMetrics") {
+        normalize_metrics(metrics);
+    }
+    if let Some(GeneratedValue::Array(cors_rules)) = properties.get_mut("cors") {
+        for rule in cors_rules {
+            if let GeneratedValue::Object(rule) = rule {
+                normalize_cors_rule(rule);
+            }
+        }
+    }
+
+    if get_string(properties, "defaultServiceVersion").is_none() {
+        properties.insert(
+            String::from("defaultServiceVersion"),
+            string_value(TABLE_API_VERSION),
+        );
+    }
+}
+
+fn normalize_metrics(metrics: &mut GeneratedObject) {
+    rename_key(metrics, "Version", "version");
+    rename_key(metrics, "Enabled", "enabled");
+    rename_key(metrics, "IncludeAPIs", "includeAPIs");
+    rename_key(metrics, "RetentionPolicy", "retentionPolicy");
+    if let Some(GeneratedValue::Object(retention)) = metrics.get_mut("retentionPolicy") {
+        rename_key(retention, "Enabled", "enabled");
+        rename_key(retention, "Days", "days");
+    }
+}

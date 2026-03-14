@@ -28,5 +28,9 @@ pub mod table_configuration;
 pub mod table_environment;
 pub mod table_request_listener_factory;
 pub mod table_server;
+pub mod utils;
 
+pub use context::TableStorageContext;
+pub use errors::{NotImplementedError, StorageError, StorageErrorFactory};
+pub use persistence::query_interpreter;
 pub use table_server::TableServer;

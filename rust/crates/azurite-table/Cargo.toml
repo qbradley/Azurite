@@ -6,6 +6,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+async-trait.workspace = true
 azurite-common = { path = "../azurite-common" }
 axum.workspace = true
 base64 = "0.22"
@@ -13,8 +14,10 @@ bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
 regex = "1.10"
+quick-xml.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
 tower.workspace = true
 tower-http.workspace = true

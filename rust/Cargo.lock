@@ -276,6 +276,7 @@ name = "azurite-table"
 version = "0.1.0"
 dependencies = [
  "assert_matches",
+ "async-trait",
  "axum",
  "azurite-common",
  "base64",
@@ -283,9 +284,11 @@ dependencies = [
  "chrono",
  "clap",
  "pretty_assertions",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
  "tokio-test",
  "tower",
