@@ -5,8 +5,6 @@ mod phase12_middleware_config_tests {
     use azurite_blob::i_blob_environment::IBlobEnvironment;
     use azurite_blob::middlewares::preflight_middleware_factory::PreflightMiddlewareFactory;
     use azurite_blob::utils::constants::*;
-    use azurite_common::configuration_base::ConfigurationBase;
-    use azurite_common::i_environment::IEnvironment;
     use azurite_common::i_logger::ILogger;
     use std::sync::Arc;
 
@@ -89,10 +87,13 @@ mod phase12_middleware_config_tests {
 
         // Validate getter methods return default values
         assert_eq!(
-            env.blobHost(),
+            <BlobEnvironment as IBlobEnvironment>::blobHost(&env),
             Some(DEFAULT_BLOB_SERVER_HOST_NAME.to_string())
         );
-        assert_eq!(env.blobPort(), Some(DEFAULT_BLOB_LISTENING_PORT));
+        assert_eq!(
+            <BlobEnvironment as IBlobEnvironment>::blobPort(&env),
+            Some(DEFAULT_BLOB_LISTENING_PORT)
+        );
     }
 
     #[test]
@@ -106,8 +107,14 @@ mod phase12_middleware_config_tests {
         ];
         let env = BlobEnvironment::new(args).expect("Failed to parse args");
 
-        assert_eq!(env.blobHost(), Some("0.0.0.0".to_string()));
-        assert_eq!(env.blobPort(), Some(11000));
+        assert_eq!(
+            <BlobEnvironment as IBlobEnvironment>::blobHost(&env),
+            Some("0.0.0.0".to_string())
+        );
+        assert_eq!(
+            <BlobEnvironment as IBlobEnvironment>::blobPort(&env),
+            Some(11000)
+        );
     }
 
     #[test]
@@ -121,14 +128,21 @@ mod phase12_middleware_config_tests {
         ];
         let env = BlobEnvironment::new(args).expect("Failed to parse args");
 
-        assert_eq!(env.silent(), Some(true));
-        assert_eq!(env.loose(), Some(true));
-        assert_eq!(env.skipApiVersionCheck(), Some(true));
-        assert_eq!(env.inMemoryPersistence(), Some(true));
+        // Use non-async methods from IBlobEnvironment
+        assert_eq!(<BlobEnvironment as IBlobEnvironment>::silent(&env), true);
+        assert_eq!(<BlobEnvironment as IBlobEnvironment>::loose(&env), true);
+        assert_eq!(
+            <BlobEnvironment as IBlobEnvironment>::skipApiVersionCheck(&env),
+            true
+        );
+        assert_eq!(
+            <BlobEnvironment as IBlobEnvironment>::inMemoryPersistence(&env),
+            true
+        );
     }
 
-    #[test]
-    fn test_blob_environment_location_path() {
+    #[tokio::test]
+    async fn test_blob_environment_location_path() {
         let args = vec![
             "azurite-blob".to_string(),
             "--location".to_string(),
@@ -136,7 +150,10 @@ mod phase12_middleware_config_tests {
         ];
         let env = BlobEnvironment::new(args).expect("Failed to parse args");
 
-        assert_eq!(env.location(), Some("/tmp/azurite".to_string()));
+        // location() is async, so use tokio::test
+        let location = <BlobEnvironment as IBlobEnvironment>::location(&env).await;
+        assert!(location.is_ok());
+        assert_eq!(location.unwrap(), "/tmp/azurite".to_string());
     }
 
     #[test]
