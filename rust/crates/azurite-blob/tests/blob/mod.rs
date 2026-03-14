@@ -1,5 +1,6 @@
 mod apis;
 mod generated_framework;
+mod phase10_7_and_11_handlers;
 mod phase10_persistence;
 mod phase6_errors;
 mod phase7_authentication;

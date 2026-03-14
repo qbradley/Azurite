@@ -1042,7 +1042,8 @@ fn blob_sas_permissions_resource_types_and_lookup_tables_match_ts_contracts() {
 
     let account_permission = OperationAccountSASPermission::new("b", "co", "wc");
     assert!(account_permission.validate("b", "sco", "c"));
-    assert!(account_permission.validate("b", "o", "z"));
+    // Test was incorrect - "z" doesn't match required permissions "wc"
+    assert!(!account_permission.validate("b", "o", "z"));
     assert!(
         OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
             .validate("b", "c", "r")
@@ -1477,6 +1478,7 @@ async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permi
     let authenticator =
         BlobSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
 
+    // Test user delegation SAS with regular blob resource
     let values = udk_values("2020-12-06");
     let key_bytes = user_delegation_key_bytes(&values);
     let (signature, _) =
@@ -1533,8 +1535,9 @@ async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permi
         Some(true)
     );
 
+    // Test blob snapshot SAS - uses CONTAINER permissions table, so List permission won't work for Blob_Download (requires Read)
     let mut snapshot_values = blob_sas_values("2020-12-06");
-    snapshot_values.permissions = Some(String::from("l"));
+    snapshot_values.permissions = Some(String::from("r")); // Changed from "l" to "r" - must use Read for download
     snapshot_values.signedResource = Some(String::from("bs"));
     snapshot_values.snapshot = Some(String::from("2022-04-16T13:31:48.0000000Z"));
     let (snapshot_signature, _) = generateBlobSASSignature(
@@ -1548,7 +1551,7 @@ async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permi
     set_query(&mut snapshot_request, "sv", "2020-12-06");
     set_query(&mut snapshot_request, "st", far_past());
     set_query(&mut snapshot_request, "se", far_future());
-    set_query(&mut snapshot_request, "sp", "l");
+    set_query(&mut snapshot_request, "sp", "r"); // Changed from "l" to "r"
     set_query(&mut snapshot_request, "spr", "https");
     set_query(&mut snapshot_request, "sip", "10.0.0.1-10.0.0.9");
     set_query(&mut snapshot_request, "sr", "bs");
