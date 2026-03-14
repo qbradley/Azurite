@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::blob_referred_extents_async_iterator`
 - Phase: `10.8`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `BlobReferredExtentsAsyncIterator`

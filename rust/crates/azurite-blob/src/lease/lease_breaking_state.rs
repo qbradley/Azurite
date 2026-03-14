@@ -7,7 +7,9 @@ use azurite_common::utils::utils::minDate;
 
 use crate::errors::storage_error_factory::StorageErrorFactory;
 use crate::generated::context::Context;
-use crate::lease::i_lease_state::{ILease, ILeaseState, ILeaseValidator, LeaseStateType, LeaseStatusType};
+use crate::lease::i_lease_state::{
+    ILease, ILeaseState, ILeaseValidator, LeaseStateType, LeaseStatusType,
+};
 use crate::lease::lease_state_base::LeaseStateBase;
 
 pub struct LeaseBreakingState {
@@ -103,7 +105,15 @@ impl ILeaseState for LeaseBreakingState {
             // Return self unchanged — clone current breaking state
             return Ok(Box::new(
                 LeaseBreakingState::new(self.base.lease.clone(), self.base.context.clone())
-                    .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                    .map_err(|e| {
+                        crate::errors::StorageError::new(
+                            500,
+                            "InternalError",
+                            &e,
+                            "",
+                            std::collections::BTreeMap::new(),
+                        )
+                    })?,
             ));
         }
 
@@ -123,7 +133,15 @@ impl ILeaseState for LeaseBreakingState {
                     },
                     self.base.context.clone(),
                 )
-                .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                .map_err(|e| {
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
+                })?,
             ));
         }
 
@@ -144,7 +162,15 @@ impl ILeaseState for LeaseBreakingState {
                     },
                     self.base.context.clone(),
                 )
-                .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                .map_err(|e| {
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
+                })?,
             ));
         }
 
@@ -153,7 +179,10 @@ impl ILeaseState for LeaseBreakingState {
         ))
     }
 
-    fn renew(&self, proposed_lease_id: &str) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
+    fn renew(
+        &self,
+        proposed_lease_id: &str,
+    ) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
         if proposed_lease_id == self.base.lease.leaseId.as_deref().unwrap_or("") {
             Err(StorageErrorFactory::getLeaseIsBrokenAndCannotBeRenewed(
                 self.base.context.contextId().as_deref(),
@@ -183,10 +212,7 @@ impl ILeaseState for LeaseBreakingState {
         }
     }
 
-    fn release(
-        &self,
-        lease_id: &str,
-    ) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
+    fn release(&self, lease_id: &str) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
         if self.base.lease.leaseId.as_deref() != Some(lease_id) {
             return Err(StorageErrorFactory::getLeaseIdMismatchWithLeaseOperation(
                 self.base.context.contextId().as_deref(),
@@ -206,7 +232,15 @@ impl ILeaseState for LeaseBreakingState {
                 },
                 self.base.context.clone(),
             )
-            .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+            .map_err(|e| {
+                crate::errors::StorageError::new(
+                    500,
+                    "InternalError",
+                    &e,
+                    "",
+                    std::collections::BTreeMap::new(),
+                )
+            })?,
         ))
     }
 

@@ -323,8 +323,8 @@ where
                 move || async move {
                     let appendExtentIdx = loop {
                         let mut selectedIndex = None;
-                        for i in 0..activeWriteExtentsNumber {
-                            if let Ok(mut appendExtent) = activeWriteExtents[i].try_lock() {
+                        for (i, extent) in activeWriteExtents.iter().enumerate().take(activeWriteExtentsNumber) {
+                            if let Ok(mut appendExtent) = extent.try_lock() {
                                 if appendExtent.appendStatus == AppendStatusCode::Idle {
                                     appendExtent.appendStatus = AppendStatusCode::Appending;
                                     selectedIndex = Some(i);

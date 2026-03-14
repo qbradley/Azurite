@@ -1,3 +1,8 @@
+#![allow(non_snake_case)]
+#![allow(clippy::incompatible_msrv)]
+#![allow(clippy::assertions_on_constants)]
+#![allow(clippy::await_holding_lock)]
+
 use std::{
     any::Any,
     fs,

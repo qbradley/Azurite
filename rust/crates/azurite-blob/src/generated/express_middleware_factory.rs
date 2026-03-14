@@ -4,8 +4,6 @@ use crate::generated::context::{Context, ContextHolder};
 use crate::generated::express_request_adapter::ExpressRequestAdapter;
 use crate::generated::express_response_adapter::ExpressResponseAdapter;
 use crate::generated::handlers::IHandlers;
-use crate::generated::i_request::IRequest;
-use crate::generated::i_response::IResponse;
 use crate::generated::middleware::deserializer::deserializer_middleware;
 use crate::generated::middleware::dispatch::dispatch_middleware;
 use crate::generated::middleware::end::end_middleware;

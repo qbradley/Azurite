@@ -4,11 +4,11 @@ use crate::generated::artifacts::mappers::Mapper;
 use crate::generated::artifacts::models::{
     GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
 };
-use crate::generated::artifacts::parameters::{OperationParameter, ParameterPath};
+use crate::generated::artifacts::parameters::ParameterPath;
 use crate::generated::artifacts::specifications::{OperationSpec, ResponseSpec};
 use crate::generated::context::{Context, IHandlerParameters};
 use crate::generated::errors::deserialization_error::DeserializationError;
-use crate::generated::i_request::{GeneratedReadableStream, IRequest, RequestHeaderValue};
+use crate::generated::i_request::{IRequest, RequestHeaderValue};
 use crate::generated::i_response::{IResponse, ResponseHeaderValue};
 use crate::generated::utils::i_logger::ILogger;
 use crate::generated::utils::xml::{parseXML, stringifyXML};
@@ -198,10 +198,10 @@ async fn readRequestIntoText<R: IRequest>(req: &R) -> String {
     req.getBodyStream().read_to_string()
 }
 
-fn resolve_response_spec<'a>(
-    spec: &'a OperationSpec,
+fn resolve_response_spec(
+    spec: &OperationSpec,
     statusCode: u16,
-) -> crate::generated::GeneratedResult<&'a ResponseSpec> {
+) -> crate::generated::GeneratedResult<&ResponseSpec> {
     spec.responses.get(&statusCode.to_string()).ok_or_else(|| {
         format!(
             "Request specification doesn't include provided response status code {}",

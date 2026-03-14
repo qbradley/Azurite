@@ -21,9 +21,10 @@ impl<'a> ILeaseSyncer<ContainerModel> for ContainerLeaseSyncer<'a> {
         self.container.leaseBreakTime = lease.leaseBreakTime;
 
         if let Some(v) = &lease.leaseDurationType {
-            self.container
-                .properties
-                .insert("leaseDuration".to_string(), GeneratedValue::String(v.clone()));
+            self.container.properties.insert(
+                "leaseDuration".to_string(),
+                GeneratedValue::String(v.clone()),
+            );
         } else {
             self.container.properties.remove("leaseDuration");
         }

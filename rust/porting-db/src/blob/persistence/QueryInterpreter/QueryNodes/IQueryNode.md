@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::query_interpreter::query_nodes::i_query_node`
 - Phase: `10.3`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Interface `TagContent`

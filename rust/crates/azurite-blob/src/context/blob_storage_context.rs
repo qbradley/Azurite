@@ -93,7 +93,10 @@ impl BlobStorageContext {
     }
 
     fn get_string(&self, key: &str) -> Option<String> {
-        self.context.extras().get(key).and_then(GeneratedValue::as_string)
+        self.context
+            .extras()
+            .get(key)
+            .and_then(GeneratedValue::as_string)
     }
 
     fn set_string(&self, key: &str, value: Option<String>) {
@@ -107,7 +110,10 @@ impl BlobStorageContext {
     }
 
     fn get_bool(&self, key: &str) -> Option<bool> {
-        self.context.extras().get(key).and_then(GeneratedValue::as_bool)
+        self.context
+            .extras()
+            .get(key)
+            .and_then(GeneratedValue::as_bool)
     }
 
     fn set_bool(&self, key: &str, value: Option<bool>) {

@@ -207,13 +207,13 @@ Conditional header validation (ETag, If-Match, If-Modified-Since, etc.)
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 9.1 | `src/blob/conditions/IConditionalHeaders.ts` | `azurite-blob/src/conditions/i_conditional_headers.rs` | ~20 | L | — | ⬜ |
-| 9.2 | `src/blob/conditions/IConditionResource.ts` | `azurite-blob/src/conditions/i_condition_resource.rs` | ~15 | L | — | ⬜ |
-| 9.3 | `src/blob/conditions/IConditionalHeadersValidator.ts` | `azurite-blob/src/conditions/i_conditional_headers_validator.rs` | ~15 | L | 9.1, 9.2 | ⬜ |
-| 9.4 | `src/blob/conditions/ConditionalHeadersAdapter.ts` | `azurite-blob/src/conditions/conditional_headers_adapter.rs` | ~50 | M | 9.1 | ⬜ |
-| 9.5 | `src/blob/conditions/ConditionResourceAdapter.ts` | `azurite-blob/src/conditions/condition_resource_adapter.rs` | ~40 | L | 9.2 | ⬜ |
-| 9.6 | `src/blob/conditions/ReadConditionalHeadersValidator.ts` | `azurite-blob/src/conditions/read_conditional_headers_validator.rs` | ~100 | M | 9.3 | ⬜ |
-| 9.7 | `src/blob/conditions/WriteConditionalHeadersValidator.ts` | `azurite-blob/src/conditions/write_conditional_headers_validator.rs` | ~120 | M | 9.3 | ⬜ |
+| 9.1 | `src/blob/conditions/IConditionalHeaders.ts` | `azurite-blob/src/conditions/i_conditional_headers.rs` | ~20 | L | — | ✅ |
+| 9.2 | `src/blob/conditions/IConditionResource.ts` | `azurite-blob/src/conditions/i_condition_resource.rs` | ~15 | L | — | ✅ |
+| 9.3 | `src/blob/conditions/IConditionalHeadersValidator.ts` | `azurite-blob/src/conditions/i_conditional_headers_validator.rs` | ~15 | L | 9.1, 9.2 | ✅ |
+| 9.4 | `src/blob/conditions/ConditionalHeadersAdapter.ts` | `azurite-blob/src/conditions/conditional_headers_adapter.rs` | ~50 | M | 9.1 | ✅ |
+| 9.5 | `src/blob/conditions/ConditionResourceAdapter.ts` | `azurite-blob/src/conditions/condition_resource_adapter.rs` | ~40 | L | 9.2 | ✅ |
+| 9.6 | `src/blob/conditions/ReadConditionalHeadersValidator.ts` | `azurite-blob/src/conditions/read_conditional_headers_validator.rs` | ~100 | M | 9.3 | ✅ |
+| 9.7 | `src/blob/conditions/WriteConditionalHeadersValidator.ts` | `azurite-blob/src/conditions/write_conditional_headers_validator.rs` | ~120 | M | 9.3 | ✅ |
 
 ---
 
@@ -223,16 +223,16 @@ The metadata store and query interpreter — the heart of blob storage logic.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 10.1 | `src/blob/persistence/IBlobMetadataStore.ts` | `azurite-blob/src/persistence/i_blob_metadata_store.rs` | ~1165 | H | Phase 1 | ⬜ |
-| 10.2 | `src/blob/persistence/QueryInterpreter/IQueryContext.ts` | `azurite-blob/src/persistence/query_interpreter/i_query_context.rs` | ~15 | L | — | ⬜ |
-| 10.3 | `src/blob/persistence/QueryInterpreter/QueryNodes/IQueryNode.ts` | `azurite-blob/src/persistence/query_interpreter/query_nodes/i_query_node.rs` | ~10 | L | 10.2 | ⬜ |
-| 10.4 | `src/blob/persistence/QueryInterpreter/QueryNodes/*.ts` (12 files) | `azurite-blob/src/persistence/query_interpreter/query_nodes/` | ~300 | M | 10.3 | ⬜ |
-| 10.5 | `src/blob/persistence/QueryInterpreter/QueryParser.ts` | `azurite-blob/src/persistence/query_interpreter/query_parser.rs` | ~605 | H | 10.3, 10.4 | ⬜ |
-| 10.6 | `src/blob/persistence/QueryInterpreter/QueryInterpreter.ts` | `azurite-blob/src/persistence/query_interpreter/query_interpreter.rs` | ~100 | M | 10.4 | ⬜ |
+| 10.1 | `src/blob/persistence/IBlobMetadataStore.ts` | `azurite-blob/src/persistence/i_blob_metadata_store.rs` | ~1165 | H | Phase 1 | ✅ |
+| 10.2 | `src/blob/persistence/QueryInterpreter/IQueryContext.ts` | `azurite-blob/src/persistence/query_interpreter/i_query_context.rs` | ~15 | L | — | ✅ |
+| 10.3 | `src/blob/persistence/QueryInterpreter/QueryNodes/IQueryNode.ts` | `azurite-blob/src/persistence/query_interpreter/query_nodes/i_query_node.rs` | ~10 | L | 10.2 | ✅ |
+| 10.4 | `src/blob/persistence/QueryInterpreter/QueryNodes/*.ts` (12 files) | `azurite-blob/src/persistence/query_interpreter/query_nodes/` | ~300 | M | 10.3 | ✅ |
+| 10.5 | `src/blob/persistence/QueryInterpreter/QueryParser.ts` | `azurite-blob/src/persistence/query_interpreter/query_parser.rs` | ~605 | H | 10.3, 10.4 | ✅ |
+| 10.6 | `src/blob/persistence/QueryInterpreter/QueryInterpreter.ts` | `azurite-blob/src/persistence/query_interpreter/query_interpreter.rs` | ~100 | M | 10.4 | ✅ |
 | 10.7 | `src/blob/persistence/LokiBlobMetadataStore.ts` | `azurite-blob/src/persistence/loki_blob_metadata_store.rs` | ~3565 | H | 10.1 | ⬜ |
-| 10.8 | `src/blob/persistence/BlobReferredExtentsAsyncIterator.ts` | `azurite-blob/src/persistence/blob_referred_extents_async_iterator.rs` | ~80 | M | 10.1 | ⬜ |
-| 10.9 | `src/blob/persistence/FilterBlobPage.ts` | `azurite-blob/src/persistence/filter_blob_page.rs` | ~60 | M | 10.1 | ⬜ |
-| 10.10 | `src/blob/persistence/PageWithDelimiter.ts` | `azurite-blob/src/persistence/page_with_delimiter.rs` | ~80 | M | 10.1 | ⬜ |
+| 10.8 | `src/blob/persistence/BlobReferredExtentsAsyncIterator.ts` | `azurite-blob/src/persistence/blob_referred_extents_async_iterator.rs` | ~80 | M | 10.1 | ✅ |
+| 10.9 | `src/blob/persistence/FilterBlobPage.ts` | `azurite-blob/src/persistence/filter_blob_page.rs` | ~60 | M | 10.1 | ✅ |
+| 10.10 | `src/blob/persistence/PageWithDelimiter.ts` | `azurite-blob/src/persistence/page_with_delimiter.rs` | ~80 | M | 10.1 | ✅ |
 
 ---
 

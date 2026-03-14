@@ -66,7 +66,7 @@ impl BlobSharedKeyAuthenticator {
         }
 
         headers.retain(|(name, _)| name.to_ascii_lowercase().starts_with(X_MS_PREFIX));
-        headers.sort_by(|a, b| a.0.to_ascii_lowercase().cmp(&b.0.to_ascii_lowercase()));
+        headers.sort_by_key(|a| a.0.to_ascii_lowercase());
 
         let mut canonicalizedHeadersStringToSign = String::new();
         for (name, value) in headers {
@@ -173,7 +173,9 @@ impl IAuthenticator for BlobSharedKeyAuthenticator {
         let accountProperties = self.dataStore.getAccount(&account);
         if accountProperties.is_none() {
             self.logger.error(
-                &format!("BlobSharedKeyAuthenticator:validate() Invalid storage account {account}."),
+                &format!(
+                    "BlobSharedKeyAuthenticator:validate() Invalid storage account {account}."
+                ),
                 blobContext.contextId().as_deref(),
             );
             return Err(StorageErrorFactory::ResourceNotFound(
@@ -198,11 +200,8 @@ impl IAuthenticator for BlobSharedKeyAuthenticator {
             ));
         }
 
-        let stringToSign = self.build_string_to_sign(
-            req,
-            &account,
-            blobContext.authenticationPath().as_deref(),
-        );
+        let stringToSign =
+            self.build_string_to_sign(req, &account, blobContext.authenticationPath().as_deref());
 
         let signature1 = computeHMACSHA256(&stringToSign, &accountProperties.key1);
         let authValue1 = format!("SharedKey {account}:{signature1}");
@@ -229,8 +228,10 @@ impl IAuthenticator for BlobSharedKeyAuthenticator {
                 .authenticationPath()
                 .unwrap_or_default()
                 .replacen(&account, &format!("{account}{SECONDARY_SUFFIX}"), 1);
-            let stringToSign_secondary = self.build_string_to_sign(req, &account, Some(&secondaryPath));
-            let signature1_secondary = computeHMACSHA256(&stringToSign_secondary, &accountProperties.key1);
+            let stringToSign_secondary =
+                self.build_string_to_sign(req, &account, Some(&secondaryPath));
+            let signature1_secondary =
+                computeHMACSHA256(&stringToSign_secondary, &accountProperties.key1);
             let authValue1_secondary = format!("SharedKey {account}:{signature1_secondary}");
             if authHeaderValue == authValue1_secondary {
                 return Ok(Some(true));
@@ -255,7 +256,9 @@ fn decode_uri_component(value: &str) -> String {
     let mut result = Vec::with_capacity(bytes.len());
     while index < bytes.len() {
         if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (from_hex(bytes[index + 1]), from_hex(bytes[index + 2])) {
+            if let (Some(high), Some(low)) =
+                (from_hex(bytes[index + 1]), from_hex(bytes[index + 2]))
+            {
                 result.push(high * 16 + low);
                 index += 3;
                 continue;

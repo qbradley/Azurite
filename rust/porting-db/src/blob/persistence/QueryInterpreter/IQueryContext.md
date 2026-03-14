@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::query_interpreter::i_query_context`
 - Phase: `10.2`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Type alias `IQueryContext = any`

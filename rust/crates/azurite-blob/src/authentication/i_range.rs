@@ -21,7 +21,7 @@ pub fn rangeToString(iRange: &IRange) -> Result<String, RangeError> {
         });
     }
     if let Some(count) = iRange.count {
-        if count != 0 && count <= 0 {
+        if count < 0 {
             return Err(RangeError {
                 message: String::from(
                     "IRange.count must be larger than 0. Leave it undefined if you want a range from offset to the end.",
@@ -30,7 +30,9 @@ pub fn rangeToString(iRange: &IRange) -> Result<String, RangeError> {
         }
     }
     Ok(match iRange.count {
-        Some(count) if count != 0 => format!("bytes={}-{}", iRange.offset, iRange.offset + count - 1),
+        Some(count) if count != 0 => {
+            format!("bytes={}-{}", iRange.offset, iRange.offset + count - 1)
+        }
         _ => format!("bytes={}-", iRange.offset),
     })
 }

@@ -1,22 +1,30 @@
+#![allow(non_snake_case)]
+
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use azurite_blob::generated::artifacts::mappers::{Mapper, MapperType};
-use azurite_blob::generated::artifacts::models::{self, GeneratedBody, GeneratedResponse, GeneratedValue};
+use azurite_blob::generated::artifacts::models::{
+    self, GeneratedBody, GeneratedResponse, GeneratedValue,
+};
 use azurite_blob::generated::artifacts::operation::{Operation, ALL_OPERATIONS};
 use azurite_blob::generated::artifacts::parameters::{OperationParameter, ParameterPath};
-use azurite_blob::generated::artifacts::specifications::{OperationSpec, RequestBodySpec, ResponseSpec};
+use azurite_blob::generated::artifacts::specifications::{
+    OperationSpec, RequestBodySpec, ResponseSpec,
+};
 use azurite_blob::generated::context::Context;
 use azurite_blob::generated::errors::middleware_error::MiddlewareError;
 use azurite_blob::generated::express_middleware_factory::ExpressMiddlewareFactory;
 use azurite_blob::generated::express_request_adapter::ExpressRequestAdapter;
 use azurite_blob::generated::express_response_adapter::ExpressResponseAdapter;
 use azurite_blob::generated::handlers::{
-    getHandlerByOperation, IAppendBlobHandler, IBlobHandler, IBlockBlobHandler,
-    IContainerHandler, IHandlers, IPageBlobHandler, IServiceHandler,
+    getHandlerByOperation, IAppendBlobHandler, IBlobHandler, IBlockBlobHandler, IContainerHandler,
+    IHandlers, IPageBlobHandler, IServiceHandler,
 };
-use azurite_blob::generated::i_request::{GeneratedHttpRequest, GeneratedReadableStream, HttpMethod, IRequest, RequestHeaderValue};
+use azurite_blob::generated::i_request::{
+    GeneratedHttpRequest, GeneratedReadableStream, HttpMethod, IRequest, RequestHeaderValue,
+};
 use azurite_blob::generated::i_response::{GeneratedHttpResponse, IResponse, ResponseHeaderValue};
 use azurite_blob::generated::middleware::dispatch::dispatch_middleware;
 use azurite_blob::generated::middleware::end::end_middleware;
@@ -67,7 +75,10 @@ impl RecordingLogger {
         self.entries
             .lock()
             .expect("recording logger mutex poisoned")
-            .push(format!("{level}:{message}:{}", context_id.unwrap_or("<none>")));
+            .push(format!(
+                "{level}:{message}:{}",
+                context_id.unwrap_or("<none>")
+            ));
     }
 }
 
@@ -125,25 +136,24 @@ struct BlockBlobHandlerHarness {
 
 fn recorded_response(method: &str) -> GeneratedResponse {
     let mut response = GeneratedResponse::new(200);
-    response.body = Some(GeneratedBody::Value(GeneratedValue::Object(BTreeMap::from([
-        (
+    response.body = Some(GeneratedBody::Value(GeneratedValue::Object(
+        BTreeMap::from([(
             String::from("handlerMethod"),
             GeneratedValue::String(method.to_owned()),
-        ),
-    ]))));
+        )]),
+    )));
     response
 }
 
 #[async_trait]
 impl IServiceHandler for ServiceHandlerHarness {
-
     async fn setProperties(
         &self,
         storageServiceProperties: models::StorageServiceProperties,
-options: models::ServiceSetPropertiesOptionalParams,
-context: Context
+        options: models::ServiceSetPropertiesOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ServiceSetPropertiesResponse> {
-        let _ = (storageServiceProperties, options, context,);
+        let _ = (storageServiceProperties, options, context);
         self.recorder.record("serviceHandler.setProperties");
         Ok(recorded_response("serviceHandler.setProperties"))
     }
@@ -151,9 +161,9 @@ context: Context
     async fn getProperties(
         &self,
         options: models::ServiceGetPropertiesOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ServiceGetPropertiesResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("serviceHandler.getProperties");
         Ok(recorded_response("serviceHandler.getProperties"))
     }
@@ -161,9 +171,9 @@ context: Context
     async fn getStatistics(
         &self,
         options: models::ServiceGetStatisticsOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ServiceGetStatisticsResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("serviceHandler.getStatistics");
         Ok(recorded_response("serviceHandler.getStatistics"))
     }
@@ -171,9 +181,10 @@ context: Context
     async fn listContainersSegment(
         &self,
         options: models::ServiceListContainersSegmentOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::ServiceListContainersSegmentResponse> {
-        let _ = (options, context,);
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::ServiceListContainersSegmentResponse>
+    {
+        let _ = (options, context);
         self.recorder.record("serviceHandler.listContainersSegment");
         Ok(recorded_response("serviceHandler.listContainersSegment"))
     }
@@ -181,32 +192,32 @@ context: Context
     async fn getUserDelegationKey(
         &self,
         keyInfo: models::KeyInfo,
-options: models::ServiceGetUserDelegationKeyOptionalParams,
-context: Context
+        options: models::ServiceGetUserDelegationKeyOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ServiceGetUserDelegationKeyResponse> {
-        let _ = (keyInfo, options, context,);
+        let _ = (keyInfo, options, context);
         self.recorder.record("serviceHandler.getUserDelegationKey");
         Ok(recorded_response("serviceHandler.getUserDelegationKey"))
     }
 
-async fn getAccountInfo(
-    &self,
-    context: Context
-) -> azurite_blob::generated::GeneratedResult<models::ServiceGetAccountInfoResponse> {
-    let _ = (context,);
-    self.recorder.record("serviceHandler.getAccountInfo");
-    Ok(recorded_response("serviceHandler.getAccountInfo"))
-}
+    async fn getAccountInfo(
+        &self,
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::ServiceGetAccountInfoResponse> {
+        let _ = (context,);
+        self.recorder.record("serviceHandler.getAccountInfo");
+        Ok(recorded_response("serviceHandler.getAccountInfo"))
+    }
 
     async fn submitBatch(
         &self,
         body: GeneratedReadableStream,
-contentLength: f64,
-multipartContentType: String,
-options: models::ServiceSubmitBatchOptionalParams,
-context: Context
+        contentLength: f64,
+        multipartContentType: String,
+        options: models::ServiceSubmitBatchOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ServiceSubmitBatchResponse> {
-        let _ = (body, contentLength, multipartContentType, options, context,);
+        let _ = (body, contentLength, multipartContentType, options, context);
         self.recorder.record("serviceHandler.submitBatch");
         Ok(recorded_response("serviceHandler.submitBatch"))
     }
@@ -214,9 +225,9 @@ context: Context
     async fn filterBlobs(
         &self,
         options: models::ServiceFilterBlobsOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ServiceFilterBlobsResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("serviceHandler.filterBlobs");
         Ok(recorded_response("serviceHandler.filterBlobs"))
     }
@@ -224,13 +235,12 @@ context: Context
 
 #[async_trait]
 impl IContainerHandler for ContainerHandlerHarness {
-
     async fn create(
         &self,
         options: models::ContainerCreateOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerCreateResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.create");
         Ok(recorded_response("containerHandler.create"))
     }
@@ -238,9 +248,9 @@ context: Context
     async fn getProperties(
         &self,
         options: models::ContainerGetPropertiesOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerGetPropertiesResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.getProperties");
         Ok(recorded_response("containerHandler.getProperties"))
     }
@@ -248,19 +258,21 @@ context: Context
     async fn getPropertiesWithHead(
         &self,
         options: models::ContainerGetPropertiesWithHeadOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::ContainerGetPropertiesWithHeadResponse> {
-        let _ = (options, context,);
-        self.recorder.record("containerHandler.getPropertiesWithHead");
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::ContainerGetPropertiesWithHeadResponse>
+    {
+        let _ = (options, context);
+        self.recorder
+            .record("containerHandler.getPropertiesWithHead");
         Ok(recorded_response("containerHandler.getPropertiesWithHead"))
     }
 
     async fn delete(
         &self,
         options: models::ContainerDeleteMethodOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerDeleteResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.delete");
         Ok(recorded_response("containerHandler.delete"))
     }
@@ -268,9 +280,9 @@ context: Context
     async fn setMetadata(
         &self,
         options: models::ContainerSetMetadataOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerSetMetadataResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.setMetadata");
         Ok(recorded_response("containerHandler.setMetadata"))
     }
@@ -278,9 +290,9 @@ context: Context
     async fn getAccessPolicy(
         &self,
         options: models::ContainerGetAccessPolicyOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerGetAccessPolicyResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.getAccessPolicy");
         Ok(recorded_response("containerHandler.getAccessPolicy"))
     }
@@ -288,9 +300,9 @@ context: Context
     async fn setAccessPolicy(
         &self,
         options: models::ContainerSetAccessPolicyOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerSetAccessPolicyResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.setAccessPolicy");
         Ok(recorded_response("containerHandler.setAccessPolicy"))
     }
@@ -298,9 +310,9 @@ context: Context
     async fn restore(
         &self,
         options: models::ContainerRestoreOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerRestoreResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.restore");
         Ok(recorded_response("containerHandler.restore"))
     }
@@ -308,12 +320,12 @@ context: Context
     async fn submitBatch(
         &self,
         body: GeneratedReadableStream,
-contentLength: f64,
-multipartContentType: String,
-options: models::ContainerSubmitBatchOptionalParams,
-context: Context
+        contentLength: f64,
+        multipartContentType: String,
+        options: models::ContainerSubmitBatchOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerSubmitBatchResponse> {
-        let _ = (body, contentLength, multipartContentType, options, context,);
+        let _ = (body, contentLength, multipartContentType, options, context);
         self.recorder.record("containerHandler.submitBatch");
         Ok(recorded_response("containerHandler.submitBatch"))
     }
@@ -321,9 +333,9 @@ context: Context
     async fn filterBlobs(
         &self,
         options: models::ContainerFilterBlobsOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerFilterBlobsResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.filterBlobs");
         Ok(recorded_response("containerHandler.filterBlobs"))
     }
@@ -331,9 +343,9 @@ context: Context
     async fn acquireLease(
         &self,
         options: models::ContainerAcquireLeaseOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerAcquireLeaseResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.acquireLease");
         Ok(recorded_response("containerHandler.acquireLease"))
     }
@@ -341,10 +353,10 @@ context: Context
     async fn releaseLease(
         &self,
         leaseId: String,
-options: models::ContainerReleaseLeaseOptionalParams,
-context: Context
+        options: models::ContainerReleaseLeaseOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerReleaseLeaseResponse> {
-        let _ = (leaseId, options, context,);
+        let _ = (leaseId, options, context);
         self.recorder.record("containerHandler.releaseLease");
         Ok(recorded_response("containerHandler.releaseLease"))
     }
@@ -352,10 +364,10 @@ context: Context
     async fn renewLease(
         &self,
         leaseId: String,
-options: models::ContainerRenewLeaseOptionalParams,
-context: Context
+        options: models::ContainerRenewLeaseOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerRenewLeaseResponse> {
-        let _ = (leaseId, options, context,);
+        let _ = (leaseId, options, context);
         self.recorder.record("containerHandler.renewLease");
         Ok(recorded_response("containerHandler.renewLease"))
     }
@@ -363,9 +375,9 @@ context: Context
     async fn breakLease(
         &self,
         options: models::ContainerBreakLeaseOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerBreakLeaseResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("containerHandler.breakLease");
         Ok(recorded_response("containerHandler.breakLease"))
     }
@@ -373,11 +385,11 @@ context: Context
     async fn changeLease(
         &self,
         leaseId: String,
-proposedLeaseId: String,
-options: models::ContainerChangeLeaseOptionalParams,
-context: Context
+        proposedLeaseId: String,
+        options: models::ContainerChangeLeaseOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::ContainerChangeLeaseResponse> {
-        let _ = (leaseId, proposedLeaseId, options, context,);
+        let _ = (leaseId, proposedLeaseId, options, context);
         self.recorder.record("containerHandler.changeLease");
         Ok(recorded_response("containerHandler.changeLease"))
     }
@@ -385,9 +397,10 @@ context: Context
     async fn listBlobFlatSegment(
         &self,
         options: models::ContainerListBlobFlatSegmentOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::ContainerListBlobFlatSegmentResponse> {
-        let _ = (options, context,);
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::ContainerListBlobFlatSegmentResponse>
+    {
+        let _ = (options, context);
         self.recorder.record("containerHandler.listBlobFlatSegment");
         Ok(recorded_response("containerHandler.listBlobFlatSegment"))
     }
@@ -395,33 +408,36 @@ context: Context
     async fn listBlobHierarchySegment(
         &self,
         delimiter: String,
-options: models::ContainerListBlobHierarchySegmentOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::ContainerListBlobHierarchySegmentResponse> {
-        let _ = (delimiter, options, context,);
-        self.recorder.record("containerHandler.listBlobHierarchySegment");
-        Ok(recorded_response("containerHandler.listBlobHierarchySegment"))
+        options: models::ContainerListBlobHierarchySegmentOptionalParams,
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::ContainerListBlobHierarchySegmentResponse>
+    {
+        let _ = (delimiter, options, context);
+        self.recorder
+            .record("containerHandler.listBlobHierarchySegment");
+        Ok(recorded_response(
+            "containerHandler.listBlobHierarchySegment",
+        ))
     }
 
-async fn getAccountInfo(
-    &self,
-    context: Context
-) -> azurite_blob::generated::GeneratedResult<models::ContainerGetAccountInfoResponse> {
-    let _ = (context,);
-    self.recorder.record("containerHandler.getAccountInfo");
-    Ok(recorded_response("containerHandler.getAccountInfo"))
-}
+    async fn getAccountInfo(
+        &self,
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::ContainerGetAccountInfoResponse> {
+        let _ = (context,);
+        self.recorder.record("containerHandler.getAccountInfo");
+        Ok(recorded_response("containerHandler.getAccountInfo"))
+    }
 }
 
 #[async_trait]
 impl IBlobHandler for BlobHandlerHarness {
-
     async fn download(
         &self,
         options: models::BlobDownloadOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobDownloadResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.download");
         Ok(recorded_response("blobHandler.download"))
     }
@@ -429,9 +445,9 @@ context: Context
     async fn getProperties(
         &self,
         options: models::BlobGetPropertiesOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobGetPropertiesResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.getProperties");
         Ok(recorded_response("blobHandler.getProperties"))
     }
@@ -439,9 +455,9 @@ context: Context
     async fn delete(
         &self,
         options: models::BlobDeleteMethodOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobDeleteResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.delete");
         Ok(recorded_response("blobHandler.delete"))
     }
@@ -449,9 +465,9 @@ context: Context
     async fn undelete(
         &self,
         options: models::BlobUndeleteOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobUndeleteResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.undelete");
         Ok(recorded_response("blobHandler.undelete"))
     }
@@ -459,10 +475,10 @@ context: Context
     async fn setExpiry(
         &self,
         expiryOptions: models::BlobExpiryOptions,
-options: models::BlobSetExpiryOptionalParams,
-context: Context
+        options: models::BlobSetExpiryOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetExpiryResponse> {
-        let _ = (expiryOptions, options, context,);
+        let _ = (expiryOptions, options, context);
         self.recorder.record("blobHandler.setExpiry");
         Ok(recorded_response("blobHandler.setExpiry"))
     }
@@ -470,9 +486,9 @@ context: Context
     async fn setHTTPHeaders(
         &self,
         options: models::BlobSetHTTPHeadersOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetHTTPHeadersResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.setHTTPHeaders");
         Ok(recorded_response("blobHandler.setHTTPHeaders"))
     }
@@ -480,9 +496,9 @@ context: Context
     async fn setImmutabilityPolicy(
         &self,
         options: models::BlobSetImmutabilityPolicyOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetImmutabilityPolicyResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.setImmutabilityPolicy");
         Ok(recorded_response("blobHandler.setImmutabilityPolicy"))
     }
@@ -490,9 +506,10 @@ context: Context
     async fn deleteImmutabilityPolicy(
         &self,
         options: models::BlobDeleteImmutabilityPolicyOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::BlobDeleteImmutabilityPolicyResponse> {
-        let _ = (options, context,);
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::BlobDeleteImmutabilityPolicyResponse>
+    {
+        let _ = (options, context);
         self.recorder.record("blobHandler.deleteImmutabilityPolicy");
         Ok(recorded_response("blobHandler.deleteImmutabilityPolicy"))
     }
@@ -500,10 +517,10 @@ context: Context
     async fn setLegalHold(
         &self,
         legalHold: bool,
-options: models::BlobSetLegalHoldOptionalParams,
-context: Context
+        options: models::BlobSetLegalHoldOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetLegalHoldResponse> {
-        let _ = (legalHold, options, context,);
+        let _ = (legalHold, options, context);
         self.recorder.record("blobHandler.setLegalHold");
         Ok(recorded_response("blobHandler.setLegalHold"))
     }
@@ -511,9 +528,9 @@ context: Context
     async fn setMetadata(
         &self,
         options: models::BlobSetMetadataOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetMetadataResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.setMetadata");
         Ok(recorded_response("blobHandler.setMetadata"))
     }
@@ -521,9 +538,9 @@ context: Context
     async fn acquireLease(
         &self,
         options: models::BlobAcquireLeaseOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobAcquireLeaseResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.acquireLease");
         Ok(recorded_response("blobHandler.acquireLease"))
     }
@@ -531,10 +548,10 @@ context: Context
     async fn releaseLease(
         &self,
         leaseId: String,
-options: models::BlobReleaseLeaseOptionalParams,
-context: Context
+        options: models::BlobReleaseLeaseOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobReleaseLeaseResponse> {
-        let _ = (leaseId, options, context,);
+        let _ = (leaseId, options, context);
         self.recorder.record("blobHandler.releaseLease");
         Ok(recorded_response("blobHandler.releaseLease"))
     }
@@ -542,10 +559,10 @@ context: Context
     async fn renewLease(
         &self,
         leaseId: String,
-options: models::BlobRenewLeaseOptionalParams,
-context: Context
+        options: models::BlobRenewLeaseOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobRenewLeaseResponse> {
-        let _ = (leaseId, options, context,);
+        let _ = (leaseId, options, context);
         self.recorder.record("blobHandler.renewLease");
         Ok(recorded_response("blobHandler.renewLease"))
     }
@@ -553,11 +570,11 @@ context: Context
     async fn changeLease(
         &self,
         leaseId: String,
-proposedLeaseId: String,
-options: models::BlobChangeLeaseOptionalParams,
-context: Context
+        proposedLeaseId: String,
+        options: models::BlobChangeLeaseOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobChangeLeaseResponse> {
-        let _ = (leaseId, proposedLeaseId, options, context,);
+        let _ = (leaseId, proposedLeaseId, options, context);
         self.recorder.record("blobHandler.changeLease");
         Ok(recorded_response("blobHandler.changeLease"))
     }
@@ -565,9 +582,9 @@ context: Context
     async fn breakLease(
         &self,
         options: models::BlobBreakLeaseOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobBreakLeaseResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.breakLease");
         Ok(recorded_response("blobHandler.breakLease"))
     }
@@ -575,9 +592,9 @@ context: Context
     async fn createSnapshot(
         &self,
         options: models::BlobCreateSnapshotOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobCreateSnapshotResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.createSnapshot");
         Ok(recorded_response("blobHandler.createSnapshot"))
     }
@@ -585,10 +602,10 @@ context: Context
     async fn startCopyFromURL(
         &self,
         copySource: String,
-options: models::BlobStartCopyFromURLOptionalParams,
-context: Context
+        options: models::BlobStartCopyFromURLOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobStartCopyFromURLResponse> {
-        let _ = (copySource, options, context,);
+        let _ = (copySource, options, context);
         self.recorder.record("blobHandler.startCopyFromURL");
         Ok(recorded_response("blobHandler.startCopyFromURL"))
     }
@@ -596,10 +613,10 @@ context: Context
     async fn copyFromURL(
         &self,
         copySource: String,
-options: models::BlobCopyFromURLOptionalParams,
-context: Context
+        options: models::BlobCopyFromURLOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobCopyFromURLResponse> {
-        let _ = (copySource, options, context,);
+        let _ = (copySource, options, context);
         self.recorder.record("blobHandler.copyFromURL");
         Ok(recorded_response("blobHandler.copyFromURL"))
     }
@@ -607,10 +624,10 @@ context: Context
     async fn abortCopyFromURL(
         &self,
         copyId: String,
-options: models::BlobAbortCopyFromURLOptionalParams,
-context: Context
+        options: models::BlobAbortCopyFromURLOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobAbortCopyFromURLResponse> {
-        let _ = (copyId, options, context,);
+        let _ = (copyId, options, context);
         self.recorder.record("blobHandler.abortCopyFromURL");
         Ok(recorded_response("blobHandler.abortCopyFromURL"))
     }
@@ -618,29 +635,29 @@ context: Context
     async fn setTier(
         &self,
         tier: models::AccessTier,
-options: models::BlobSetTierOptionalParams,
-context: Context
+        options: models::BlobSetTierOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetTierResponse> {
-        let _ = (tier, options, context,);
+        let _ = (tier, options, context);
         self.recorder.record("blobHandler.setTier");
         Ok(recorded_response("blobHandler.setTier"))
     }
 
-async fn getAccountInfo(
-    &self,
-    context: Context
-) -> azurite_blob::generated::GeneratedResult<models::BlobGetAccountInfoResponse> {
-    let _ = (context,);
-    self.recorder.record("blobHandler.getAccountInfo");
-    Ok(recorded_response("blobHandler.getAccountInfo"))
-}
+    async fn getAccountInfo(
+        &self,
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::BlobGetAccountInfoResponse> {
+        let _ = (context,);
+        self.recorder.record("blobHandler.getAccountInfo");
+        Ok(recorded_response("blobHandler.getAccountInfo"))
+    }
 
     async fn query(
         &self,
         options: models::BlobQueryOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobQueryResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.query");
         Ok(recorded_response("blobHandler.query"))
     }
@@ -648,9 +665,9 @@ context: Context
     async fn getTags(
         &self,
         options: models::BlobGetTagsOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobGetTagsResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.getTags");
         Ok(recorded_response("blobHandler.getTags"))
     }
@@ -658,9 +675,9 @@ context: Context
     async fn setTags(
         &self,
         options: models::BlobSetTagsOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlobSetTagsResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blobHandler.setTags");
         Ok(recorded_response("blobHandler.setTags"))
     }
@@ -668,15 +685,14 @@ context: Context
 
 #[async_trait]
 impl IPageBlobHandler for PageBlobHandlerHarness {
-
     async fn create(
         &self,
         contentLength: f64,
-blobContentLength: f64,
-options: models::PageBlobCreateOptionalParams,
-context: Context
+        blobContentLength: f64,
+        options: models::PageBlobCreateOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobCreateResponse> {
-        let _ = (contentLength, blobContentLength, options, context,);
+        let _ = (contentLength, blobContentLength, options, context);
         self.recorder.record("pageBlobHandler.create");
         Ok(recorded_response("pageBlobHandler.create"))
     }
@@ -684,11 +700,11 @@ context: Context
     async fn uploadPages(
         &self,
         body: GeneratedReadableStream,
-contentLength: f64,
-options: models::PageBlobUploadPagesOptionalParams,
-context: Context
+        contentLength: f64,
+        options: models::PageBlobUploadPagesOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobUploadPagesResponse> {
-        let _ = (body, contentLength, options, context,);
+        let _ = (body, contentLength, options, context);
         self.recorder.record("pageBlobHandler.uploadPages");
         Ok(recorded_response("pageBlobHandler.uploadPages"))
     }
@@ -696,10 +712,10 @@ context: Context
     async fn clearPages(
         &self,
         contentLength: f64,
-options: models::PageBlobClearPagesOptionalParams,
-context: Context
+        options: models::PageBlobClearPagesOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobClearPagesResponse> {
-        let _ = (contentLength, options, context,);
+        let _ = (contentLength, options, context);
         self.recorder.record("pageBlobHandler.clearPages");
         Ok(recorded_response("pageBlobHandler.clearPages"))
     }
@@ -707,13 +723,20 @@ context: Context
     async fn uploadPagesFromURL(
         &self,
         sourceUrl: String,
-sourceRange: String,
-contentLength: f64,
-range: String,
-options: models::PageBlobUploadPagesFromURLOptionalParams,
-context: Context
+        sourceRange: String,
+        contentLength: f64,
+        range: String,
+        options: models::PageBlobUploadPagesFromURLOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobUploadPagesFromURLResponse> {
-        let _ = (sourceUrl, sourceRange, contentLength, range, options, context,);
+        let _ = (
+            sourceUrl,
+            sourceRange,
+            contentLength,
+            range,
+            options,
+            context,
+        );
         self.recorder.record("pageBlobHandler.uploadPagesFromURL");
         Ok(recorded_response("pageBlobHandler.uploadPagesFromURL"))
     }
@@ -721,9 +744,9 @@ context: Context
     async fn getPageRanges(
         &self,
         options: models::PageBlobGetPageRangesOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobGetPageRangesResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("pageBlobHandler.getPageRanges");
         Ok(recorded_response("pageBlobHandler.getPageRanges"))
     }
@@ -731,9 +754,9 @@ context: Context
     async fn getPageRangesDiff(
         &self,
         options: models::PageBlobGetPageRangesDiffOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobGetPageRangesDiffResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("pageBlobHandler.getPageRangesDiff");
         Ok(recorded_response("pageBlobHandler.getPageRangesDiff"))
     }
@@ -741,10 +764,10 @@ context: Context
     async fn resize(
         &self,
         blobContentLength: f64,
-options: models::PageBlobResizeOptionalParams,
-context: Context
+        options: models::PageBlobResizeOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobResizeResponse> {
-        let _ = (blobContentLength, options, context,);
+        let _ = (blobContentLength, options, context);
         self.recorder.record("pageBlobHandler.resize");
         Ok(recorded_response("pageBlobHandler.resize"))
     }
@@ -752,10 +775,11 @@ context: Context
     async fn updateSequenceNumber(
         &self,
         sequenceNumberAction: models::SequenceNumberActionType,
-options: models::PageBlobUpdateSequenceNumberOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::PageBlobUpdateSequenceNumberResponse> {
-        let _ = (sequenceNumberAction, options, context,);
+        options: models::PageBlobUpdateSequenceNumberOptionalParams,
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::PageBlobUpdateSequenceNumberResponse>
+    {
+        let _ = (sequenceNumberAction, options, context);
         self.recorder.record("pageBlobHandler.updateSequenceNumber");
         Ok(recorded_response("pageBlobHandler.updateSequenceNumber"))
     }
@@ -763,10 +787,10 @@ context: Context
     async fn copyIncremental(
         &self,
         copySource: String,
-options: models::PageBlobCopyIncrementalOptionalParams,
-context: Context
+        options: models::PageBlobCopyIncrementalOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::PageBlobCopyIncrementalResponse> {
-        let _ = (copySource, options, context,);
+        let _ = (copySource, options, context);
         self.recorder.record("pageBlobHandler.copyIncremental");
         Ok(recorded_response("pageBlobHandler.copyIncremental"))
     }
@@ -774,14 +798,13 @@ context: Context
 
 #[async_trait]
 impl IAppendBlobHandler for AppendBlobHandlerHarness {
-
     async fn create(
         &self,
         contentLength: f64,
-options: models::AppendBlobCreateOptionalParams,
-context: Context
+        options: models::AppendBlobCreateOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::AppendBlobCreateResponse> {
-        let _ = (contentLength, options, context,);
+        let _ = (contentLength, options, context);
         self.recorder.record("appendBlobHandler.create");
         Ok(recorded_response("appendBlobHandler.create"))
     }
@@ -789,11 +812,11 @@ context: Context
     async fn appendBlock(
         &self,
         body: GeneratedReadableStream,
-contentLength: f64,
-options: models::AppendBlobAppendBlockOptionalParams,
-context: Context
+        contentLength: f64,
+        options: models::AppendBlobAppendBlockOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::AppendBlobAppendBlockResponse> {
-        let _ = (body, contentLength, options, context,);
+        let _ = (body, contentLength, options, context);
         self.recorder.record("appendBlobHandler.appendBlock");
         Ok(recorded_response("appendBlobHandler.appendBlock"))
     }
@@ -801,11 +824,12 @@ context: Context
     async fn appendBlockFromUrl(
         &self,
         sourceUrl: String,
-contentLength: f64,
-options: models::AppendBlobAppendBlockFromUrlOptionalParams,
-context: Context
-    ) -> azurite_blob::generated::GeneratedResult<models::AppendBlobAppendBlockFromUrlResponse> {
-        let _ = (sourceUrl, contentLength, options, context,);
+        contentLength: f64,
+        options: models::AppendBlobAppendBlockFromUrlOptionalParams,
+        context: Context,
+    ) -> azurite_blob::generated::GeneratedResult<models::AppendBlobAppendBlockFromUrlResponse>
+    {
+        let _ = (sourceUrl, contentLength, options, context);
         self.recorder.record("appendBlobHandler.appendBlockFromUrl");
         Ok(recorded_response("appendBlobHandler.appendBlockFromUrl"))
     }
@@ -813,9 +837,9 @@ context: Context
     async fn seal(
         &self,
         options: models::AppendBlobSealOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::AppendBlobSealResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("appendBlobHandler.seal");
         Ok(recorded_response("appendBlobHandler.seal"))
     }
@@ -823,15 +847,14 @@ context: Context
 
 #[async_trait]
 impl IBlockBlobHandler for BlockBlobHandlerHarness {
-
     async fn upload(
         &self,
         body: GeneratedReadableStream,
-contentLength: f64,
-options: models::BlockBlobUploadOptionalParams,
-context: Context
+        contentLength: f64,
+        options: models::BlockBlobUploadOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlockBlobUploadResponse> {
-        let _ = (body, contentLength, options, context,);
+        let _ = (body, contentLength, options, context);
         self.recorder.record("blockBlobHandler.upload");
         Ok(recorded_response("blockBlobHandler.upload"))
     }
@@ -839,11 +862,11 @@ context: Context
     async fn putBlobFromUrl(
         &self,
         contentLength: f64,
-copySource: String,
-options: models::BlockBlobPutBlobFromUrlOptionalParams,
-context: Context
+        copySource: String,
+        options: models::BlockBlobPutBlobFromUrlOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlockBlobPutBlobFromUrlResponse> {
-        let _ = (contentLength, copySource, options, context,);
+        let _ = (contentLength, copySource, options, context);
         self.recorder.record("blockBlobHandler.putBlobFromUrl");
         Ok(recorded_response("blockBlobHandler.putBlobFromUrl"))
     }
@@ -851,12 +874,12 @@ context: Context
     async fn stageBlock(
         &self,
         blockId: String,
-contentLength: f64,
-body: GeneratedReadableStream,
-options: models::BlockBlobStageBlockOptionalParams,
-context: Context
+        contentLength: f64,
+        body: GeneratedReadableStream,
+        options: models::BlockBlobStageBlockOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlockBlobStageBlockResponse> {
-        let _ = (blockId, contentLength, body, options, context,);
+        let _ = (blockId, contentLength, body, options, context);
         self.recorder.record("blockBlobHandler.stageBlock");
         Ok(recorded_response("blockBlobHandler.stageBlock"))
     }
@@ -864,12 +887,12 @@ context: Context
     async fn stageBlockFromURL(
         &self,
         blockId: String,
-contentLength: f64,
-sourceUrl: String,
-options: models::BlockBlobStageBlockFromURLOptionalParams,
-context: Context
+        contentLength: f64,
+        sourceUrl: String,
+        options: models::BlockBlobStageBlockFromURLOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlockBlobStageBlockFromURLResponse> {
-        let _ = (blockId, contentLength, sourceUrl, options, context,);
+        let _ = (blockId, contentLength, sourceUrl, options, context);
         self.recorder.record("blockBlobHandler.stageBlockFromURL");
         Ok(recorded_response("blockBlobHandler.stageBlockFromURL"))
     }
@@ -877,10 +900,10 @@ context: Context
     async fn commitBlockList(
         &self,
         blocks: models::BlockLookupList,
-options: models::BlockBlobCommitBlockListOptionalParams,
-context: Context
+        options: models::BlockBlobCommitBlockListOptionalParams,
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlockBlobCommitBlockListResponse> {
-        let _ = (blocks, options, context,);
+        let _ = (blocks, options, context);
         self.recorder.record("blockBlobHandler.commitBlockList");
         Ok(recorded_response("blockBlobHandler.commitBlockList"))
     }
@@ -888,14 +911,13 @@ context: Context
     async fn getBlockList(
         &self,
         options: models::BlockBlobGetBlockListOptionalParams,
-context: Context
+        context: Context,
     ) -> azurite_blob::generated::GeneratedResult<models::BlockBlobGetBlockListResponse> {
-        let _ = (options, context,);
+        let _ = (options, context);
         self.recorder.record("blockBlobHandler.getBlockList");
         Ok(recorded_response("blockBlobHandler.getBlockList"))
     }
 }
-
 
 struct ContractHandlers {
     recorder: CallRecorder,
@@ -1068,9 +1090,19 @@ fn middleware_order_matches_typescript_contract() {
 #[test]
 fn context_holder_shares_state_by_path_and_isolates_other_paths() {
     let holder = Context::new_holder();
-    let request = GeneratedHttpRequest::new(HttpMethod::GET, "http://127.0.0.1/", "http://127.0.0.1", "/");
+    let request = GeneratedHttpRequest::new(
+        HttpMethod::GET,
+        "http://127.0.0.1/",
+        "http://127.0.0.1",
+        "/",
+    );
     let response = GeneratedHttpResponse::default();
-    let context_a = Context::from_holder(holder.clone(), "generated", Some(request.clone()), Some(response.clone()));
+    let context_a = Context::from_holder(
+        holder.clone(),
+        "generated",
+        Some(request.clone()),
+        Some(response.clone()),
+    );
     let context_b = Context::from_holder(holder.clone(), "generated", None, None);
     let other_context = Context::from_holder(holder, "other", None, None);
 
@@ -1093,7 +1125,9 @@ fn context_holder_shares_state_by_path_and_isolates_other_paths() {
     assert!(context_b.request().is_some());
     assert!(context_b.response().is_some());
     assert!(matches!(
-        context_b.handlerParameters().and_then(|params| params.get("flag").cloned()),
+        context_b
+            .handlerParameters()
+            .and_then(|params| params.get("flag").cloned()),
         Some(GeneratedValue::Bool(true))
     ));
     assert_eq!(
@@ -1150,11 +1184,12 @@ fn operation_enum_and_handler_mapping_metadata_stay_in_lockstep() {
 
 #[test]
 fn handler_traits_cover_every_generated_interface_method() {
-    let interfaces: BTreeMap<String, HandlerInterfaceMetadata> = serde_json::from_str(include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/src/generated/artifacts/metadata/handler_interfaces.generated.json"
-    )))
-    .expect("handler interface metadata should deserialize");
+    let interfaces: BTreeMap<String, HandlerInterfaceMetadata> =
+        serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/generated/artifacts/metadata/handler_interfaces.generated.json"
+        )))
+        .expect("handler interface metadata should deserialize");
 
     assert_eq!(interfaces["IServiceHandler"].iface_name, "IServiceHandler");
     assert_eq!(interfaces["IServiceHandler"].handler_name, "ServiceHandler");
@@ -1165,7 +1200,10 @@ fn handler_traits_cover_every_generated_interface_method() {
     assert_eq!(interfaces["IAppendBlobHandler"].methods.len(), 4);
     assert_eq!(interfaces["IBlockBlobHandler"].methods.len(), 6);
     assert_eq!(
-        interfaces.values().map(|iface| iface.methods.len()).sum::<usize>(),
+        interfaces
+            .values()
+            .map(|iface| iface.methods.len())
+            .sum::<usize>(),
         69
     );
 
@@ -1178,12 +1216,18 @@ fn handler_traits_cover_every_generated_interface_method() {
             .map(|param| (param.name.as_str(), param.type_name.as_str()))
             .collect::<Vec<_>>(),
         vec![
-            ("storageServiceProperties", "Models.StorageServiceProperties"),
+            (
+                "storageServiceProperties",
+                "Models.StorageServiceProperties"
+            ),
             ("options", "Models.ServiceSetPropertiesOptionalParams"),
             ("context", "Context"),
         ]
     );
-    assert_eq!(first_service_method.response_type, "ServiceSetPropertiesResponse");
+    assert_eq!(
+        first_service_method.response_type,
+        "ServiceSetPropertiesResponse"
+    );
 
     let _ = ContractHandlers::default();
 }
@@ -1244,12 +1288,17 @@ async fn express_factory_stages_share_context_across_the_generated_pipeline() {
     let mut request_for_deserialize = request.clone();
     let mut response_for_serialize = response.clone();
 
-    factory.dispatch(&context, &request).expect("dispatch stage should succeed");
+    factory
+        .dispatch(&context, &request)
+        .expect("dispatch stage should succeed");
     factory
         .deserialize(&context, &mut request_for_deserialize)
         .await
         .expect("deserialize stage should succeed");
-    factory.handle(&context).await.expect("handler stage should succeed");
+    factory
+        .handle(&context)
+        .await
+        .expect("handler stage should succeed");
     factory
         .serialize(&context, &mut response_for_serialize)
         .await
@@ -1257,13 +1306,17 @@ async fn express_factory_stages_share_context_across_the_generated_pipeline() {
     factory.end(&context, &mut response_for_serialize);
 
     assert_eq!(context.operation(), Some(Operation::Service_GetAccountInfo));
-    assert_eq!(handlers.calls(), vec![String::from("serviceHandler.getAccountInfo")]);
+    assert_eq!(
+        handlers.calls(),
+        vec![String::from("serviceHandler.getAccountInfo")]
+    );
     assert_eq!(response_for_serialize.getStatusCode(), 200);
     assert!(response_for_serialize.getBodyStream().is_ended());
 
     let log_entries = logger.entries();
     let dispatch_index = stage_index(&log_entries, "DispatchMiddleware: Dispatching request");
-    let deserialize_index = stage_index(&log_entries, "DeserializerMiddleware: Start deserializing");
+    let deserialize_index =
+        stage_index(&log_entries, "DeserializerMiddleware: Start deserializing");
     let handler_index = stage_index(&log_entries, "HandlerMiddleware: DeserializedParameters");
     let serializer_index = stage_index(&log_entries, "SerializerMiddleware: Start serializing");
     let end_index = stage_index(&log_entries, "EndMiddleware: End response");
@@ -1317,16 +1370,28 @@ async fn deserializer_narrows_queries_headers_and_body_into_concrete_values() {
         path: Some(String::from("/demo")),
         urlParameters: vec![],
         queryParameters: vec![
-            operation_parameter(ParameterPath::Single(String::from("enabled")), mapper("enabled", "Boolean")),
-            operation_parameter(ParameterPath::Single(String::from("count")), mapper("count", "Number")),
-            operation_parameter(ParameterPath::Single(String::from("ids")), mapper("ids", "Sequence")),
+            operation_parameter(
+                ParameterPath::Single(String::from("enabled")),
+                mapper("enabled", "Boolean"),
+            ),
+            operation_parameter(
+                ParameterPath::Single(String::from("count")),
+                mapper("count", "Number"),
+            ),
+            operation_parameter(
+                ParameterPath::Single(String::from("ids")),
+                mapper("ids", "Sequence"),
+            ),
         ],
         headerParameters: vec![
             operation_parameter(
                 ParameterPath::Single(String::from("metadata")),
                 header_collection_mapper("x-ms-meta-"),
             ),
-            operation_parameter(ParameterPath::Single(String::from("mode")), mapper("x-mode", "Boolean")),
+            operation_parameter(
+                ParameterPath::Single(String::from("mode")),
+                mapper("x-mode", "Boolean"),
+            ),
         ],
         requestBody: Some(RequestBodySpec {
             parameterPath: ParameterPath::Single(String::from("payload")),
@@ -1341,8 +1406,14 @@ async fn deserializer_narrows_queries_headers_and_body_into_concrete_values() {
         .await
         .expect("deserialization should succeed");
 
-    assert_eq!(parameters.get("enabled").and_then(GeneratedValue::as_bool), Some(true));
-    assert_eq!(parameters.get("count").and_then(GeneratedValue::as_number), Some(42.5));
+    assert_eq!(
+        parameters.get("enabled").and_then(GeneratedValue::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        parameters.get("count").and_then(GeneratedValue::as_number),
+        Some(42.5)
+    );
     match parameters.get("ids") {
         Some(GeneratedValue::Array(values)) => {
             assert_eq!(
@@ -1358,22 +1429,55 @@ async fn deserializer_narrows_queries_headers_and_body_into_concrete_values() {
     }
     match parameters.get("metadata") {
         Some(GeneratedValue::Object(values)) => {
-            assert_eq!(values.get("owner").and_then(GeneratedValue::as_string).as_deref(), Some("alice"));
-            assert_eq!(values.get("KIND").and_then(GeneratedValue::as_string).as_deref(), Some("gold"));
+            assert_eq!(
+                values
+                    .get("owner")
+                    .and_then(GeneratedValue::as_string)
+                    .as_deref(),
+                Some("alice")
+            );
+            assert_eq!(
+                values
+                    .get("KIND")
+                    .and_then(GeneratedValue::as_string)
+                    .as_deref(),
+                Some("gold")
+            );
         }
         other => panic!("expected object for metadata, got {other:?}"),
     }
-    assert_eq!(parameters.get("mode").and_then(GeneratedValue::as_bool), Some(false));
+    assert_eq!(
+        parameters.get("mode").and_then(GeneratedValue::as_bool),
+        Some(false)
+    );
     match parameters.get("payload") {
         Some(GeneratedValue::Object(values)) => {
-            assert_eq!(values.get("name").and_then(GeneratedValue::as_string).as_deref(), Some("example"));
-            assert_eq!(values.get("size").and_then(GeneratedValue::as_number), Some(3.0));
-            assert_eq!(values.get("active").and_then(GeneratedValue::as_bool), Some(true));
+            assert_eq!(
+                values
+                    .get("name")
+                    .and_then(GeneratedValue::as_string)
+                    .as_deref(),
+                Some("example")
+            );
+            assert_eq!(
+                values.get("size").and_then(GeneratedValue::as_number),
+                Some(3.0)
+            );
+            assert_eq!(
+                values.get("active").and_then(GeneratedValue::as_bool),
+                Some(true)
+            );
         }
         other => panic!("expected object body payload, got {other:?}"),
     }
     assert_eq!(request.getBody().as_deref(), Some(body));
-    assert_eq!(parameters.get("body").and_then(GeneratedValue::as_string).as_deref(), Some(body));
+    assert_eq!(
+        parameters
+            .get("body")
+            .and_then(GeneratedValue::as_string)
+            .as_deref(),
+        Some(body)
+    );
 }
 
 #[tokio::test]
@@ -1424,21 +1528,26 @@ async fn serializer_emits_json_headers_and_body_in_wire_format() {
 
     let mut handler_response = GeneratedResponse::new(201);
     handler_response.statusMessage = Some(String::from("Created"));
-    handler_response.insert_field(
-        "etag",
-        GeneratedValue::String(String::from("\"etag-1\"")),
-    );
+    handler_response.insert_field("etag", GeneratedValue::String(String::from("\"etag-1\"")));
     handler_response.insert_field(
         "metadata",
         GeneratedValue::Object(BTreeMap::from([
-            (String::from("owner"), GeneratedValue::String(String::from("alice"))),
+            (
+                String::from("owner"),
+                GeneratedValue::String(String::from("alice")),
+            ),
             (String::from("attempts"), GeneratedValue::Number(2.0)),
         ])),
     );
-    handler_response.body = Some(GeneratedBody::Value(GeneratedValue::Object(BTreeMap::from([
-        (String::from("name"), GeneratedValue::String(String::from("demo"))),
-        (String::from("sealed"), GeneratedValue::Bool(true)),
-    ]))));
+    handler_response.body = Some(GeneratedBody::Value(GeneratedValue::Object(
+        BTreeMap::from([
+            (
+                String::from("name"),
+                GeneratedValue::String(String::from("demo")),
+            ),
+            (String::from("sealed"), GeneratedValue::Bool(true)),
+        ]),
+    )));
 
     serialize(&context, &mut response, &spec, &handler_response, &logger)
         .await
@@ -1516,9 +1625,15 @@ async fn serializer_emits_xml_and_stream_bodies() {
         "demo",
     ))));
 
-    serialize(&context, &mut xml_response, &xml_spec, &handler_response, &logger)
-        .await
-        .expect("xml serialization should succeed");
+    serialize(
+        &context,
+        &mut xml_response,
+        &xml_spec,
+        &handler_response,
+        &logger,
+    )
+    .await
+    .expect("xml serialization should succeed");
 
     assert_eq!(
         xml_response
@@ -1557,11 +1672,19 @@ async fn serializer_emits_xml_and_stream_bodies() {
     };
     let mut stream_response = GeneratedHttpResponse::default();
     let mut streamed = GeneratedResponse::new(206);
-    streamed.body = Some(GeneratedBody::Stream(GeneratedReadableStream::from_string("chunk-1")));
+    streamed.body = Some(GeneratedBody::Stream(GeneratedReadableStream::from_string(
+        "chunk-1",
+    )));
 
-    serialize(&context, &mut stream_response, &stream_spec, &streamed, &logger)
-        .await
-        .expect("stream serialization should succeed");
+    serialize(
+        &context,
+        &mut stream_response,
+        &stream_spec,
+        &streamed,
+        &logger,
+    )
+    .await
+    .expect("stream serialization should succeed");
 
     assert_eq!(stream_response.getStatusCode(), 206);
     assert_eq!(stream_response.getBodyStream().text(), "chunk-1");
@@ -1619,8 +1742,18 @@ async fn stream_request_bodies_remain_streams_during_deserialization() {
 #[test]
 fn error_middleware_writes_structured_wire_errors_and_end_finishes_the_response() {
     let logger = RecordingLogger::default();
-    let request = GeneratedHttpRequest::new(HttpMethod::GET, "http://127.0.0.1/", "http://127.0.0.1", "/");
-    let context = Context::from_holder(Context::new_holder(), "generated", Some(request.clone()), Some(GeneratedHttpResponse::default()));
+    let request = GeneratedHttpRequest::new(
+        HttpMethod::GET,
+        "http://127.0.0.1/",
+        "http://127.0.0.1",
+        "/",
+    );
+    let context = Context::from_holder(
+        Context::new_holder(),
+        "generated",
+        Some(request.clone()),
+        Some(GeneratedHttpResponse::default()),
+    );
     let mut response = GeneratedHttpResponse::default();
 
     let mut error = MiddlewareError::new(409, "Conflict");

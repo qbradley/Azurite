@@ -317,7 +317,7 @@ impl IExtentStore for ExtentStoreFixture {
                     .get(&chunk.id)
                     .map(|bytes| slice_bytes(bytes, chunk.offset, chunk.count))
             })
-            .unwrap_or_else(Bytes::new);
+            .unwrap_or_default();
 
         Ok(readable_from_bytes(bytes))
     }

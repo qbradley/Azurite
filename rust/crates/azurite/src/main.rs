@@ -1,3 +1,6 @@
+#![allow(non_snake_case)]
+#![allow(clippy::incompatible_msrv)]
+
 use azurite_blob::blob_server::BlobServer;
 use azurite_queue::queue_server::QueueServer;
 use azurite_table::table_server::TableServer;

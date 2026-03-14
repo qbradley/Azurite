@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::query_interpreter::query_interpreter`
 - Phase: `10.6`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Exported functions

@@ -21,9 +21,10 @@ impl<'a> ILeaseSyncer<BlobModel> for BlobLeaseSyncer<'a> {
         self.blob.leaseBreakTime = lease.leaseBreakTime;
 
         if let Some(v) = &lease.leaseDurationType {
-            self.blob
-                .properties
-                .insert("leaseDuration".to_string(), GeneratedValue::String(v.clone()));
+            self.blob.properties.insert(
+                "leaseDuration".to_string(),
+                GeneratedValue::String(v.clone()),
+            );
         } else {
             self.blob.properties.remove("leaseDuration");
         }

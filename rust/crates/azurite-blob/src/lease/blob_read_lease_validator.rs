@@ -37,9 +37,11 @@ impl ILeaseValidator for BlobReadLeaseValidator {
                 ));
             } else if let Some(stored_id) = &lease.leaseId {
                 if input_id.to_lowercase() != stored_id.to_lowercase() {
-                    return Err(StorageErrorFactory::getBlobLeaseIdMismatchWithBlobOperation(
-                        context.contextId().as_deref(),
-                    ));
+                    return Err(
+                        StorageErrorFactory::getBlobLeaseIdMismatchWithBlobOperation(
+                            context.contextId().as_deref(),
+                        ),
+                    );
                 }
             }
         }

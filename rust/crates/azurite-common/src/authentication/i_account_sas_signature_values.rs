@@ -221,7 +221,7 @@ fn generateAccountSASSignature20201206(
         .clone()
         .unwrap_or_default();
 
-    let stringToSign = vec![
+    let stringToSign = [
         accountName.to_owned(),
         parsedPermissions,
         parsedServices,
@@ -264,7 +264,7 @@ fn generateAccountSASSignature20150405(
     };
     let version = accountSASSignatureValues.version.clone();
 
-    let stringToSign = vec![
+    let stringToSign = [
         accountName.to_owned(),
         parsedPermissions,
         parsedServices,

@@ -25,9 +25,8 @@ pub use container_delete_lease_validator::ContainerDeleteLeaseValidator;
 pub use container_lease_adapter::ContainerLeaseAdapter;
 pub use container_lease_syncer::ContainerLeaseSyncer;
 pub use container_read_lease_validator::ContainerReadLeaseValidator;
-pub use i_lease_state::{ILease, ILeaseSyncer, ILeaseState, ILeaseValidator};
+pub use i_lease_state::{ILease, ILeaseState, ILeaseSyncer, ILeaseValidator};
 pub use lease_factory::LeaseFactory;
 
 #[derive(Debug, Clone, Default)]
 pub struct BlobLeaseModule;
-

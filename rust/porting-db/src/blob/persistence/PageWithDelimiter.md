@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::page_with_delimiter`
 - Phase: `10.10`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `PageWithDelimiter<BlobType>`

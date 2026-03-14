@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::loki_blob_metadata_store`
 - Phase: `10.7`
-- Status: `not_started`
+- Status: `in_progress` (1733 lines translated, 35 of 51 methods implemented, compilation errors present)
 
 ## Exported API
 ### Default class `LokiBlobMetadataStore`

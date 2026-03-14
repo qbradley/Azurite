@@ -5,7 +5,9 @@ use azurite_common::utils::utils::minDate;
 
 use crate::errors::storage_error_factory::StorageErrorFactory;
 use crate::generated::context::Context;
-use crate::lease::i_lease_state::{ILease, ILeaseState, ILeaseValidator, LeaseDurationType, LeaseStateType, LeaseStatusType};
+use crate::lease::i_lease_state::{
+    ILease, ILeaseState, ILeaseValidator, LeaseDurationType, LeaseStateType, LeaseStatusType,
+};
 use crate::lease::lease_state_base::LeaseStateBase;
 
 pub struct LeaseLeasedState {
@@ -83,7 +85,7 @@ impl ILeaseState for LeaseLeasedState {
             ));
         }
 
-        if (duration < 15 || duration > 60) && duration != -1 {
+        if !(15..=60).contains(&duration) && duration != -1 {
             return Err(StorageErrorFactory::getInvalidLeaseDuration(
                 self.base.context.contextId().as_deref(),
             ));
@@ -110,7 +112,15 @@ impl ILeaseState for LeaseLeasedState {
                     },
                     self.base.context.clone(),
                 )
-                .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                .map_err(|e| {
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
+                })?,
             ))
         } else {
             let expire = start + chrono::Duration::seconds(duration);
@@ -127,7 +137,15 @@ impl ILeaseState for LeaseLeasedState {
                     },
                     self.base.context.clone(),
                 )
-                .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                .map_err(|e| {
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
+                })?,
             ))
         }
     }
@@ -157,10 +175,17 @@ impl ILeaseState for LeaseLeasedState {
                         },
                         ctx,
                     )
-                    .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                    .map_err(|e| {
+                        crate::errors::StorageError::new(
+                            500,
+                            "InternalError",
+                            &e,
+                            "",
+                            std::collections::BTreeMap::new(),
+                        )
+                    })?,
                 ));
-            } else {
-                let bp = break_period.unwrap();
+            } else if let Some(bp) = break_period {
                 let break_time = start + chrono::Duration::seconds(bp);
                 return Ok(Box::new(
                     crate::lease::lease_breaking_state::LeaseBreakingState::new(
@@ -175,7 +200,15 @@ impl ILeaseState for LeaseLeasedState {
                         },
                         ctx,
                     )
-                    .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                    .map_err(|e| {
+                        crate::errors::StorageError::new(
+                            500,
+                            "InternalError",
+                            &e,
+                            "",
+                            std::collections::BTreeMap::new(),
+                        )
+                    })?,
                 ));
             }
         }
@@ -195,7 +228,15 @@ impl ILeaseState for LeaseLeasedState {
                     },
                     ctx,
                 )
-                .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                .map_err(|e| {
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
+                })?,
             ));
         }
 
@@ -213,12 +254,20 @@ impl ILeaseState for LeaseLeasedState {
                     },
                     ctx,
                 )
-                .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                .map_err(|e| {
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
+                })?,
             ));
         }
 
         let bp = break_period.unwrap();
-        if bp < 0 || bp > 60 {
+        if !(0..=60).contains(&bp) {
             return Err(StorageErrorFactory::getInvalidLeaseBreakPeriod(
                 self.base.context.contextId().as_deref(),
             ));
@@ -240,7 +289,15 @@ impl ILeaseState for LeaseLeasedState {
                 },
                 ctx,
             )
-            .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+            .map_err(|e| {
+                crate::errors::StorageError::new(
+                    500,
+                    "InternalError",
+                    &e,
+                    "",
+                    std::collections::BTreeMap::new(),
+                )
+            })?,
         ))
     }
 
@@ -254,8 +311,17 @@ impl ILeaseState for LeaseLeasedState {
         if self.base.lease.leaseDurationType.as_deref() == Some(LeaseDurationType::Infinite) {
             // Renewing an infinite lease is a no-op — return a new LeaseLeasedState with same data
             return Ok(Box::new(
-                LeaseLeasedState::new(self.base.lease.clone(), self.base.context.clone())
-                    .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+                LeaseLeasedState::new(self.base.lease.clone(), self.base.context.clone()).map_err(
+                    |e| {
+                        crate::errors::StorageError::new(
+                            500,
+                            "InternalError",
+                            &e,
+                            "",
+                            std::collections::BTreeMap::new(),
+                        )
+                    },
+                )?,
             ));
         }
 
@@ -276,7 +342,15 @@ impl ILeaseState for LeaseLeasedState {
                 },
                 self.base.context.clone(),
             )
-            .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+            .map_err(|e| {
+                crate::errors::StorageError::new(
+                    500,
+                    "InternalError",
+                    &e,
+                    "",
+                    std::collections::BTreeMap::new(),
+                )
+            })?,
         ))
     }
 
@@ -306,14 +380,19 @@ impl ILeaseState for LeaseLeasedState {
                 },
                 self.base.context.clone(),
             )
-            .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+            .map_err(|e| {
+                crate::errors::StorageError::new(
+                    500,
+                    "InternalError",
+                    &e,
+                    "",
+                    std::collections::BTreeMap::new(),
+                )
+            })?,
         ))
     }
 
-    fn release(
-        &self,
-        lease_id: &str,
-    ) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
+    fn release(&self, lease_id: &str) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
         if self.base.lease.leaseId.as_deref() != Some(lease_id) {
             return Err(StorageErrorFactory::getLeaseIdMismatchWithLeaseOperation(
                 self.base.context.contextId().as_deref(),
@@ -333,7 +412,15 @@ impl ILeaseState for LeaseLeasedState {
                 },
                 self.base.context.clone(),
             )
-            .map_err(|e| crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new()))?,
+            .map_err(|e| {
+                crate::errors::StorageError::new(
+                    500,
+                    "InternalError",
+                    &e,
+                    "",
+                    std::collections::BTreeMap::new(),
+                )
+            })?,
         ))
     }
 

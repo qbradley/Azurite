@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use std::{
     io,
     sync::{
@@ -59,7 +61,7 @@ fn readable_from_chunks(chunks: Vec<Bytes>) -> ReadableStream {
     Box::pin(StreamReader::new(stream::iter(
         chunks
             .into_iter()
-            .map(|chunk| Ok::<Bytes, io::Error>(chunk))
+            .map(Ok::<Bytes, io::Error>)
             .collect::<Vec<_>>(),
     )))
 }
@@ -333,7 +335,7 @@ async fn memory_extent_store_appends_reads_and_tracks_metadata() {
         .await
         .expect("memory store clean should succeed");
     assert_eq!(chunk_store.totalSize(), 0);
-    assert_eq!(category_name.starts_with("memory-"), true);
+    assert!(category_name.starts_with("memory-"));
 }
 
 #[tokio::test]

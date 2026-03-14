@@ -109,10 +109,7 @@ impl MemoryExtentChunkStore {
         let mut state = self.state.lock().unwrap();
         let sizeLimit = state._sizeLimit;
         let totalSize = state._totalSize;
-        let category = state
-            ._chunks
-            .entry(categoryName.to_string())
-            .or_insert_with(ExtentCategoryChunks::default);
+        let category = state._chunks.entry(categoryName.to_string()).or_default();
 
         let mut delta = chunk.count as i64;
         if let Some(existing) = category.chunks.get(&chunk.id) {

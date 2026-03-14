@@ -3,7 +3,9 @@ use uuid::Uuid;
 
 use crate::errors::storage_error_factory::StorageErrorFactory;
 use crate::generated::context::Context;
-use crate::lease::i_lease_state::{ILease, ILeaseState, ILeaseValidator, LeaseDurationType, LeaseStateType, LeaseStatusType};
+use crate::lease::i_lease_state::{
+    ILease, ILeaseState, ILeaseValidator, LeaseDurationType, LeaseStateType, LeaseStatusType,
+};
 use crate::lease::lease_state_base::LeaseStateBase;
 
 pub struct LeaseAvailableState {
@@ -98,7 +100,7 @@ impl ILeaseState for LeaseAvailableState {
         duration: i64,
         proposed_lease_id: Option<&str>,
     ) -> Result<Box<dyn ILeaseState>, crate::errors::StorageError> {
-        if (duration < 15 || duration > 60) && duration != -1 {
+        if !(15..=60).contains(&duration) && duration != -1 {
             return Err(StorageErrorFactory::getInvalidLeaseDuration(
                 self.base.context.contextId().as_deref(),
             ));
@@ -126,7 +128,13 @@ impl ILeaseState for LeaseAvailableState {
                     self.base.context.clone(),
                 )
                 .map_err(|e| {
-                    crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new())
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
                 })?,
             ))
         } else {
@@ -145,7 +153,13 @@ impl ILeaseState for LeaseAvailableState {
                     self.base.context.clone(),
                 )
                 .map_err(|e| {
-                    crate::errors::StorageError::new(500, "InternalError", &e, "", std::collections::BTreeMap::new())
+                    crate::errors::StorageError::new(
+                        500,
+                        "InternalError",
+                        &e,
+                        "",
+                        std::collections::BTreeMap::new(),
+                    )
                 })?,
             ))
         }

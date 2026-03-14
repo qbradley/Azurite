@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::filter_blob_page`
 - Phase: `10.9`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `FilterBlobPage<FilterBlobType>`

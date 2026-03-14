@@ -89,8 +89,14 @@ impl AccountSASAuthenticator {
         true
     }
 
-    fn validateProtocol(&self, sasProtocol: Option<SASProtocolOrString>, requestProtocol: &str) -> bool {
-        let sasProtocol = sasProtocol.map(|value| value.toString()).unwrap_or_else(|| String::from("https,http"));
+    fn validateProtocol(
+        &self,
+        sasProtocol: Option<SASProtocolOrString>,
+        requestProtocol: &str,
+    ) -> bool {
+        let sasProtocol = sasProtocol
+            .map(|value| value.toString())
+            .unwrap_or_else(|| String::from("https,http"));
         if sasProtocol.contains(',') {
             true
         } else {
@@ -98,8 +104,16 @@ impl AccountSASAuthenticator {
         }
     }
 
-    async fn blobExist(&self, account: &str, container: &str, blob: &str) -> Result<bool, StorageError> {
-        let blobModel = self.blobMetadataStore.getBlobType(account, container, blob, None).await?;
+    async fn blobExist(
+        &self,
+        account: &str,
+        container: &str,
+        blob: &str,
+    ) -> Result<bool, StorageError> {
+        let blobModel = self
+            .blobMetadataStore
+            .getBlobType(account, container, blob, None)
+            .await?;
         if blobModel.is_none() {
             return Ok(false);
         }
@@ -220,7 +234,9 @@ impl IAuthenticator for AccountSASAuthenticator {
                 | Operation::Blob_StartCopyFromURL
                 | Operation::Blob_CopyFromURL
         ) {
-            if let (Some(containerName), Some(blobName)) = (containerName.as_deref(), blobName.as_deref()) {
+            if let (Some(containerName), Some(blobName)) =
+                (containerName.as_deref(), blobName.as_deref())
+            {
                 if self.blobExist(&account, containerName, blobName).await?
                     && !values.permissions.toString().contains('w')
                 {
@@ -254,7 +270,9 @@ fn decode_uri_component(value: &str) -> String {
     let mut result = Vec::with_capacity(bytes.len());
     while index < bytes.len() {
         if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (from_hex(bytes[index + 1]), from_hex(bytes[index + 2])) {
+            if let (Some(high), Some(low)) =
+                (from_hex(bytes[index + 1]), from_hex(bytes[index + 2]))
+            {
                 result.push(high * 16 + low);
                 index += 3;
                 continue;

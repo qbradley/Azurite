@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::query_interpreter::query_nodes::binary_operator_node`
 - Phase: `10.4`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default abstract class `BinaryOperatorNode`

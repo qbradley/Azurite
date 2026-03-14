@@ -70,10 +70,7 @@ pub trait ILeaseState: Send + Sync {
         proposed_lease_id: Option<&str>,
     ) -> Result<Box<dyn ILeaseState>, StorageError>;
 
-    fn break_lease(
-        &self,
-        break_period: Option<i64>,
-    ) -> Result<Box<dyn ILeaseState>, StorageError>;
+    fn break_lease(&self, break_period: Option<i64>) -> Result<Box<dyn ILeaseState>, StorageError>;
 
     fn renew(&self, lease_id: &str) -> Result<Box<dyn ILeaseState>, StorageError>;
 

@@ -283,7 +283,7 @@ impl AzuriteTelemetryClient {
         let mut state = TELEMETRY_STATE.lock().unwrap();
         state.enableTelemetry = enableTelemetry;
 
-        if enableTelemetry != false && state.initialized != true {
+        if enableTelemetry && !state.initialized {
             state.isVSC = isVSC;
             state.location = location;
             state.instanceID =
@@ -763,8 +763,8 @@ impl AzuriteTelemetryClient {
                             parameters.push(',');
                         }
                     }
-                } else if value.starts_with('-') {
-                    if let Some(flag) = shortParameters.get(&value[1..]) {
+                } else if let Some(stripped) = value.strip_prefix('-') {
+                    if let Some(flag) = shortParameters.get(stripped) {
                         parameters.push_str(flag);
                         parameters.push(',');
                     }

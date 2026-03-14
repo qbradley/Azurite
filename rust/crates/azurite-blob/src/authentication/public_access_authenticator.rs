@@ -59,7 +59,11 @@ impl PublicAccessAuthenticator {
         container: &str,
         context: &Context,
     ) -> Option<String> {
-        match self.blobMetadataStore.getContainerACL(context, account, container).await {
+        match self
+            .blobMetadataStore
+            .getContainerACL(context, account, container, None)
+            .await
+        {
             Ok(Some(containerModel)) => container_public_access(&containerModel.properties),
             Ok(None) => None,
             Err(_) => None,
@@ -84,8 +88,14 @@ impl IAuthenticator for PublicAccessAuthenticator {
             .get("account")
             .and_then(|value| value.as_string())
             .unwrap_or_default();
-        let containerName = context.extras().get("container").and_then(|value| value.as_string());
-        let _blobName = context.extras().get("blob").and_then(|value| value.as_string());
+        let containerName = context
+            .extras()
+            .get("container")
+            .and_then(|value| value.as_string());
+        let _blobName = context
+            .extras()
+            .get("blob")
+            .and_then(|value| value.as_string());
 
         if containerName.is_none() {
             return Ok(None);

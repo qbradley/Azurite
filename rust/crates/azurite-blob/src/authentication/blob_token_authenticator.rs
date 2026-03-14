@@ -5,7 +5,9 @@ use azurite_common::i_account_data_store::IAccountDataStore;
 use azurite_common::i_logger::ILogger;
 use azurite_common::models::OAuthLevel;
 use azurite_common::utils::constants::{BEARER_TOKEN_PREFIX, HTTPS, VALID_ISSUE_PREFIXES};
-use base64::{engine::general_purpose::URL_SAFE, engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{
+    engine::general_purpose::URL_SAFE, engine::general_purpose::URL_SAFE_NO_PAD, Engine as _,
+};
 use chrono::Utc;
 use regex::Regex;
 use serde_json::Value;
@@ -22,19 +24,19 @@ const AUTHORIZATION: &str = "authorization";
 
 static VALID_BLOB_AUDIENCES: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
-        Regex::new(r"^https://storage\.azure\.com[/]?$" ).unwrap(),
-        Regex::new(r"^e406a681-f3d4-42a8-90b6-c2b029497af1$" ).unwrap(),
-        Regex::new(r"^https://(.*)\.blob\.core\.windows\.net[/]?$" ).unwrap(),
-        Regex::new(r"^https://(.*)\.blob\.core\.chinacloudapi\.cn[/]?$" ).unwrap(),
-        Regex::new(r"^https://(.*)\.blob\.core\.usgovcloudapi\.net[/]?$" ).unwrap(),
-        Regex::new(r"^https://(.*)\.blob\.core\.cloudapi\.de[/]?$" ).unwrap(),
+        Regex::new(r"^https://storage\.azure\.com[/]?$").unwrap(),
+        Regex::new(r"^e406a681-f3d4-42a8-90b6-c2b029497af1$").unwrap(),
+        Regex::new(r"^https://(.*)\.blob\.core\.windows\.net[/]?$").unwrap(),
+        Regex::new(r"^https://(.*)\.blob\.core\.chinacloudapi\.cn[/]?$").unwrap(),
+        Regex::new(r"^https://(.*)\.blob\.core\.usgovcloudapi\.net[/]?$").unwrap(),
+        Regex::new(r"^https://(.*)\.blob\.core\.cloudapi\.de[/]?$").unwrap(),
     ]
 });
 
 pub struct BlobTokenAuthenticator {
     dataStore: Arc<dyn IAccountDataStore + Send + Sync>,
     oauth: OAuthLevel,
-    logger: Arc<dyn ILogger + Send + Sync>,
+    _logger: Arc<dyn ILogger + Send + Sync>,
 }
 
 impl BlobTokenAuthenticator {
@@ -46,11 +48,15 @@ impl BlobTokenAuthenticator {
         Self {
             dataStore,
             oauth,
-            logger,
+            _logger: logger,
         }
     }
 
-    async fn authenticateBasic(&self, token: &str, context: &Context) -> Result<bool, StorageError> {
+    async fn authenticateBasic(
+        &self,
+        token: &str,
+        context: &Context,
+    ) -> Result<bool, StorageError> {
         let decoded = decode_jwt_payload(token).ok_or_else(|| {
             StorageErrorFactory::getAuthenticationFailed(
                 context.contextId().as_deref(),
@@ -87,25 +93,34 @@ impl BlobTokenAuthenticator {
             ));
         }
 
-        let iss = decoded.get("iss").and_then(|value| value.as_str()).ok_or_else(|| {
-            StorageErrorFactory::getAuthenticationFailed(
-                context.contextId().as_deref(),
-                "Authentication scheme Bearer is not supported.",
-            )
-        })?;
-        if !VALID_ISSUE_PREFIXES.iter().any(|prefix| iss.starts_with(prefix)) {
+        let iss = decoded
+            .get("iss")
+            .and_then(|value| value.as_str())
+            .ok_or_else(|| {
+                StorageErrorFactory::getAuthenticationFailed(
+                    context.contextId().as_deref(),
+                    "Authentication scheme Bearer is not supported.",
+                )
+            })?;
+        if !VALID_ISSUE_PREFIXES
+            .iter()
+            .any(|prefix| iss.starts_with(prefix))
+        {
             return Err(StorageErrorFactory::getAuthenticationFailed(
                 context.contextId().as_deref(),
                 "Invalid token issuer.",
             ));
         }
 
-        let aud = decoded.get("aud").and_then(|value| value.as_str()).ok_or_else(|| {
-            StorageErrorFactory::getAuthenticationFailed(
-                context.contextId().as_deref(),
-                "Authentication scheme Bearer is not supported.",
-            )
-        })?;
+        let aud = decoded
+            .get("aud")
+            .and_then(|value| value.as_str())
+            .ok_or_else(|| {
+                StorageErrorFactory::getAuthenticationFailed(
+                    context.contextId().as_deref(),
+                    "Authentication scheme Bearer is not supported.",
+                )
+            })?;
         let blobContext = BlobStorageContext::new(context);
         let mut audMatch = false;
         for regex in VALID_BLOB_AUDIENCES.iter() {

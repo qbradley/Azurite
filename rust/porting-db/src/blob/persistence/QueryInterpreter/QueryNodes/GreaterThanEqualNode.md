@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::query_interpreter::query_nodes::greater_than_equal_node`
 - Phase: `10.4`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `GreaterThanEqualNode`

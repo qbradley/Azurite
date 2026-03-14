@@ -24,10 +24,9 @@ pub use i_authentication_context::IAuthenticationContext;
 pub use i_authenticator::IAuthenticator;
 pub use i_blob_sas_signature_values::{
     generateBlobSASSignature, generateBlobSASSignatureWithUDK, generate_blob_sas_signature,
-    generate_blob_sas_signature_with_udk, DateOrString, IBlobSASSignatureValues,
-    IIPRangeOrString,
+    generate_blob_sas_signature_with_udk, DateOrString, IBlobSASSignatureValues, IIPRangeOrString,
 };
-pub use i_range::{range_to_string, rangeToString, IRange, RangeError};
+pub use i_range::{rangeToString, range_to_string, IRange, RangeError};
 pub use operation_account_sas_permission::{
     OperationAccountSASPermission, OPERATION_ACCOUNT_SAS_PERMISSIONS,
 };

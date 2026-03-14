@@ -29,11 +29,15 @@ use super::operation_blob_sas_permission::{
 };
 
 const AUTHENTICATION_BEARERTOKEN_REQUIRED: &str = "Only authentication scheme Bearer is supported";
-const USERDELEGATIONKEY_BASIC_KEY: &str = "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+const USERDELEGATIONKEY_BASIC_KEY: &str =
+    "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
 const BLOCK_BLOB: &str = "BlockBlob";
 
-static USERDELEGATIONKEY_BASIC_KEY_BYTES: LazyLock<Vec<u8>> =
-    LazyLock::new(|| STANDARD.decode(USERDELEGATIONKEY_BASIC_KEY).unwrap_or_default());
+static USERDELEGATIONKEY_BASIC_KEY_BYTES: LazyLock<Vec<u8>> = LazyLock::new(|| {
+    STANDARD
+        .decode(USERDELEGATIONKEY_BASIC_KEY)
+        .unwrap_or_default()
+});
 
 pub struct BlobSASAuthenticator {
     accountDataStore: Arc<dyn IAccountDataStore + Send + Sync>,
@@ -142,8 +146,14 @@ impl BlobSASAuthenticator {
         true
     }
 
-    fn validateProtocol(&self, sasProtocol: Option<SASProtocolOrString>, requestProtocol: &str) -> bool {
-        let sasProtocol = sasProtocol.map(|value| value.toString()).unwrap_or_else(|| String::from("https,http"));
+    fn validateProtocol(
+        &self,
+        sasProtocol: Option<SASProtocolOrString>,
+        requestProtocol: &str,
+    ) -> bool {
+        let sasProtocol = sasProtocol
+            .map(|value| value.toString())
+            .unwrap_or_else(|| String::from("https,http"));
         if sasProtocol.contains(',') {
             true
         } else {
@@ -158,7 +168,11 @@ impl BlobSASAuthenticator {
         id: &str,
         context: &Context,
     ) -> Option<AccessPolicy> {
-        let containerModel = self.blobMetadataStore.getContainerACL(context, account, container).await.ok()??;
+        let containerModel = self
+            .blobMetadataStore
+            .getContainerACL(context, account, container, None)
+            .await
+            .ok()??;
         let containerAcl = containerModel.containerAcl?;
         for acl in containerAcl {
             if signed_identifier_id(&acl).as_deref() == Some(id) {
@@ -168,8 +182,16 @@ impl BlobSASAuthenticator {
         None
     }
 
-    async fn blobExist(&self, account: &str, container: &str, blob: &str) -> Result<bool, StorageError> {
-        let blobModel = self.blobMetadataStore.getBlobType(account, container, blob, None).await?;
+    async fn blobExist(
+        &self,
+        account: &str,
+        container: &str,
+        blob: &str,
+    ) -> Result<bool, StorageError> {
+        let blobModel = self
+            .blobMetadataStore
+            .getBlobType(account, container, blob, None)
+            .await?;
         if blobModel.is_none() {
             return Ok(false);
         }
@@ -189,7 +211,9 @@ impl IAuthenticator for BlobSASAuthenticator {
         content: &Context,
     ) -> Result<Option<bool>, StorageError> {
         let blobContext = BlobStorageContext::new(content);
-        let account = blobContext.account().ok_or_else(|| StorageErrorFactory::ResourceNotFound(blobContext.contextId().as_deref()))?;
+        let account = blobContext.account().ok_or_else(|| {
+            StorageErrorFactory::ResourceNotFound(blobContext.contextId().as_deref())
+        })?;
         let containerName = match blobContext.container() {
             Some(containerName) => containerName,
             None => return Ok(None),
@@ -281,7 +305,8 @@ impl IAuthenticator for BlobSASAuthenticator {
                 return Ok(Some(false));
             }
         } else {
-            let (sig1, _) = generateBlobSASSignature(&values, resource, &account, &accountProperties.key1);
+            let (sig1, _) =
+                generateBlobSASSignature(&values, resource, &account, &accountProperties.key1);
             let sig1Pass = sig1 == signature;
             if let Some(key2) = accountProperties.key2.as_deref() {
                 let (sig2, _) = generateBlobSASSignature(&values, resource, &account, key2);
@@ -296,7 +321,12 @@ impl IAuthenticator for BlobSASAuthenticator {
 
         if let Some(identifier) = values.identifier.clone() {
             let accessPolicy = self
-                .getContainerAccessPolicyByIdentifier(&account, &containerName, &identifier, content)
+                .getContainerAccessPolicyByIdentifier(
+                    &account,
+                    &containerName,
+                    &identifier,
+                    content,
+                )
                 .await;
             if accessPolicy.is_none() {
                 return Err(StorageErrorFactory::getAuthorizationFailure(
@@ -304,12 +334,17 @@ impl IAuthenticator for BlobSASAuthenticator {
                 ));
             }
             let accessPolicy = accessPolicy.unwrap();
-            values.startTime = access_policy_field(&accessPolicy, "start").map(BlobDateOrString::String);
-            values.expiryTime = access_policy_field(&accessPolicy, "expiry").map(BlobDateOrString::String);
+            values.startTime =
+                access_policy_field(&accessPolicy, "start").map(BlobDateOrString::String);
+            values.expiryTime =
+                access_policy_field(&accessPolicy, "expiry").map(BlobDateOrString::String);
             values.permissions = access_policy_field(&accessPolicy, "permission");
         }
 
-        if !self.validateTime(values.expiryTime.clone().map(into_common_date), values.startTime.clone().map(into_common_date)) {
+        if !self.validateTime(
+            values.expiryTime.clone().map(into_common_date),
+            values.startTime.clone().map(into_common_date),
+        ) {
             return Err(StorageErrorFactory::getAuthorizationFailure(
                 blobContext.contextId().as_deref().unwrap_or(""),
             ));
@@ -349,7 +384,8 @@ impl IAuthenticator for BlobSASAuthenticator {
             )
         });
 
-        if !blobSASPermission.validatePermissions(values.permissions.as_deref().unwrap_or_default()) {
+        if !blobSASPermission.validatePermissions(values.permissions.as_deref().unwrap_or_default())
+        {
             return Err(StorageErrorFactory::getAuthorizationPermissionMismatch(
                 blobContext.contextId().as_deref().unwrap_or(""),
             ));
@@ -427,7 +463,9 @@ fn decode_uri_component(value: &str) -> String {
     let mut result = Vec::with_capacity(bytes.len());
     while index < bytes.len() {
         if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (from_hex(bytes[index + 1]), from_hex(bytes[index + 2])) {
+            if let (Some(high), Some(low)) =
+                (from_hex(bytes[index + 1]), from_hex(bytes[index + 2]))
+            {
                 result.push(high * 16 + low);
                 index += 3;
                 continue;

@@ -65,7 +65,7 @@ impl LeaseFactory {
                     return Err(StorageError::new(
                         500,
                         "InternalError",
-                        &format!(
+                        format!(
                             "LeaseFactory:createLeaseState() leaseBreakTime should not be undefined when leaseState is {}.",
                             LeaseStateType::Breaking
                         ),
@@ -91,7 +91,7 @@ impl LeaseFactory {
             Some(other) => Err(StorageError::new(
                 500,
                 "InternalError",
-                &format!(
+                format!(
                     "LeaseFactory:createLeaseState() Cannot create LeaseState instance from lease with state {:?}",
                     other
                 ),

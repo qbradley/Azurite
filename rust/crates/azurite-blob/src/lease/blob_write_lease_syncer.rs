@@ -30,9 +30,10 @@ impl<'a> ILeaseSyncer<BlobModel> for BlobWriteLeaseSyncer<'a> {
         self.blob.leaseBreakTime = lease.leaseBreakTime;
 
         if let Some(v) = &lease.leaseDurationType {
-            self.blob
-                .properties
-                .insert("leaseDuration".to_string(), GeneratedValue::String(v.clone()));
+            self.blob.properties.insert(
+                "leaseDuration".to_string(),
+                GeneratedValue::String(v.clone()),
+            );
         } else {
             self.blob.properties.remove("leaseDuration");
         }
@@ -84,18 +85,16 @@ impl<'a> ILeaseSyncer<BlobModel> for BlobWriteLeaseSyncer<'a> {
                 self.blob.properties.remove("leaseDuration");
             }
             if let Some(v) = &lease.leaseState {
-                self.blob.properties.insert(
-                    "leaseState".to_string(),
-                    GeneratedValue::String(v.clone()),
-                );
+                self.blob
+                    .properties
+                    .insert("leaseState".to_string(), GeneratedValue::String(v.clone()));
             } else {
                 self.blob.properties.remove("leaseState");
             }
             if let Some(v) = &lease.leaseStatus {
-                self.blob.properties.insert(
-                    "leaseStatus".to_string(),
-                    GeneratedValue::String(v.clone()),
-                );
+                self.blob
+                    .properties
+                    .insert("leaseStatus".to_string(), GeneratedValue::String(v.clone()));
             } else {
                 self.blob.properties.remove("leaseStatus");
             }

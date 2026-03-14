@@ -8,7 +8,7 @@
 - Crate: `azurite-blob`
 - Module: `persistence::i_blob_metadata_store`
 - Phase: `10.1`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Exported models and aliases

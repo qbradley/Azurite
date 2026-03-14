@@ -2,7 +2,6 @@ use async_trait::async_trait;
 
 use crate::generated::artifacts::models;
 use crate::generated::context::Context;
-use crate::generated::i_request::GeneratedReadableStream;
 
 #[allow(non_snake_case)]
 #[async_trait]

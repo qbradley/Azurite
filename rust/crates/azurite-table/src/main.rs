@@ -1,3 +1,6 @@
+#![allow(non_snake_case)]
+#![allow(clippy::incompatible_msrv)]
+
 use azurite_table::TableServer;
 use clap::Parser;
 
