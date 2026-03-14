@@ -106,10 +106,10 @@ fn to_common_extent(b: &IExtentChunk) -> CommonExtentChunk {
 
 /// Map common StorageError to blob StorageError.
 fn map_common_err(
-    e: azurite_common::storage_error::StorageError,
+    _e: azurite_common::storage_error::StorageError,
     context_id: Option<&str>,
 ) -> StorageError {
-    StorageErrorFactory::getInvalidOperation(context_id, Some(&e.message))
+    StorageErrorFactory::getInvalidMetadata(context_id.unwrap_or_default())
 }
 
 /// Convert a raw metadata HashMap to a GeneratedObject (BTreeMap<String, GeneratedValue>).

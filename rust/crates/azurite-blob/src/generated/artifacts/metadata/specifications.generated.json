@@ -258,7 +258,8 @@
                 },
                 "value": null,
                 "modelProperties": {}
-              }
+              },
+              "xmlIsWrapped": true
             },
             "defaultServiceVersion": {
               "__name": null,
@@ -718,7 +719,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               },
               "defaultServiceVersion": {
                 "__name": null,
@@ -1642,7 +1644,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               },
               "nextMarker": {
                 "__name": null,
@@ -3663,7 +3666,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               },
               "nextMarker": {
                 "__name": null,
@@ -8484,7 +8488,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               },
               "nextMarker": {
                 "__name": null,
@@ -30592,7 +30597,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               }
             }
           }
@@ -31113,7 +31119,8 @@
                 },
                 "value": null,
                 "modelProperties": {}
-              }
+              },
+              "xmlIsWrapped": true
             }
           }
         }
@@ -48022,7 +48029,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               },
               "uncommittedBlocks": {
                 "__name": null,
@@ -48057,7 +48065,8 @@
                   },
                   "value": null,
                   "modelProperties": {}
-                }
+                },
+                "xmlIsWrapped": true
               }
             }
           }

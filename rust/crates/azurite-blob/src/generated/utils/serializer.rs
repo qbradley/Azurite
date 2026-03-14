@@ -273,18 +273,27 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
     match value {
         serde_json::Value::Object(object) => {
             if let Some(properties) = resolve_model_properties(mapper) {
-                let mapped = object
-                    .iter()
-                    .filter_map(|(key, value)| {
-                        properties.get(key).map(|property_mapper| {
-                            (
-                                mapped_name(property_mapper).unwrap_or(key).to_owned(),
-                                apply_model_mapping(value, property_mapper),
-                            )
-                        })
-                    })
-                    .collect();
-                serde_json::Value::Object(mapped)
+                let mut result = serde_json::Map::new();
+                for (key, value) in object {
+                    if let Some(property_mapper) = properties.get(key) {
+                        let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
+                            && property_mapper.xmlElementName.is_some()
+                            && !property_mapper.xmlIsWrapped;
+                        if is_unwrapped_sequence {
+                            // Unwrapped sequence: place array elements directly in parent
+                            // using xmlElementName as key (no wrapper element)
+                            let element_name =
+                                property_mapper.xmlElementName.as_ref().unwrap().clone();
+                            let mapped_array = map_sequence_elements(value, property_mapper);
+                            result.insert(element_name, mapped_array);
+                        } else {
+                            let mapped_key = mapped_name(property_mapper).unwrap_or(key).to_owned();
+                            let mapped_value = apply_model_mapping(value, property_mapper);
+                            result.insert(mapped_key, mapped_value);
+                        }
+                    }
+                }
+                serde_json::Value::Object(result)
             } else {
                 serde_json::Value::Object(object.clone())
             }
@@ -299,13 +308,35 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                 values.clone()
             };
             let mapped_array = serde_json::Value::Array(mapped_values);
-            if let Some(element_name) = mapper.xmlElementName.as_ref() {
-                let mut wrapped = serde_json::Map::new();
-                wrapped.insert(element_name.clone(), mapped_array);
-                serde_json::Value::Object(wrapped)
+            // Only wrap when xmlIsWrapped is true
+            if mapper.xmlIsWrapped {
+                if let Some(element_name) = mapper.xmlElementName.as_ref() {
+                    let mut wrapped = serde_json::Map::new();
+                    wrapped.insert(element_name.clone(), mapped_array);
+                    serde_json::Value::Object(wrapped)
+                } else {
+                    mapped_array
+                }
             } else {
                 mapped_array
             }
+        }
+        _ => value.clone(),
+    }
+}
+
+fn map_sequence_elements(value: &serde_json::Value, mapper: &Mapper) -> serde_json::Value {
+    match value {
+        serde_json::Value::Array(values) => {
+            let mapped = if let Some(element_mapper) = mapper.r#type.element.as_deref() {
+                values
+                    .iter()
+                    .map(|v| apply_model_mapping(v, element_mapper))
+                    .collect()
+            } else {
+                values.clone()
+            };
+            serde_json::Value::Array(mapped)
         }
         _ => value.clone(),
     }

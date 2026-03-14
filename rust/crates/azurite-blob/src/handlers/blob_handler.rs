@@ -417,8 +417,10 @@ impl IBlobHandler for BlobHandler {
             .request()
             .map(|r| r.getRawHeaders())
             .unwrap_or_default();
-        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id).map_err(|_| {
+            Box::new(StorageErrorFactory::getInvalidMetadata(&ctx_id))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
             m.into_iter()
                 .map(|(k, v)| (k, GeneratedValue::String(v)))
@@ -690,8 +692,10 @@ impl IBlobHandler for BlobHandler {
             .request()
             .map(|r| r.getRawHeaders())
             .unwrap_or_default();
-        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id).map_err(|_| {
+            Box::new(StorageErrorFactory::getInvalidMetadata(&ctx_id))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
             m.into_iter()
                 .map(|(k, v)| (k, GeneratedValue::String(v)))
@@ -795,8 +799,10 @@ impl IBlobHandler for BlobHandler {
             .request()
             .map(|r| r.getRawHeaders())
             .unwrap_or_default();
-        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id).map_err(|_| {
+            Box::new(StorageErrorFactory::getInvalidMetadata(&ctx_id))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
             m.into_iter()
                 .map(|(k, v)| (k, GeneratedValue::String(v)))
@@ -897,8 +903,10 @@ impl IBlobHandler for BlobHandler {
             .request()
             .map(|r| r.getRawHeaders())
             .unwrap_or_default();
-        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let metadata_map = convertRawHeadersToMetadata(&raw_headers, &ctx_id).map_err(|_| {
+            Box::new(StorageErrorFactory::getInvalidMetadata(&ctx_id))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
         let metadata: Option<GeneratedObject> = metadata_map.map(|m| {
             m.into_iter()
                 .map(|(k, v)| (k, GeneratedValue::String(v)))

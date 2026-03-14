@@ -77,15 +77,15 @@ impl IContainerHandler for ContainerHandler {
         let containerName = blobCtx.container().unwrap_or_default();
         let lastModified = context.startTime().unwrap_or_else(Utc::now);
         let etag = newEtag();
+        let ctx_id = context.contextId().unwrap_or_default();
         let metadata = context
             .request()
-            .map(|request| {
-                convertRawHeadersToMetadata(
-                    &request.getRawHeaders(),
-                    context.contextId().as_deref().unwrap_or_default(),
-                )
-            })
-            .transpose()?
+            .map(|request| convertRawHeadersToMetadata(&request.getRawHeaders(), &ctx_id))
+            .transpose()
+            .map_err(|_| {
+                Box::new(StorageErrorFactory::getInvalidMetadata(&ctx_id))
+                    as Box<dyn std::error::Error + Send + Sync>
+            })?
             .flatten();
 
         let mut properties = GeneratedObject::new();
@@ -230,15 +230,15 @@ impl IContainerHandler for ContainerHandler {
         let containerName = blobCtx.container().unwrap_or_default();
         let date = context.startTime().unwrap_or_else(Utc::now);
         let eTag = newEtag();
+        let ctx_id = context.contextId().unwrap_or_default();
         let metadata = context
             .request()
-            .map(|request| {
-                convertRawHeadersToMetadata(
-                    &request.getRawHeaders(),
-                    context.contextId().as_deref().unwrap_or_default(),
-                )
-            })
-            .transpose()?
+            .map(|request| convertRawHeadersToMetadata(&request.getRawHeaders(), &ctx_id))
+            .transpose()
+            .map_err(|_| {
+                Box::new(StorageErrorFactory::getInvalidMetadata(&ctx_id))
+                    as Box<dyn std::error::Error + Send + Sync>
+            })?
             .flatten();
         let leaseAccessConditions = get_object(&options, "leaseAccessConditions");
         let modifiedAccessConditions = get_object(&options, "modifiedAccessConditions");

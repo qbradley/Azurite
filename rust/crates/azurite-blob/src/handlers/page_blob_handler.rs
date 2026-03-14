@@ -55,10 +55,10 @@ fn to_blob_extent(c: CommonExtentChunk) -> IExtentChunk {
 }
 
 fn map_common_err(
-    e: azurite_common::storage_error::StorageError,
+    _e: azurite_common::storage_error::StorageError,
     context_id: Option<&str>,
 ) -> StorageError {
-    StorageErrorFactory::getInvalidOperation(context_id, Some(&e.message))
+    StorageErrorFactory::getInvalidMetadata(context_id.unwrap_or_default())
 }
 
 fn to_generated_metadata(m: std::collections::HashMap<String, String>) -> models::BlobMetadata {
