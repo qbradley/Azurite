@@ -7,9 +7,15 @@ pub mod query_interpreter;
 
 pub use i_blob_metadata_store::{
     access_policy_field, container_public_access, signed_identifier_access_policy,
-    signed_identifier_id, BlobModel, BlobPrefixModel, BlobTypeResult, BlockModel, ContainerModel,
-    FilterBlobModel, GetContainerAccessPolicyResponse, IBlobMetadataStore, IExtentChunk,
-    PersistencyBlockModel, PersistencyPageRange, ServicePropertiesModel, ZERO_EXTENT_ID,
+    signed_identifier_id, AcquireBlobLeaseResponse, AcquireContainerLeaseResponse, BlobId,
+    BlobLeaseResponse, BlobModel, BlobPrefixModel, BlobTypeResult, BlockListEntry, BlockModel,
+    BreakBlobLeaseResponse, BreakContainerLeaseResponse, ChangeBlobLeaseResponse,
+    ChangeContainerLeaseResponse, ContainerLeaseResponse, ContainerModel, CreateSnapshotResponse,
+    FilterBlobModel, GetBlobPropertiesRes, GetBlockListResult, GetContainerAccessPolicyResponse,
+    GetContainerPropertiesResponse, GetPageRangeResponse, IBlobMetadataStore, IContainerMetadata,
+    IExtentChunk, PersistencyBlockModel, PersistencyPageRange, ReleaseBlobLeaseResponse,
+    ReleaseContainerLeaseResponse, RenewBlobLeaseResponse, RenewContainerLeaseResponse,
+    ServicePropertiesModel, SetContainerAccessPolicyOptions, ZERO_EXTENT_ID,
 };
 
 pub use blob_referred_extents_async_iterator::BlobReferredExtentsAsyncIterator;

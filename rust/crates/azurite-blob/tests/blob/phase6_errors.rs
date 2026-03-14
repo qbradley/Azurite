@@ -57,7 +57,11 @@ fn extra_messages() -> BTreeMap<String, String> {
 }
 
 fn body_xml(error: &StorageError) -> String {
-    match error.body.as_ref().expect("storage error body should exist") {
+    match error
+        .body
+        .as_ref()
+        .expect("storage error body should exist")
+    {
         GeneratedValue::String(value) => value.clone(),
         other => panic!("expected XML string body, got {other:?}"),
     }
@@ -172,11 +176,20 @@ fn storage_error_constructor_matches_ts_xml_headers_and_timestamp_shape() {
 
     assert_eq!(error.statusCode, 409);
     assert_eq!(error.message, "Quoted \"message\" & <xml>");
-    assert_eq!(error.statusMessage.as_deref(), Some("Quoted \"message\" & <xml>"));
+    assert_eq!(
+        error.statusMessage.as_deref(),
+        Some("Quoted \"message\" & <xml>")
+    );
     assert_eq!(error.storageErrorCode, "Code<&>");
     assert_eq!(error.storageRequestID, REQUEST_ID);
-    assert_eq!(header_value(&error, "x-ms-error-code").as_deref(), Some("Code<&>"));
-    assert_eq!(header_value(&error, "x-ms-request-id").as_deref(), Some(REQUEST_ID));
+    assert_eq!(
+        header_value(&error, "x-ms-error-code").as_deref(),
+        Some("Code<&>")
+    );
+    assert_eq!(
+        header_value(&error, "x-ms-request-id").as_deref(),
+        Some(REQUEST_ID)
+    );
 
     let body = body_xml(&error);
     assert!(body.contains("<Code>Code&lt;&amp;&gt;</Code>"));
@@ -283,7 +296,11 @@ fn storage_error_factory_methods_match_ts_status_codes_messages_headers_and_requ
         case("getBlobSealed", StorageErrorFactory::getBlobSealed(Some(REQUEST_ID)), 409, "BlobIsSealed", "The specified blob is sealed, and its contents can't be modified unless the blob is re-created after a delete."),
     ];
 
-    assert_eq!(cases.len(), 74, "update this test when factory coverage changes");
+    assert_eq!(
+        cases.len(),
+        74,
+        "update this test when factory coverage changes"
+    );
 
     for case in cases {
         assert_storage_error_case(case);
@@ -296,10 +313,22 @@ fn storage_error_factory_preserves_ts_default_request_id_quirks() {
         StorageErrorFactory::getContainerNotFound(None).storageRequestID,
         DEFAULT_BLOB_REQUEST_ID
     );
-    assert_eq!(StorageErrorFactory::getInvalidHeaderValue(None, None).storageRequestID, "");
-    assert_eq!(StorageErrorFactory::getInvalidAPIVersion(None, None).storageRequestID, "");
-    assert_eq!(StorageErrorFactory::getInvalidResourceName(None).storageRequestID, "");
-    assert_eq!(StorageErrorFactory::getBlobSealed(None).storageRequestID, "");
+    assert_eq!(
+        StorageErrorFactory::getInvalidHeaderValue(None, None).storageRequestID,
+        ""
+    );
+    assert_eq!(
+        StorageErrorFactory::getInvalidAPIVersion(None, None).storageRequestID,
+        ""
+    );
+    assert_eq!(
+        StorageErrorFactory::getInvalidResourceName(None).storageRequestID,
+        ""
+    );
+    assert_eq!(
+        StorageErrorFactory::getBlobSealed(None).storageRequestID,
+        ""
+    );
 }
 
 #[test]
@@ -353,7 +382,10 @@ fn blob_storage_context_propagates_fields_and_request_id_aliases_like_ts() {
     assert_eq!(blob_context.container().as_deref(), Some("container"));
     assert_eq!(blob_context.getContainer().as_deref(), Some("container"));
     assert_eq!(blob_context.blob().as_deref(), Some("blob"));
-    assert_eq!(blob_context.authenticationPath().as_deref(), Some("/acct/container/blob"));
+    assert_eq!(
+        blob_context.authenticationPath().as_deref(),
+        Some("/acct/container/blob")
+    );
     assert_eq!(blob_context.disableProductStyleUrl(), Some(false));
     assert_eq!(blob_context.loose(), Some(true));
     assert_eq!(blob_context.xMsRequestID().as_deref(), Some("ctx-1"));

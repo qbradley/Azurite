@@ -1492,78 +1492,537 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
     async fn start_copy_from_url(
         &self,
-        _context: &Context,
-        _source: BlobId,
-        _destination: BlobId,
-        _copy_source: &str,
-        _metadata: Option<&BlobMetadata>,
-        _tier: Option<AccessTier>,
-        _options: Option<&BlobStartCopyFromURLOptionalParams>,
+        context: &Context,
+        source: BlobId,
+        destination: BlobId,
+        copy_source: &str,
+        metadata: Option<&BlobMetadata>,
+        tier: Option<AccessTier>,
+        options: Option<&BlobStartCopyFromURLOptionalParams>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
-        // Placeholder - full implementation would be ~200 lines
-        // TODO: Implement startCopyFromURL from TS lines 1860-2047
-        Err(StorageError::from("startCopyFromURL not yet implemented"))
+        // TS: lines 1860-2047
+        let options = options.cloned().unwrap_or_default();
+
+        // Get source blob with lease updated
+        let source_blob = self.get_blob_with_lease_updated(
+            &source.account,
+            &source.container,
+            &source.blob,
+            &source.snapshot.clone().unwrap_or_default(),
+            context,
+            true, // forceCommitted
+        ).await?
+            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+
+        // Validate source read conditions
+        let source_mac = options.source_modified_access_conditions.clone().unwrap_or_default();
+        let read_cond_adapter = ConditionalHeadersAdapter {
+            if_modified_since: source_mac.source_if_modified_since,
+            if_unmodified_since: source_mac.source_if_unmodified_since,
+            if_match: source_mac.source_if_match.clone(),
+            if_none_match: source_mac.source_if_none_match.clone(),
+            if_tags: source_mac.source_if_tags.clone(),
+        };
+        let resource_adapter = ConditionResourceAdapter::new(&source_blob.properties, source_blob.metadata.as_ref());
+        validate_read_conditions(context, &read_cond_adapter, &resource_adapter, true)?;
+
+        // Get destination blob (may not exist)
+        let dest_blob = self.get_blob_with_lease_updated(
+            &destination.account,
+            &destination.container,
+            &destination.blob,
+            "",
+            context,
+            false,
+        ).await?;
+
+        // Validate destination write conditions
+        validate_write_conditions(
+            context,
+            options.modified_access_conditions.as_ref(),
+            dest_blob.as_ref(),
+        )?;
+
+        // Copy if not exists check
+        if let Some(ref mac) = options.modified_access_conditions {
+            if mac.if_none_match.as_deref() == Some("*") && dest_blob.is_some() {
+                return Err(StorageErrorFactory::get_blob_already_exists(&context.context_id));
+            }
+        }
+
+        // Validate lease on destination if it exists
+        if let Some(ref dest) = dest_blob {
+            let validator = BlobWriteLeaseValidator::new(options.lease_access_conditions.as_ref());
+            let adapter = BlobLeaseAdapter::new(dest);
+            validator.validate(&adapter, context)?;
+        }
+
+        // Validate source is committed, not deleted
+        if source_blob.deleted == Some(true) || source_blob.is_committed == Some(false) {
+            return Err(StorageErrorFactory::get_blob_not_found(&context.context_id));
+        }
+
+        // Check if source is archived
+        if source_blob.properties.access_tier == Some(AccessTier::Archive)
+            && (tier.is_none() || source.account != destination.account)
+        {
+            return Err(StorageErrorFactory::get_blob_archived(&context.context_id));
+        }
+
+        // Check container exists
+        self.check_container_exist(context, &destination.account, &destination.container).await?;
+
+        // Deep clone source blob
+        let mut copied_blob = BlobModel {
+            name: Some(destination.blob.clone()),
+            deleted: Some(false),
+            snapshot: Some("".to_string()),
+            properties: source_blob.properties.clone(),
+            metadata: if metadata.is_none() || metadata.map(|m| m.is_empty()).unwrap_or(true) {
+                source_blob.metadata.clone()
+            } else {
+                metadata.cloned()
+            },
+            accountName: destination.account.clone(),
+            containerName: destination.container.clone(),
+            pageRangesInOrder: source_blob.pageRangesInOrder.clone(),
+            isCommitted: source_blob.isCommitted,
+            leaseDurationSeconds: dest_blob.as_ref().and_then(|d| d.leaseDurationSeconds),
+            leaseId: dest_blob.as_ref().and_then(|d| d.leaseId.clone()),
+            leaseExpireTime: dest_blob.as_ref().and_then(|d| d.leaseExpireTime),
+            leaseBreakTime: dest_blob.as_ref().and_then(|d| d.leaseBreakTime),
+            committedBlocksInOrder: source_blob.committedBlocksInOrder.clone(),
+            persistency: source_blob.persistency.clone(),
+            blobTags: options.blob_tags_string.as_ref().map(|s| get_tags_from_string(s, &context.context_id)),
+        };
+
+        // Update properties for copy
+        copied_blob.properties.creation_time = context.start_time;
+        copied_blob.properties.last_modified = context.start_time;
+        copied_blob.properties.etag = Some(new_etag());
+        copied_blob.properties.lease_status = dest_blob.as_ref()
+            .and_then(|d| d.properties.lease_status.clone())
+            .or_else(|| Some("Unlocked".to_string()));
+        copied_blob.properties.lease_state = dest_blob.as_ref()
+            .and_then(|d| d.properties.lease_state.clone())
+            .or_else(|| Some("Available".to_string()));
+        copied_blob.properties.lease_duration = dest_blob.as_ref()
+            .and_then(|d| d.properties.lease_duration.clone());
+        copied_blob.properties.copy_id = Some(Uuid::new_v4().to_string());
+        copied_blob.properties.copy_status = Some("success".to_string());
+        copied_blob.properties.copy_source = Some(copy_source.to_string());
+        copied_blob.properties.copy_progress = source_blob.properties.content_length
+            .map(|len| format!("{}/{}", len, len));
+        copied_blob.properties.copy_completion_time = context.start_time;
+        copied_blob.properties.copy_status_description = None;
+        copied_blob.properties.incremental_copy = Some(false);
+        copied_blob.properties.destination_snapshot = None;
+        copied_blob.properties.deleted_time = None;
+        copied_blob.properties.remaining_retention_days = None;
+        copied_blob.properties.archive_status = None;
+        copied_blob.properties.access_tier_change_time = None;
+
+        // Handle AppendBlob isSealed
+        if source_blob.properties.blob_type == Some(BlobType::AppendBlob) {
+            copied_blob.properties.is_sealed = options.seal_blob;
+        }
+
+        // Handle tier for BlockBlob
+        if copied_blob.properties.blob_type == Some(BlobType::BlockBlob) {
+            if let Some(tier_value) = tier {
+                copied_blob.properties.access_tier = Self::parse_tier(Some(&tier_value.to_string()));
+                if copied_blob.properties.access_tier.is_none() {
+                    return Err(StorageErrorFactory::get_invalid_header_value(
+                        &context.context_id,
+                        "x-ms-access-tier",
+                        &tier_value.to_string(),
+                    ));
+                }
+            }
+        }
+
+        // PageBlob doesn't support tier in startCopyFromURL
+        if copied_blob.properties.blob_type == Some(BlobType::PageBlob) && tier.is_some() {
+            return Err(StorageErrorFactory::get_invalid_header_value(
+                &context.context_id,
+                "x-ms-access-tier",
+                &tier.unwrap().to_string(),
+            ));
+        }
+
+        // Update collection
+        let mut blobs = self.blobs_collection.write().unwrap();
+        
+        // Remove old destination if exists
+        if dest_blob.is_some() {
+            let dest_key = (
+                destination.account.clone(),
+                destination.container.clone(),
+                destination.blob.clone(),
+                "".to_string(),
+            );
+            blobs.remove(&dest_key);
+        }
+
+        // Insert copied blob
+        let insert_key = (
+            destination.account.clone(),
+            destination.container.clone(),
+            destination.blob.clone(),
+            "".to_string(),
+        );
+        blobs.insert(insert_key, copied_blob.clone());
+        drop(blobs);
+
+        Ok(copied_blob.properties)
     }
 
     async fn copy_from_url(
         &self,
-        _context: &Context,
-        _source: BlobId,
-        _destination: BlobId,
-        _copy_source: &str,
-        _metadata: Option<&BlobMetadata>,
-        _tier: Option<AccessTier>,
-        _options: Option<&BlobCopyFromURLOptionalParams>,
+        context: &Context,
+        source: BlobId,
+        destination: BlobId,
+        copy_source: &str,
+        metadata: Option<&BlobMetadata>,
+        tier: Option<AccessTier>,
+        options: Option<&BlobCopyFromURLOptionalParams>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
-        // Placeholder - full implementation would be ~190 lines
-        // TODO: Implement copyFromURL from TS lines 2049-2236
-        Err(StorageError::from("copyFromURL not yet implemented"))
+        // TS: lines 2049-2236
+        let options = options.cloned().unwrap_or_default();
+
+        // Get source blob
+        let source_blob = self.get_blob_with_lease_updated(
+            &source.account,
+            &source.container,
+            &source.blob,
+            &source.snapshot.clone().unwrap_or_default(),
+            context,
+            true,
+        ).await?
+            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+
+        // Validate source read conditions (note: ignores x-ms-source-if-tags per TS comment)
+        let source_mac = options.source_modified_access_conditions.clone().unwrap_or_default();
+        let read_cond_adapter = ConditionalHeadersAdapter {
+            if_modified_since: source_mac.source_if_modified_since,
+            if_unmodified_since: source_mac.source_if_unmodified_since,
+            if_match: source_mac.source_if_match.clone(),
+            if_none_match: source_mac.source_if_none_match.clone(),
+            if_tags: None, // Ignored per TS line 2080
+        };
+        let resource_adapter = ConditionResourceAdapter::new(&source_blob.properties, source_blob.metadata.as_ref());
+        validate_read_conditions(context, &read_cond_adapter, &resource_adapter, false)?;
+
+        // Get destination blob
+        let dest_blob = self.get_blob_with_lease_updated(
+            &destination.account,
+            &destination.container,
+            &destination.blob,
+            "",
+            context,
+            false,
+        ).await?;
+
+        // Validate destination write conditions
+        validate_write_conditions(
+            context,
+            options.modified_access_conditions.as_ref(),
+            dest_blob.as_ref(),
+        )?;
+
+        // Copy if not exists check
+        if let Some(ref mac) = options.modified_access_conditions {
+            if mac.if_none_match.as_deref() == Some("*") && dest_blob.is_some() {
+                return Err(StorageErrorFactory::get_blob_already_exists(&context.context_id));
+            }
+        }
+
+        // Validate lease on destination with syncer
+        if let Some(ref dest) = dest_blob {
+            let mut dest_clone = dest.clone();
+            let lease_adapter = BlobLeaseAdapter::new(&dest_clone);
+            let syncer = BlobWriteLeaseSyncer::new(&mut dest_clone);
+            syncer.sync(&lease_adapter)?;
+            
+            let validator = BlobWriteLeaseValidator::new(options.lease_access_conditions.as_ref());
+            validator.validate(&lease_adapter, context)?;
+        }
+
+        // Validate source is committed, not deleted, not archived
+        if source_blob.deleted == Some(true) || source_blob.is_committed == Some(false) {
+            return Err(StorageErrorFactory::get_blob_not_found(&context.context_id));
+        }
+
+        if source_blob.properties.access_tier == Some(AccessTier::Archive) {
+            return Err(StorageErrorFactory::get_blob_archived(&context.context_id));
+        }
+
+        // Check container exists
+        self.check_container_exist(context, &destination.account, &destination.container).await?;
+
+        // Deep clone source blob
+        let mut copied_blob = BlobModel {
+            name: Some(destination.blob.clone()),
+            deleted: Some(false),
+            snapshot: Some("".to_string()),
+            properties: source_blob.properties.clone(),
+            metadata: if metadata.is_none() || metadata.map(|m| m.is_empty()).unwrap_or(true) {
+                source_blob.metadata.clone()
+            } else {
+                metadata.cloned()
+            },
+            accountName: destination.account.clone(),
+            containerName: destination.container.clone(),
+            pageRangesInOrder: source_blob.pageRangesInOrder.clone(),
+            isCommitted: source_blob.isCommitted,
+            leaseDurationSeconds: dest_blob.as_ref().and_then(|d| d.leaseDurationSeconds),
+            leaseId: dest_blob.as_ref().and_then(|d| d.leaseId.clone()),
+            leaseExpireTime: dest_blob.as_ref().and_then(|d| d.leaseExpireTime),
+            leaseBreakTime: dest_blob.as_ref().and_then(|d| d.leaseBreakTime),
+            committedBlocksInOrder: source_blob.committedBlocksInOrder.clone(),
+            persistency: source_blob.persistency.clone(),
+            blobTags: None, // Set below based on copySourceTags
+        };
+
+        // Handle blob tags based on copySourceTags
+        if options.copy_source_tags == Some("COPY".to_string()) {
+            copied_blob.blobTags = source_blob.blobTags.clone();
+        } else if let Some(ref tags_str) = options.blob_tags_string {
+            copied_blob.blobTags = Some(get_tags_from_string(tags_str, &context.context_id));
+        }
+
+        // Update properties for copy
+        copied_blob.properties.creation_time = context.start_time;
+        copied_blob.properties.last_modified = context.start_time;
+        copied_blob.properties.etag = Some(new_etag());
+        copied_blob.properties.lease_status = dest_blob.as_ref()
+            .and_then(|d| d.properties.lease_status.clone())
+            .or_else(|| Some("Unlocked".to_string()));
+        copied_blob.properties.lease_state = dest_blob.as_ref()
+            .and_then(|d| d.properties.lease_state.clone())
+            .or_else(|| Some("Available".to_string()));
+        copied_blob.properties.lease_duration = dest_blob.as_ref()
+            .and_then(|d| d.properties.lease_duration.clone());
+        copied_blob.properties.copy_id = Some(Uuid::new_v4().to_string());
+        copied_blob.properties.copy_status = Some("success".to_string());
+        copied_blob.properties.copy_source = Some(copy_source.to_string());
+        copied_blob.properties.copy_progress = source_blob.properties.content_length
+            .map(|len| format!("{}/{}", len, len));
+        copied_blob.properties.copy_completion_time = context.start_time;
+        copied_blob.properties.copy_status_description = None;
+        copied_blob.properties.incremental_copy = Some(false);
+        copied_blob.properties.destination_snapshot = None;
+        copied_blob.properties.deleted_time = None;
+        copied_blob.properties.remaining_retention_days = None;
+        copied_blob.properties.archive_status = None;
+        copied_blob.properties.access_tier_change_time = None;
+
+        // Handle tier for BlockBlob
+        if copied_blob.properties.blob_type == Some(BlobType::BlockBlob) {
+            if let Some(tier_value) = tier {
+                copied_blob.properties.access_tier = Self::parse_tier(Some(&tier_value.to_string()));
+                if copied_blob.properties.access_tier.is_none() {
+                    return Err(StorageErrorFactory::get_invalid_header_value(
+                        &context.context_id,
+                        "x-ms-access-tier",
+                        &tier_value.to_string(),
+                    ));
+                }
+            }
+        }
+
+        // PageBlob doesn't support tier
+        if copied_blob.properties.blob_type == Some(BlobType::PageBlob) && tier.is_some() {
+            return Err(StorageErrorFactory::get_invalid_header_value(
+                &context.context_id,
+                "x-ms-access-tier",
+                &tier.unwrap().to_string(),
+            ));
+        }
+
+        // Update collection
+        let mut blobs = self.blobs_collection.write().unwrap();
+        
+        // Remove old destination if exists
+        if dest_blob.is_some() {
+            let dest_key = (
+                destination.account.clone(),
+                destination.container.clone(),
+                destination.blob.clone(),
+                "".to_string(),
+            );
+            blobs.remove(&dest_key);
+        }
+
+        // Insert copied blob
+        let insert_key = (
+            destination.account.clone(),
+            destination.container.clone(),
+            destination.blob.clone(),
+            "".to_string(),
+        );
+        blobs.insert(insert_key, copied_blob.clone());
+        drop(blobs);
+
+        Ok(copied_blob.properties)
     }
 
     async fn set_tier(
         &self,
-        _context: &Context,
-        _account: &str,
-        _container: &str,
-        _blob: &str,
-        _tier: AccessTier,
-        _lease_access_conditions: Option<&LeaseAccessConditions>,
+        context: &Context,
+        account: &str,
+        container: &str,
+        blob: &str,
+        tier: AccessTier,
+        lease_access_conditions: Option<&LeaseAccessConditions>,
     ) -> Result<i32, StorageError> {
-        // Placeholder - full implementation would be ~75 lines
-        // TODO: Implement setTier from TS lines 2238-2311
-        Err(StorageError::from("setTier not yet implemented"))
+        // TS: lines 2238-2311
+        let mut doc = self.get_blob_with_lease_updated(account, container, blob, "", context, false).await?
+            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+
+        // Validate lease
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let adapter = BlobLeaseAdapter::new(&doc);
+        validator.validate(&adapter, context)?;
+
+        // Cannot set tier on snapshot
+        if !doc.snapshot.as_ref().unwrap_or(&String::new()).is_empty() {
+            return Err(StorageErrorFactory::get_blob_snapshot_operation_not_supported(&context.context_id));
+        }
+
+        // Determine response code (202 if from Archive, otherwise 200)
+        let response_code = if doc.properties.access_tier == Some(AccessTier::Archive)
+            && (tier == AccessTier::Cool || tier == AccessTier::Hot || tier == AccessTier::Cold)
+        {
+            202
+        } else {
+            200
+        };
+
+        // Validate tier based on blob type
+        match doc.properties.blob_type {
+            Some(BlobType::BlockBlob) => {
+                // BlockBlob supports Archive, Cool, Hot, Cold
+                match tier {
+                    AccessTier::Archive | AccessTier::Cool | AccessTier::Hot | AccessTier::Cold => {
+                        doc.properties.access_tier = Some(tier);
+                    }
+                    _ => {
+                        return Err(StorageErrorFactory::get_invalid_header_value(
+                            &context.context_id,
+                            "x-ms-access-tier",
+                            &tier.to_string(),
+                        ));
+                    }
+                }
+            }
+            Some(BlobType::PageBlob) => {
+                // PageBlob doesn't support tier
+                return Err(StorageErrorFactory::get_invalid_header_value(
+                    &context.context_id,
+                    "x-ms-access-tier",
+                    &tier.to_string(),
+                ));
+            }
+            _ => {
+                return Err(StorageErrorFactory::get_invalid_header_value(
+                    &context.context_id,
+                    "x-ms-access-tier",
+                    &tier.to_string(),
+                ));
+            }
+        }
+
+        // Update properties
+        doc.properties.access_tier_inferred = Some(false);
+        doc.properties.access_tier_change_time = context.start_time;
+
+        // Sync lease state
+        let adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut doc);
+        lease_state.lease().sync_with_syncer(&syncer)?;
+
+        // Update collection
+        let mut blobs = self.blobs_collection.write().unwrap();
+        let key = (account.to_string(), container.to_string(), blob.to_string(), "".to_string());
+        blobs.insert(key, doc);
+        drop(blobs);
+
+        Ok(response_code)
     }
 
     async fn set_blob_tag(
         &self,
-        _context: &Context,
-        _account: &str,
-        _container: &str,
-        _blob: &str,
-        _snapshot: Option<&str>,
-        _lease_access_conditions: Option<&LeaseAccessConditions>,
-        _tags: Option<&BlobTags>,
+        context: &Context,
+        account: &str,
+        container: &str,
+        blob: &str,
+        snapshot: Option<&str>,
+        lease_access_conditions: Option<&LeaseAccessConditions>,
+        tags: Option<&BlobTags>,
         _modified_access_conditions: Option<&ModifiedAccessConditions>,
     ) -> Result<(), StorageError> {
-        // Placeholder
-        // TODO: Implement setBlobTag from TS lines 3419-3448
-        // NOTE: TS ignores modifiedAccessConditions parameter (fidelity flag)
-        Err(StorageError::from("setBlobTag not yet implemented"))
+        // TS: lines 3419-3448
+        // NOTE: TS ignores modifiedAccessConditions parameter (fidelity flag from line 3419)
+        let snapshot = snapshot.unwrap_or("");
+        
+        let mut doc = self.get_blob_with_lease_updated(account, container, blob, snapshot, context, false).await?
+            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+
+        // Validate lease
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        let adapter = BlobLeaseAdapter::new(&doc);
+        validator.validate(&adapter, context)?;
+
+        // Sync lease state
+        let adapter = BlobLeaseAdapter::new(&doc);
+        let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+        let mut syncer = BlobLeaseSyncer::new(&mut doc);
+        lease_state.lease().sync_with_syncer(&syncer)?;
+
+        // Update blob tags
+        doc.blobTags = tags.cloned();
+
+        // Update collection
+        let mut blobs = self.blobs_collection.write().unwrap();
+        let key = (account.to_string(), container.to_string(), blob.to_string(), snapshot.to_string());
+        blobs.insert(key, doc);
+        drop(blobs);
+
+        Ok(())
     }
 
     async fn get_blob_tag(
         &self,
-        _context: &Context,
-        _account: &str,
-        _container: &str,
-        _blob: &str,
-        _snapshot: Option<&str>,
-        _lease_access_conditions: Option<&LeaseAccessConditions>,
-        _modified_access_conditions: Option<&ModifiedAccessConditions>,
+        context: &Context,
+        account: &str,
+        container: &str,
+        blob: &str,
+        snapshot: Option<&str>,
+        lease_access_conditions: Option<&LeaseAccessConditions>,
+        modified_access_conditions: Option<&ModifiedAccessConditions>,
     ) -> Result<Option<BlobTags>, StorageError> {
-        // Placeholder
-        // TODO: Implement getBlobTag from TS lines 3464-3503
-        Err(StorageError::from("getBlobTag not yet implemented"))
+        // TS: lines 3464-3503
+        let snapshot = snapshot.unwrap_or("");
+        
+        let doc = self.get_blob_with_lease_updated(account, container, blob, snapshot, context, false).await?
+            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+
+        // Validate read conditions
+        validate_read_conditions(
+            context,
+            &ConditionalHeadersAdapter::from_modified_access_conditions(modified_access_conditions),
+            &ConditionResourceAdapter::new(&doc.properties, doc.metadata.as_ref()),
+            false,
+        )?;
+
+        // Validate lease
+        let validator = BlobReadLeaseValidator::new(lease_access_conditions);
+        let adapter = BlobLeaseAdapter::new(&doc);
+        validator.validate(&adapter, context)?;
+
+        Ok(doc.blobTags)
     }
 
     async fn seal_blob(
@@ -1584,26 +2043,207 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
     async fn stage_block(
         &self,
-        _context: &Context,
-        _block: BlockModel,
-        _lease_access_conditions: Option<&LeaseAccessConditions>,
+        context: &Context,
+        block: BlockModel,
+        lease_access_conditions: Option<&LeaseAccessConditions>,
     ) -> Result<(), StorageError> {
-        // Placeholder - full implementation would be ~85 lines
-        // TODO: Implement stageBlock from TS lines 2313-2395
-        Err(StorageError::from("stageBlock not yet implemented"))
+        // TS: lines 2313-2395
+        
+        // Check container exists
+        self.check_container_exist(context, &block.accountName, &block.containerName).await?;
+
+        // Check if blob exists
+        let blob_key = (
+            block.accountName.clone(),
+            block.containerName.clone(),
+            block.blobName.clone(),
+            "".to_string(),
+        );
+
+        let blob_exists = {
+            let blobs = self.blobs_collection.read().unwrap();
+            blobs.contains_key(&blob_key)
+        };
+
+        if !blob_exists {
+            // Create new uncommitted BlockBlob
+            let etag = new_etag();
+            let new_blob = BlobModel {
+                deleted: Some(false),
+                accountName: block.accountName.clone(),
+                containerName: block.containerName.clone(),
+                name: Some(block.blobName.clone()),
+                properties: BlobPropertiesInternal {
+                    creation_time: context.start_time,
+                    last_modified: context.start_time,
+                    etag: Some(etag),
+                    content_length: Some(0),
+                    blob_type: Some(BlobType::BlockBlob),
+                    ..Default::default()
+                },
+                snapshot: Some("".to_string()),
+                isCommitted: Some(false),
+                ..Default::default()
+            };
+
+            let mut blobs = self.blobs_collection.write().unwrap();
+            blobs.insert(blob_key, new_blob);
+            drop(blobs);
+        } else {
+            // Validate existing blob
+            let blobs = self.blobs_collection.read().unwrap();
+            let blob_doc = blobs.get(&blob_key).unwrap();
+
+            // Check blob type is BlockBlob
+            if blob_doc.properties.blob_type != Some(BlobType::BlockBlob) {
+                return Err(StorageErrorFactory::get_blob_invalid_blob_type(&context.context_id));
+            }
+
+            // Validate lease
+            let adapter = BlobLeaseAdapter::new(blob_doc);
+            let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+            let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+            lease_state.validate(&validator)?;
+            
+            let mut blob_clone = blob_doc.clone();
+            let syncer = BlobWriteLeaseSyncer::new(&mut blob_clone);
+            lease_state.lease().sync_with_syncer(&syncer)?;
+            drop(blobs);
+        }
+
+        // Validate block ID length consistency if blob exists and has blocks
+        if blob_exists {
+            let blocks = self.blocks_collection.read().unwrap();
+            let existing_block = blocks.iter().find(|((acc, cont, blob_name, _), _)| {
+                acc == &block.accountName && cont == &block.containerName && blob_name == &block.blobName
+            });
+
+            if let Some((_, existing)) = existing_block {
+                // Decode base64 block IDs and compare lengths
+                if let (Some(ref existing_name), Some(ref new_name)) = (&existing.name, &block.name) {
+                    let existing_decoded = base64::decode(existing_name).unwrap_or_default();
+                    let new_decoded = base64::decode(new_name).unwrap_or_default();
+                    if existing_decoded.len() != new_decoded.len() {
+                        return Err(StorageErrorFactory::get_invalid_blob_or_block(&context.context_id));
+                    }
+                }
+            }
+            drop(blocks);
+        }
+
+        // Find and remove existing block with same name
+        let block_key = (
+            block.accountName.clone(),
+            block.containerName.clone(),
+            block.blobName.clone(),
+            block.name.clone().unwrap_or_default(),
+        );
+
+        let mut blocks = self.blocks_collection.write().unwrap();
+        blocks.remove(&block_key);
+        blocks.insert(block_key, block);
+        drop(blocks);
+
+        Ok(())
     }
 
     async fn append_block(
         &self,
-        _context: &Context,
-        _block: BlockModel,
-        _lease_access_conditions: Option<&LeaseAccessConditions>,
-        _modified_access_conditions: Option<&ModifiedAccessConditions>,
-        _append_position_access_conditions: Option<&AppendPositionAccessConditions>,
+        context: &Context,
+        block: BlockModel,
+        lease_access_conditions: Option<&LeaseAccessConditions>,
+        modified_access_conditions: Option<&ModifiedAccessConditions>,
+        append_position_access_conditions: Option<&AppendPositionAccessConditions>,
     ) -> Result<BlobPropertiesInternal, StorageError> {
-        // Placeholder - full implementation would be ~90 lines
-        // TODO: Implement appendBlock from TS lines 2397-2484
-        Err(StorageError::from("appendBlock not yet implemented"))
+        // TS: lines 2397-2473
+        
+        let mut doc = self.get_blob_with_lease_updated(
+            &block.accountName,
+            &block.containerName,
+            &block.blobName,
+            "",
+            context,
+            true, // forceCommitted
+        ).await?
+            .ok_or_else(|| StorageErrorFactory::get_blob_not_found(&context.context_id))?;
+
+        // Validate write conditions
+        validate_write_conditions(context, modified_access_conditions, Some(&doc))?;
+
+        // Validate lease
+        let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let validator = BlobWriteLeaseValidator::new(lease_access_conditions);
+        validator.validate(&lease_adapter, context)?;
+
+        // Check if blob is sealed
+        if doc.properties.is_sealed == Some(true) {
+            return Err(StorageErrorFactory::get_blob_sealed(&context.context_id));
+        }
+
+        // Validate blob type
+        if doc.properties.blob_type != Some(BlobType::AppendBlob) {
+            return Err(StorageErrorFactory::get_blob_invalid_blob_type(&context.context_id));
+        }
+
+        // Check max block count
+        let current_block_count = doc.committedBlocksInOrder.as_ref().map(|v| v.len()).unwrap_or(0);
+        if current_block_count >= MAX_APPEND_BLOB_BLOCK_COUNT {
+            return Err(StorageErrorFactory::get_block_count_exceeds_limit(&context.context_id));
+        }
+
+        // Validate append position if specified
+        if let Some(ref apc) = append_position_access_conditions {
+            if let Some(append_position) = apc.append_position {
+                let current_length = doc.properties.content_length.unwrap_or(0);
+                if current_length != append_position {
+                    return Err(StorageErrorFactory::get_append_position_condition_not_met(&context.context_id));
+                }
+            }
+
+            // Validate max size if specified
+            if let Some(max_size) = apc.max_size {
+                let current_length = doc.properties.content_length.unwrap_or(0);
+                let block_size = block.size.unwrap_or(0);
+                if current_length + block_size > max_size {
+                    return Err(StorageErrorFactory::get_max_blob_size_condition_not_met(&context.context_id));
+                }
+            }
+        }
+
+        // Sync lease
+        let lease_adapter = BlobLeaseAdapter::new(&doc);
+        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
+        syncer.sync(&lease_adapter)?;
+
+        // Append block
+        if doc.committedBlocksInOrder.is_none() {
+            doc.committedBlocksInOrder = Some(Vec::new());
+        }
+        let block_persistency = PersistencyBlockModel {
+            name: block.name.clone(),
+            size: block.size,
+            persistency: block.persistency.clone(),
+        };
+        doc.committedBlocksInOrder.as_mut().unwrap().push(block_persistency);
+
+        // Update properties
+        doc.properties.etag = Some(new_etag());
+        doc.properties.last_modified = context.start_time;
+        let block_size = block.size.unwrap_or(0);
+        doc.properties.content_length = Some(doc.properties.content_length.unwrap_or(0) + block_size);
+
+        // Update collection
+        let mut blobs = self.blobs_collection.write().unwrap();
+        let key = (
+            block.accountName.clone(),
+            block.containerName.clone(),
+            block.blobName.clone(),
+            "".to_string(),
+        );
+        blobs.insert(key, doc.clone());
+        drop(blobs);
+
+        Ok(doc.properties)
     }
 
     async fn commit_block_list(

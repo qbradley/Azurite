@@ -12,15 +12,16 @@ use azurite_blob::authentication::{
 };
 use azurite_blob::context::BlobStorageContext;
 use azurite_blob::errors::{StorageError, StorageErrorFactory};
+use azurite_blob::generated::artifacts::models::LeaseAccessConditions;
 use azurite_blob::generated::artifacts::models::{
     AccessPolicy, ContainerProperties, GeneratedValue, SignedIdentifier,
 };
 use azurite_blob::generated::artifacts::operation::Operation;
 use azurite_blob::generated::context::Context;
-use azurite_blob::generated::i_request::{
-    GeneratedHttpRequest, HttpMethod, RequestHeaderValue,
+use azurite_blob::generated::i_request::{GeneratedHttpRequest, HttpMethod, RequestHeaderValue};
+use azurite_blob::persistence::{
+    BlobTypeResult, GetContainerAccessPolicyResponse, IBlobMetadataStore,
 };
-use azurite_blob::persistence::{BlobTypeResult, GetContainerAccessPolicyResponse, IBlobMetadataStore};
 use azurite_common::authentication::DateOrString as CommonDateOrString;
 use azurite_common::i_account_data_store::{IAccountDataStore, IAccountProperties};
 use azurite_common::i_cleaner::ICleaner;
@@ -30,11 +31,12 @@ use azurite_common::models::OAuthLevel;
 use azurite_common::storage_error::StorageError as CommonStorageError;
 use azurite_common::utils::utils::computeHMACSHA256;
 use azurite_common::{
-    generateAccountSASSignature, AccountSASPermissionsOrString,
-    AccountSASResourceTypesOrString, AccountSASServicesOrString, IAccountSASSignatureValues,
-    SASProtocol, SASProtocolOrString,
+    generateAccountSASSignature, AccountSASPermissionsOrString, AccountSASResourceTypesOrString,
+    AccountSASServicesOrString, IAccountSASSignatureValues, SASProtocol, SASProtocolOrString,
 };
-use base64::{engine::general_purpose::STANDARD, engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{
+    engine::general_purpose::STANDARD, engine::general_purpose::URL_SAFE_NO_PAD, Engine as _,
+};
 use chrono::{TimeZone, Utc};
 use pretty_assertions::assert_eq;
 use serde_json::json;
@@ -44,7 +46,8 @@ const CONTAINER: &str = "container";
 const BLOB: &str = "blob.txt";
 const SHARED_KEY: &[u8] = b"phase7-shared-key";
 const SECONDARY_SUFFIX: &str = "-secondary";
-const USER_DELEGATION_BASIC_KEY: &str = "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+const USER_DELEGATION_BASIC_KEY: &str =
+    "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
 
 #[derive(Default)]
 struct NoopLogger;
@@ -110,8 +113,11 @@ impl IAccountDataStore for TestAccountStore {
 
 #[derive(Default)]
 struct TestBlobMetadataStore {
-    container_acls: Mutex<HashMap<(String, String), Result<Option<GetContainerAccessPolicyResponse>, StorageError>>>,
-    blob_types: Mutex<HashMap<(String, String, String), Result<Option<BlobTypeResult>, StorageError>>>,
+    container_acls: Mutex<
+        HashMap<(String, String), Result<Option<GetContainerAccessPolicyResponse>, StorageError>>,
+    >,
+    blob_types:
+        Mutex<HashMap<(String, String, String), Result<Option<BlobTypeResult>, StorageError>>>,
 }
 
 impl TestBlobMetadataStore {
@@ -145,11 +151,13 @@ impl TestBlobMetadataStore {
 
 #[async_trait]
 impl IBlobMetadataStore for TestBlobMetadataStore {
+    // ── Implemented methods used by tests ──
     async fn getContainerACL(
         &self,
         _context: &Context,
         account: &str,
         container: &str,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
     ) -> Result<Option<GetContainerAccessPolicyResponse>, StorageError> {
         self.container_acls
             .lock()
@@ -173,6 +181,588 @@ impl IBlobMetadataStore for TestBlobMetadataStore {
             .cloned()
             .unwrap_or(Ok(None))
     }
+
+    // ── Stub implementations (not used by these tests) ──
+    async fn setServiceProperties(
+        &self,
+        _context: &Context,
+        _serviceProperties: azurite_blob::persistence::ServicePropertiesModel,
+    ) -> Result<azurite_blob::persistence::ServicePropertiesModel, StorageError> {
+        unimplemented!("setServiceProperties not used in phase7 tests")
+    }
+    async fn getServiceProperties(
+        &self,
+        _context: &Context,
+        _account: &str,
+    ) -> Result<Option<azurite_blob::persistence::ServicePropertiesModel>, StorageError> {
+        unimplemented!("getServiceProperties not used in phase7 tests")
+    }
+    async fn listContainers(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _prefix: Option<&str>,
+        _maxResults: Option<i64>,
+        _marker: Option<&str>,
+    ) -> Result<
+        (
+            Vec<azurite_blob::persistence::ContainerModel>,
+            Option<String>,
+        ),
+        StorageError,
+    > {
+        unimplemented!("listContainers not used in phase7 tests")
+    }
+    async fn createContainer(
+        &self,
+        _context: &Context,
+        _container: azurite_blob::persistence::ContainerModel,
+    ) -> Result<azurite_blob::persistence::ContainerModel, StorageError> {
+        unimplemented!("createContainer not used in phase7 tests")
+    }
+    async fn getContainerProperties(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+    ) -> Result<azurite_blob::persistence::GetContainerPropertiesResponse, StorageError> {
+        unimplemented!("getContainerProperties not used in phase7 tests")
+    }
+    async fn deleteContainer(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::ContainerDeleteMethodOptionalParams,
+        >,
+    ) -> Result<(), StorageError> {
+        unimplemented!("deleteContainer not used in phase7 tests")
+    }
+    async fn setContainerMetadata(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _lastModified: chrono::DateTime<chrono::Utc>,
+        _etag: &str,
+        _metadata: Option<&azurite_blob::persistence::IContainerMetadata>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<(), StorageError> {
+        unimplemented!("setContainerMetadata not used in phase7 tests")
+    }
+    async fn setContainerACL(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _setAclModel: azurite_blob::persistence::SetContainerAccessPolicyOptions,
+    ) -> Result<(), StorageError> {
+        unimplemented!("setContainerACL not used in phase7 tests")
+    }
+    async fn acquireContainerLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::ContainerAcquireLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::AcquireContainerLeaseResponse, StorageError> {
+        unimplemented!("acquireContainerLease not used in phase7 tests")
+    }
+    async fn releaseContainerLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _leaseId: &str,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::ContainerReleaseLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::ReleaseContainerLeaseResponse, StorageError> {
+        unimplemented!("releaseContainerLease not used in phase7 tests")
+    }
+    async fn renewContainerLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _leaseId: &str,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::ContainerRenewLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::RenewContainerLeaseResponse, StorageError> {
+        unimplemented!("renewContainerLease not used in phase7 tests")
+    }
+    async fn breakContainerLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _breakPeriod: Option<i64>,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::ContainerBreakLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::BreakContainerLeaseResponse, StorageError> {
+        unimplemented!("breakContainerLease not used in phase7 tests")
+    }
+    async fn changeContainerLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _leaseId: &str,
+        _proposedLeaseId: &str,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::ContainerChangeLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::ChangeContainerLeaseResponse, StorageError> {
+        unimplemented!("changeContainerLease not used in phase7 tests")
+    }
+    async fn checkContainerExist(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+    ) -> Result<(), StorageError> {
+        unimplemented!("checkContainerExist not used in phase7 tests")
+    }
+    async fn listBlobs(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _delimiter: Option<&str>,
+        _blob: Option<&str>,
+        _prefix: Option<&str>,
+        _maxResults: Option<i64>,
+        _marker: Option<&str>,
+        _includeSnapshots: Option<bool>,
+        _includeUncommittedBlobs: Option<bool>,
+    ) -> Result<
+        (
+            Vec<azurite_blob::persistence::BlobModel>,
+            Vec<azurite_blob::persistence::BlobPrefixModel>,
+            Option<String>,
+        ),
+        StorageError,
+    > {
+        unimplemented!("listBlobs not used in phase7 tests")
+    }
+    async fn listAllBlobs(
+        &self,
+        _maxResults: Option<i64>,
+        _marker: Option<&str>,
+        _includeSnapshots: Option<bool>,
+        _includeUncommittedBlobs: Option<bool>,
+    ) -> Result<(Vec<azurite_blob::persistence::BlobModel>, Option<String>), StorageError> {
+        unimplemented!("listAllBlobs not used in phase7 tests")
+    }
+    async fn filterBlobs(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: Option<&str>,
+        _where_param: Option<&str>,
+        _maxResults: Option<i64>,
+        _marker: Option<&str>,
+    ) -> Result<
+        (
+            Vec<azurite_blob::persistence::FilterBlobModel>,
+            Option<String>,
+        ),
+        StorageError,
+    > {
+        unimplemented!("filterBlobs not used in phase7 tests")
+    }
+    async fn createBlob(
+        &self,
+        _context: &Context,
+        _blob: azurite_blob::persistence::BlobModel,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<(), StorageError> {
+        unimplemented!("createBlob not used in phase7 tests")
+    }
+    async fn createSnapshot(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _metadata: Option<&azurite_blob::generated::artifacts::models::BlobMetadata>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::persistence::CreateSnapshotResponse, StorageError> {
+        unimplemented!("createSnapshot not used in phase7 tests")
+    }
+    async fn downloadBlob(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::persistence::BlobModel, StorageError> {
+        unimplemented!("downloadBlob not used in phase7 tests")
+    }
+    async fn getBlobProperties(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::persistence::GetBlobPropertiesRes, StorageError> {
+        unimplemented!("getBlobProperties not used in phase7 tests")
+    }
+    async fn deleteBlob(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _options: azurite_blob::generated::artifacts::models::BlobDeleteMethodOptionalParams,
+    ) -> Result<(), StorageError> {
+        unimplemented!("deleteBlob not used in phase7 tests")
+    }
+    async fn setBlobHTTPHeaders(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _blobHTTPHeaders: Option<&azurite_blob::generated::artifacts::models::BlobHTTPHeaders>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("setBlobHTTPHeaders not used in phase7 tests")
+    }
+    async fn setBlobMetadata(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _metadata: Option<&azurite_blob::generated::artifacts::models::BlobMetadata>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("setBlobMetadata not used in phase7 tests")
+    }
+    async fn checkBlobExist(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+    ) -> Result<(), StorageError> {
+        unimplemented!("checkBlobExist not used in phase7 tests")
+    }
+    async fn startCopyFromURL(
+        &self,
+        _context: &Context,
+        _source: azurite_blob::persistence::BlobId,
+        _destination: azurite_blob::persistence::BlobId,
+        _copySource: &str,
+        _metadata: Option<&azurite_blob::generated::artifacts::models::BlobMetadata>,
+        _tier: Option<&str>,
+        _leaseAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::BlobStartCopyFromURLOptionalParams,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("startCopyFromURL not used in phase7 tests")
+    }
+    async fn copyFromURL(
+        &self,
+        _context: &Context,
+        _source: azurite_blob::persistence::BlobId,
+        _destination: azurite_blob::persistence::BlobId,
+        _copySource: &str,
+        _metadata: Option<&azurite_blob::generated::artifacts::models::BlobMetadata>,
+        _tier: Option<&str>,
+        _leaseAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::BlobCopyFromURLOptionalParams,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("copyFromURL not used in phase7 tests")
+    }
+    async fn setTier(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _tier: &str,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+    ) -> Result<u16, StorageError> {
+        unimplemented!("setTier not used in phase7 tests")
+    }
+    async fn acquireBlobLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _duration: i64,
+        _proposedLeaseId: Option<&str>,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::BlobAcquireLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::AcquireBlobLeaseResponse, StorageError> {
+        unimplemented!("acquireBlobLease not used in phase7 tests")
+    }
+    async fn releaseBlobLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _leaseId: &str,
+        _options: Option<
+            &azurite_blob::generated::artifacts::models::BlobReleaseLeaseOptionalParams,
+        >,
+    ) -> Result<azurite_blob::persistence::ReleaseBlobLeaseResponse, StorageError> {
+        unimplemented!("releaseBlobLease not used in phase7 tests")
+    }
+    async fn renewBlobLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _leaseId: &str,
+        _options: Option<&azurite_blob::generated::artifacts::models::BlobRenewLeaseOptionalParams>,
+    ) -> Result<azurite_blob::persistence::RenewBlobLeaseResponse, StorageError> {
+        unimplemented!("renewBlobLease not used in phase7 tests")
+    }
+    async fn changeBlobLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _leaseId: &str,
+        _proposedLeaseId: &str,
+        _option: Option<&azurite_blob::generated::artifacts::models::BlobChangeLeaseOptionalParams>,
+    ) -> Result<azurite_blob::persistence::ChangeBlobLeaseResponse, StorageError> {
+        unimplemented!("changeBlobLease not used in phase7 tests")
+    }
+    async fn breakBlobLease(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _breakPeriod: Option<i64>,
+        _option: Option<&azurite_blob::generated::artifacts::models::BlobBreakLeaseOptionalParams>,
+    ) -> Result<azurite_blob::persistence::BreakBlobLeaseResponse, StorageError> {
+        unimplemented!("breakBlobLease not used in phase7 tests")
+    }
+    async fn stageBlock(
+        &self,
+        _context: &Context,
+        _block: azurite_blob::persistence::BlockModel,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+    ) -> Result<(), StorageError> {
+        unimplemented!("stageBlock not used in phase7 tests")
+    }
+    async fn appendBlock(
+        &self,
+        _context: &Context,
+        _block: azurite_blob::persistence::BlockModel,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+        _appendPositionAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::AppendPositionAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("appendBlock not used in phase7 tests")
+    }
+    async fn commitBlockList(
+        &self,
+        _context: &Context,
+        _blob: azurite_blob::persistence::BlobModel,
+        _blockList: Vec<azurite_blob::persistence::BlockListEntry>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<(), StorageError> {
+        unimplemented!("commitBlockList not used in phase7 tests")
+    }
+    async fn getBlockList(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _isCommitted: Option<bool>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::persistence::GetBlockListResult, StorageError> {
+        unimplemented!("getBlockList not used in phase7 tests")
+    }
+    async fn uploadPages(
+        &self,
+        _context: &Context,
+        _blob: azurite_blob::persistence::BlobModel,
+        _start: i64,
+        _end: i64,
+        _persistency: azurite_blob::persistence::IExtentChunk,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+        _sequenceNumberAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::SequenceNumberAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("uploadPages not used in phase7 tests")
+    }
+    async fn clearRange(
+        &self,
+        _context: &Context,
+        _blob: azurite_blob::persistence::BlobModel,
+        _start: i64,
+        _end: i64,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+        _sequenceNumberAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::SequenceNumberAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("clearRange not used in phase7 tests")
+    }
+    async fn getPageRanges(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::persistence::GetPageRangeResponse, StorageError> {
+        unimplemented!("getPageRanges not used in phase7 tests")
+    }
+    async fn resizePageBlob(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _blobContentLength: i64,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("resizePageBlob not used in phase7 tests")
+    }
+    async fn updateSequenceNumber(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _sequenceNumberAction: &str,
+        _blobSequenceNumber: Option<i64>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("updateSequenceNumber not used in phase7 tests")
+    }
+    async fn listUncommittedBlockPersistencyChunks(
+        &self,
+        _marker: Option<&str>,
+        _maxResults: Option<i64>,
+    ) -> Result<(Vec<azurite_blob::persistence::IExtentChunk>, Option<String>), StorageError> {
+        unimplemented!("listUncommittedBlockPersistencyChunks not used in phase7 tests")
+    }
+    async fn setBlobTag(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _tags: Option<&azurite_blob::generated::artifacts::models::BlobTags>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<(), StorageError> {
+        unimplemented!("setBlobTag not used in phase7 tests")
+    }
+    async fn getBlobTag(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _leaseAccessConditions: Option<&LeaseAccessConditions>,
+        _modifiedAccessConditions: Option<
+            &azurite_blob::generated::artifacts::models::ModifiedAccessConditions,
+        >,
+    ) -> Result<Option<azurite_blob::generated::artifacts::models::BlobTags>, StorageError> {
+        unimplemented!("getBlobTag not used in phase7 tests")
+    }
+    async fn sealBlob(
+        &self,
+        _context: &Context,
+        _account: &str,
+        _container: &str,
+        _blob: &str,
+        _snapshot: Option<&str>,
+        _options: azurite_blob::generated::artifacts::models::AppendBlobSealOptionalParams,
+    ) -> Result<azurite_blob::generated::artifacts::models::BlobPropertiesInternal, StorageError>
+    {
+        unimplemented!("sealBlob not used in phase7 tests")
+    }
 }
 
 #[derive(Clone)]
@@ -192,7 +782,9 @@ impl IAuthenticator for StubAuthenticator {
 }
 
 fn fixed_time() -> chrono::DateTime<Utc> {
-    Utc.with_ymd_and_hms(2022, 4, 16, 13, 31, 48).single().unwrap()
+    Utc.with_ymd_and_hms(2022, 4, 16, 13, 31, 48)
+        .single()
+        .unwrap()
 }
 
 fn far_future() -> &'static str {
@@ -251,7 +843,11 @@ fn set_query(request: &mut GeneratedHttpRequest, key: &str, value: &str) {
 
 fn assert_storage_error(error: &StorageError, status: u16, code: &str, message: &str) {
     assert_eq!(error.statusCode, status, "status");
-    assert_eq!(Some(error.storageErrorCode.as_str()), Some(code), "storage error code");
+    assert_eq!(
+        Some(error.storageErrorCode.as_str()),
+        Some(code),
+        "storage error code"
+    );
     assert_eq!(error.message, message, "storage error message");
 }
 
@@ -261,7 +857,10 @@ fn access_policy(permission: &str, start: &str, expiry: &str) -> AccessPolicy {
             String::from("permission"),
             GeneratedValue::String(permission.to_owned()),
         ),
-        (String::from("start"), GeneratedValue::String(start.to_owned())),
+        (
+            String::from("start"),
+            GeneratedValue::String(start.to_owned()),
+        ),
         (
             String::from("expiry"),
             GeneratedValue::String(expiry.to_owned()),
@@ -308,12 +907,12 @@ fn blob_sas_values(version: &str) -> IBlobSASSignatureValues {
     IBlobSASSignatureValues {
         version: version.to_owned(),
         protocol: Some(SASProtocolOrString::String(String::from("https"))),
-        startTime: Some(azurite_blob::authentication::DateOrString::String(String::from(
-            far_past(),
-        ))),
-        expiryTime: Some(azurite_blob::authentication::DateOrString::String(String::from(
-            far_future(),
-        ))),
+        startTime: Some(azurite_blob::authentication::DateOrString::String(
+            String::from(far_past()),
+        )),
+        expiryTime: Some(azurite_blob::authentication::DateOrString::String(
+            String::from(far_future()),
+        )),
         permissions: Some(String::from("racwd")),
         ipRange: Some(IIPRangeOrString::String(String::from("10.0.0.1-10.0.0.9"))),
         containerName: String::from(CONTAINER),
@@ -377,18 +976,21 @@ async fn i_authenticator_contract_preserves_none_success_and_error_results() {
     let request = make_request(HttpMethod::GET, "/container/blob.txt");
     let context = make_context(Operation::Blob_Download, Some(CONTAINER), Some(BLOB));
 
-    let bypass = StubAuthenticator {
-        result: Ok(None),
-    };
+    let bypass = StubAuthenticator { result: Ok(None) };
     assert_eq!(bypass.validate(&request, &context).await.unwrap(), None);
 
     let success = StubAuthenticator {
         result: Ok(Some(true)),
     };
-    assert_eq!(success.validate(&request, &context).await.unwrap(), Some(true));
+    assert_eq!(
+        success.validate(&request, &context).await.unwrap(),
+        Some(true)
+    );
 
     let failure = StubAuthenticator {
-        result: Err(StorageErrorFactory::getAuthorizationFailure("phase7-context")),
+        result: Err(StorageErrorFactory::getAuthorizationFailure(
+            "phase7-context",
+        )),
     };
     let error = failure.validate(&request, &context).await.unwrap_err();
     assert_storage_error(
@@ -441,12 +1043,18 @@ fn blob_sas_permissions_resource_types_and_lookup_tables_match_ts_contracts() {
     let account_permission = OperationAccountSASPermission::new("b", "co", "wc");
     assert!(account_permission.validate("b", "sco", "c"));
     assert!(account_permission.validate("b", "o", "z"));
-    assert!(OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
-        .validate("b", "c", "r"));
-    assert!(!OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
-        .validate("q", "c", "r"));
-    assert!(!OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
-        .validate("b", "", "r"));
+    assert!(
+        OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
+            .validate("b", "c", "r")
+    );
+    assert!(
+        !OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
+            .validate("q", "c", "r")
+    );
+    assert!(
+        !OperationAccountSASPermission::new("b", "AnyResourceType", "AnyPermission")
+            .validate("b", "", "r")
+    );
 
     let blob_permission = OperationBlobSASPermission::new("cw");
     assert!(blob_permission.validate("c"));
@@ -494,7 +1102,10 @@ fn blob_sas_signature_generation_matches_ts_service_version_fixtures() {
         string_2015,
         "racwd\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n\n10.0.0.1-10.0.0.9\nhttps\n2015-04-05\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2015, "CoL9vVY44KvrmTOLNg8cAViieR5JBumYc4FgtEd5OO4=");
+    assert_eq!(
+        signature_2015,
+        "CoL9vVY44KvrmTOLNg8cAViieR5JBumYc4FgtEd5OO4="
+    );
 
     let mut values_2018 = blob_sas_values("2018-11-09");
     values_2018.signedResource = Some(String::from("bs"));
@@ -509,7 +1120,10 @@ fn blob_sas_signature_generation_matches_ts_service_version_fixtures() {
         string_2018,
         "racwd\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n\n10.0.0.1-10.0.0.9\nhttps\n2018-11-09\nbs\n2022-04-16T13:31:48.0000000Z\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2018, "RhQOjHNrNyzlt92DUzlX4wU/BcXLd2PcuUmnOy7EKg0=");
+    assert_eq!(
+        signature_2018,
+        "RhQOjHNrNyzlt92DUzlX4wU/BcXLd2PcuUmnOy7EKg0="
+    );
 
     let mut values_2020 = blob_sas_values("2020-12-06");
     values_2020.encryptionScope = Some(String::from("scope-name"));
@@ -519,7 +1133,10 @@ fn blob_sas_signature_generation_matches_ts_service_version_fixtures() {
         string_2020,
         "racwd\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n\n10.0.0.1-10.0.0.9\nhttps\n2020-12-06\nb\n\nscope-name\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2020, "4kFyqUwaYmo0JulRJW/pm3pkozjUnn+n+W7jMQF3srI=");
+    assert_eq!(
+        signature_2020,
+        "4kFyqUwaYmo0JulRJW/pm3pkozjUnn+n+W7jMQF3srI="
+    );
 }
 
 #[test]
@@ -536,7 +1153,10 @@ fn blob_sas_signature_generation_matches_ts_udk_versions_and_identifier_quirk() 
         string_2018,
         "r\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n11111111-1111-1111-1111-111111111111\n22222222-2222-2222-2222-222222222222\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\nb\n2020-02-10\n10.0.0.1-10.0.0.9\nhttps\n2018-11-09\nb\n\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2018, "m1ndyXv6OeQQ2opncrCPH4HJeJByBKQtNxwQeCc2NJU=");
+    assert_eq!(
+        signature_2018,
+        "m1ndyXv6OeQQ2opncrCPH4HJeJByBKQtNxwQeCc2NJU="
+    );
 
     let values_2020_02 = udk_values("2020-02-10");
     let key_bytes = user_delegation_key_bytes(&values_2020_02);
@@ -550,7 +1170,10 @@ fn blob_sas_signature_generation_matches_ts_udk_versions_and_identifier_quirk() 
         string_2020_02,
         "r\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n11111111-1111-1111-1111-111111111111\n22222222-2222-2222-2222-222222222222\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\nb\n2020-02-10\n\n\n\n10.0.0.1-10.0.0.9\nhttps\n2020-02-10\nb\n\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2020_02, "OFC0dWum9TEqBxg5FnoLAnulDfaQd07dWAIpA3nzBNI=");
+    assert_eq!(
+        signature_2020_02,
+        "OFC0dWum9TEqBxg5FnoLAnulDfaQd07dWAIpA3nzBNI="
+    );
 
     let values_2020_12 = udk_values("2020-12-06");
     let key_bytes = user_delegation_key_bytes(&values_2020_12);
@@ -564,7 +1187,10 @@ fn blob_sas_signature_generation_matches_ts_udk_versions_and_identifier_quirk() 
         string_2020_12,
         "r\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n11111111-1111-1111-1111-111111111111\n22222222-2222-2222-2222-222222222222\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\nb\n2020-02-10\n\n\n\n10.0.0.1-10.0.0.9\nhttps\n2020-12-06\nb\n\n\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2020_12, "3bJfukJS6fBW/hYb0w7arvE+R64IsF4ZHMZpctAibyY=");
+    assert_eq!(
+        signature_2020_12,
+        "3bJfukJS6fBW/hYb0w7arvE+R64IsF4ZHMZpctAibyY="
+    );
 
     let values_2025 = udk_values("2025-07-05");
     let key_bytes = user_delegation_key_bytes(&values_2025);
@@ -578,7 +1204,10 @@ fn blob_sas_signature_generation_matches_ts_udk_versions_and_identifier_quirk() 
         string_2025,
         "r\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/blob/devstoreaccount1/container/blob.txt\n11111111-1111-1111-1111-111111111111\n22222222-2222-2222-2222-222222222222\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\nb\n2020-02-10\n\n\n\n10.0.0.1-10.0.0.9\nhttps\n2025-07-05\nb\n\n\n\n\nmax-age=5\ninline\ngzip\nen-US\ntext/plain"
     );
-    assert_eq!(signature_2025, "+TlpI5D5f1/UaReGQWurnMlCbLAW8oXCeCeLqtp/yvM=");
+    assert_eq!(
+        signature_2025,
+        "+TlpI5D5f1/UaReGQWurnMlCbLAW8oXCeCeLqtp/yvM="
+    );
 
     let mut identifier_only = blob_sas_values("2020-12-06");
     identifier_only.identifier = Some(String::from("policy-id"));
@@ -610,21 +1239,8 @@ async fn blob_shared_key_authenticator_matches_primary_and_secondary_signatures(
     set_header(&mut primary, "x-ms-version", "2020-12-06");
     set_header(&mut primary, "x-ms-meta-name ", "  spaced");
 
-    let primary_string_to_sign = [
-        "PUT",
-        "",
-        "",
-        "",
-        "",
-        "text/plain",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ]
-    .join("\n")
+    let primary_string_to_sign = ["PUT", "", "", "", "", "text/plain", "", "", "", "", "", ""]
+        .join("\n")
         + "\n"
         + "x-ms-meta-name:spaced\n"
         + "x-ms-version:2020-12-06\n"
@@ -638,7 +1254,10 @@ async fn blob_shared_key_authenticator_matches_primary_and_secondary_signatures(
 
     let primary_context = make_context(Operation::Blob_SetMetadata, Some(CONTAINER), Some(BLOB));
     assert_eq!(
-        authenticator.validate(&primary, &primary_context).await.unwrap(),
+        authenticator
+            .validate(&primary, &primary_context)
+            .await
+            .unwrap(),
         Some(true)
     );
 
@@ -650,10 +1269,7 @@ async fn blob_shared_key_authenticator_matches_primary_and_secondary_signatures(
     secondary_blob_context.setAuthenticationPath(Some(format!("/{ACCOUNT}/container/blob.txt")));
 
     let secondary_path = format!("/{ACCOUNT}{SECONDARY_SUFFIX}/container/blob.txt");
-    let secondary_string_to_sign = [
-        "GET", "", "", "", "", "", "", "", "", "", "", "",
-    ]
-    .join("\n")
+    let secondary_string_to_sign = ["GET", "", "", "", "", "", "", "", "", "", "", ""].join("\n")
         + "\n"
         + "x-ms-version:2020-12-06\n"
         + &format!("/{ACCOUNT}{secondary_path}\ncomp:metadata");
@@ -665,7 +1281,10 @@ async fn blob_shared_key_authenticator_matches_primary_and_secondary_signatures(
     );
 
     assert_eq!(
-        authenticator.validate(&secondary, &secondary_context).await.unwrap(),
+        authenticator
+            .validate(&secondary, &secondary_context)
+            .await
+            .unwrap(),
         Some(true)
     );
 }
@@ -675,16 +1294,25 @@ async fn blob_shared_key_authenticator_bypasses_non_shared_key_and_blocks_udk_op
     let authenticator = BlobSharedKeyAuthenticator::new(account_store(), logger());
     let request = make_request(HttpMethod::GET, "/container/blob.txt");
     let context = make_context(Operation::Blob_Download, Some(CONTAINER), Some(BLOB));
-    assert_eq!(authenticator.validate(&request, &context).await.unwrap(), None);
+    assert_eq!(
+        authenticator.validate(&request, &context).await.unwrap(),
+        None
+    );
 
     let mut bearer = make_request(HttpMethod::GET, "/container/blob.txt");
     set_header(&mut bearer, "authorization", "Bearer ignored");
-    assert_eq!(authenticator.validate(&bearer, &context).await.unwrap(), None);
+    assert_eq!(
+        authenticator.validate(&bearer, &context).await.unwrap(),
+        None
+    );
 
     let mut udk = make_request(HttpMethod::POST, "/");
     set_header(&mut udk, "authorization", "SharedKey devstoreaccount1:bad");
     let udk_context = make_context(Operation::Service_GetUserDelegationKey, None, None);
-    let error = authenticator.validate(&udk, &udk_context).await.unwrap_err();
+    let error = authenticator
+        .validate(&udk, &udk_context)
+        .await
+        .unwrap_err();
     assert_storage_error(
         &error,
         403,
@@ -695,8 +1323,8 @@ async fn blob_shared_key_authenticator_bypasses_non_shared_key_and_blocks_udk_op
 
 #[tokio::test]
 async fn account_sas_authenticator_requires_write_for_existing_blob_uploads() {
-    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> = Arc::new(
-        TestBlobMetadataStore::default().with_blob_type(
+    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> =
+        Arc::new(TestBlobMetadataStore::default().with_blob_type(
             ACCOUNT,
             CONTAINER,
             BLOB,
@@ -704,9 +1332,9 @@ async fn account_sas_authenticator_requires_write_for_existing_blob_uploads() {
                 blobType: Some(String::from("BlockBlob")),
                 isCommitted: true,
             })),
-        ),
-    );
-    let authenticator = AccountSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
+        ));
+    let authenticator =
+        AccountSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
 
     let values = account_sas_values("c");
     let (signature, _) = generateAccountSASSignature(&values, ACCOUNT, SHARED_KEY);
@@ -721,7 +1349,10 @@ async fn account_sas_authenticator_requires_write_for_existing_blob_uploads() {
     set_query(&mut request, "spr", "https,http");
 
     let context = make_context(Operation::BlockBlob_Upload, Some(CONTAINER), Some(BLOB));
-    let error = authenticator.validate(&request, &context).await.unwrap_err();
+    let error = authenticator
+        .validate(&request, &context)
+        .await
+        .unwrap_err();
     assert_storage_error(
         &error,
         403,
@@ -733,13 +1364,18 @@ async fn account_sas_authenticator_requires_write_for_existing_blob_uploads() {
     let (signature, _) = generateAccountSASSignature(&values, ACCOUNT, SHARED_KEY);
     set_query(&mut request, "sp", "cw");
     set_query(&mut request, "sig", &signature);
-    assert_eq!(authenticator.validate(&request, &context).await.unwrap(), Some(true));
+    assert_eq!(
+        authenticator.validate(&request, &context).await.unwrap(),
+        Some(true)
+    );
 }
 
 #[tokio::test]
 async fn account_sas_authenticator_enforces_protocol_and_strict_encryption_scope() {
-    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> = Arc::new(TestBlobMetadataStore::default());
-    let authenticator = AccountSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
+    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> =
+        Arc::new(TestBlobMetadataStore::default());
+    let authenticator =
+        AccountSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
 
     let mut values = account_sas_values("r");
     values.protocol = Some(SASProtocolOrString::SASProtocol(SASProtocol::HTTPS));
@@ -756,7 +1392,10 @@ async fn account_sas_authenticator_enforces_protocol_and_strict_encryption_scope
     set_query(&mut request, "spr", "https");
 
     let context = make_context(Operation::Blob_Download, Some(CONTAINER), Some(BLOB));
-    let error = authenticator.validate(&request, &context).await.unwrap_err();
+    let error = authenticator
+        .validate(&request, &context)
+        .await
+        .unwrap_err();
     assert_storage_error(
         &error,
         403,
@@ -788,8 +1427,8 @@ async fn account_sas_authenticator_enforces_protocol_and_strict_encryption_scope
 
 #[tokio::test]
 async fn blob_sas_authenticator_uses_saved_access_policy_identifier() {
-    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> = Arc::new(
-        TestBlobMetadataStore::default().with_container_acl(
+    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> =
+        Arc::new(TestBlobMetadataStore::default().with_container_acl(
             ACCOUNT,
             CONTAINER,
             Ok(Some(GetContainerAccessPolicyResponse {
@@ -799,9 +1438,9 @@ async fn blob_sas_authenticator_uses_saved_access_policy_identifier() {
                     access_policy("r", far_past(), far_future()),
                 )]),
             })),
-        ),
-    );
-    let authenticator = BlobSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
+        ));
+    let authenticator =
+        BlobSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
 
     let mut values = blob_sas_values("2020-12-06");
     values.identifier = Some(String::from("policy-id"));
@@ -825,13 +1464,18 @@ async fn blob_sas_authenticator_uses_saved_access_policy_identifier() {
     set_query(&mut request, "rsct", "text/plain");
 
     let context = make_context(Operation::Blob_Download, Some(CONTAINER), Some(BLOB));
-    assert_eq!(authenticator.validate(&request, &context).await.unwrap(), Some(true));
+    assert_eq!(
+        authenticator.validate(&request, &context).await.unwrap(),
+        Some(true)
+    );
 }
 
 #[tokio::test]
 async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permission_quirk() {
-    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> = Arc::new(TestBlobMetadataStore::default());
-    let authenticator = BlobSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
+    let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> =
+        Arc::new(TestBlobMetadataStore::default());
+    let authenticator =
+        BlobSASAuthenticator::new(account_store(), Arc::clone(&metadata_store), logger());
 
     let values = udk_values("2020-12-06");
     let key_bytes = user_delegation_key_bytes(&values);
@@ -847,12 +1491,36 @@ async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permi
     set_query(&mut request, "sip", "10.0.0.1-10.0.0.9");
     set_query(&mut request, "sr", "b");
     set_query(&mut request, "sig", &signature);
-    set_query(&mut request, "skoid", values.signedObjectId.as_deref().unwrap());
-    set_query(&mut request, "sktid", values.signedTenantId.as_deref().unwrap());
-    set_query(&mut request, "skt", values.signedStartsOn.as_deref().unwrap());
-    set_query(&mut request, "ske", values.signedExpiresOn.as_deref().unwrap());
-    set_query(&mut request, "sks", values.signedService.as_deref().unwrap());
-    set_query(&mut request, "skv", values.signedVersion.as_deref().unwrap());
+    set_query(
+        &mut request,
+        "skoid",
+        values.signedObjectId.as_deref().unwrap(),
+    );
+    set_query(
+        &mut request,
+        "sktid",
+        values.signedTenantId.as_deref().unwrap(),
+    );
+    set_query(
+        &mut request,
+        "skt",
+        values.signedStartsOn.as_deref().unwrap(),
+    );
+    set_query(
+        &mut request,
+        "ske",
+        values.signedExpiresOn.as_deref().unwrap(),
+    );
+    set_query(
+        &mut request,
+        "sks",
+        values.signedService.as_deref().unwrap(),
+    );
+    set_query(
+        &mut request,
+        "skv",
+        values.signedVersion.as_deref().unwrap(),
+    );
     set_query(&mut request, "rscc", "max-age=5");
     set_query(&mut request, "rscd", "inline");
     set_query(&mut request, "rsce", "gzip");
@@ -860,7 +1528,10 @@ async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permi
     set_query(&mut request, "rsct", "text/plain");
 
     let context = make_context(Operation::Blob_Download, Some(CONTAINER), Some(BLOB));
-    assert_eq!(authenticator.validate(&request, &context).await.unwrap(), Some(true));
+    assert_eq!(
+        authenticator.validate(&request, &context).await.unwrap(),
+        Some(true)
+    );
 
     let mut snapshot_values = blob_sas_values("2020-12-06");
     snapshot_values.permissions = Some(String::from("l"));
@@ -881,7 +1552,11 @@ async fn blob_sas_authenticator_validates_user_delegation_sas_and_snapshot_permi
     set_query(&mut snapshot_request, "spr", "https");
     set_query(&mut snapshot_request, "sip", "10.0.0.1-10.0.0.9");
     set_query(&mut snapshot_request, "sr", "bs");
-    set_query(&mut snapshot_request, "snapshot", "2022-04-16T13:31:48.0000000Z");
+    set_query(
+        &mut snapshot_request,
+        "snapshot",
+        "2022-04-16T13:31:48.0000000Z",
+    );
     set_query(&mut snapshot_request, "sig", &snapshot_signature);
     set_query(&mut snapshot_request, "rscc", "max-age=5");
     set_query(&mut snapshot_request, "rscd", "inline");
@@ -905,7 +1580,10 @@ async fn blob_token_authenticator_enforces_https_and_basic_claim_validation() {
     let context = make_context(Operation::Blob_Download, Some(CONTAINER), Some(BLOB));
 
     let request = make_request(HttpMethod::GET, "/container/blob.txt");
-    assert_eq!(authenticator.validate(&request, &context).await.unwrap(), None);
+    assert_eq!(
+        authenticator.validate(&request, &context).await.unwrap(),
+        None
+    );
 
     let mut invalid_scheme = make_request(HttpMethod::GET, "/container/blob.txt");
     set_header(&mut invalid_scheme, "authorization", "SharedKey nope");
@@ -922,8 +1600,15 @@ async fn blob_token_authenticator_enforces_https_and_basic_claim_validation() {
 
     let mut http_request = make_request(HttpMethod::GET, "/container/blob.txt");
     http_request.protocol = String::from("http");
-    set_header(&mut http_request, "authorization", "Bearer header.payload.sig");
-    let http_error = authenticator.validate(&http_request, &context).await.unwrap_err();
+    set_header(
+        &mut http_request,
+        "authorization",
+        "Bearer header.payload.sig",
+    );
+    let http_error = authenticator
+        .validate(&http_request, &context)
+        .await
+        .unwrap_err();
     assert_storage_error(
         &http_error,
         403,
@@ -940,8 +1625,18 @@ async fn blob_token_authenticator_enforces_https_and_basic_claim_validation() {
     });
     let valid_token = unsigned_bearer_token(valid_payload);
     let mut valid_request = make_request(HttpMethod::GET, "/container/blob.txt");
-    set_header(&mut valid_request, "authorization", &format!("Bearer {valid_token}"));
-    assert_eq!(authenticator.validate(&valid_request, &context).await.unwrap(), Some(true));
+    set_header(
+        &mut valid_request,
+        "authorization",
+        &format!("Bearer {valid_token}"),
+    );
+    assert_eq!(
+        authenticator
+            .validate(&valid_request, &context)
+            .await
+            .unwrap(),
+        Some(true)
+    );
 
     let future_payload = json!({
         "nbf": fixed_time().timestamp() + 600,
@@ -956,7 +1651,10 @@ async fn blob_token_authenticator_enforces_https_and_basic_claim_validation() {
         "authorization",
         &format!("Bearer {}", unsigned_bearer_token(future_payload)),
     );
-    let future_error = authenticator.validate(&future_request, &context).await.unwrap_err();
+    let future_error = authenticator
+        .validate(&future_request, &context)
+        .await
+        .unwrap_err();
     assert_storage_error(
         &future_error,
         403,
@@ -977,7 +1675,10 @@ async fn blob_token_authenticator_enforces_https_and_basic_claim_validation() {
         "authorization",
         &format!("Bearer {}", unsigned_bearer_token(invalid_issuer_payload)),
     );
-    let issuer_error = authenticator.validate(&issuer_request, &context).await.unwrap_err();
+    let issuer_error = authenticator
+        .validate(&issuer_request, &context)
+        .await
+        .unwrap_err();
     assert_storage_error(
         &issuer_error,
         403,
@@ -990,7 +1691,11 @@ async fn blob_token_authenticator_enforces_https_and_basic_claim_validation() {
 async fn public_access_authenticator_matches_ts_bypass_rules() {
     let metadata_store: Arc<dyn IBlobMetadataStore + Send + Sync> = Arc::new(
         TestBlobMetadataStore::default()
-            .with_container_acl(ACCOUNT, CONTAINER, Ok(Some(public_access_response("container"))))
+            .with_container_acl(
+                ACCOUNT,
+                CONTAINER,
+                Ok(Some(public_access_response("container"))),
+            )
             .with_container_acl(
                 ACCOUNT,
                 "blob-public",
@@ -999,33 +1704,64 @@ async fn public_access_authenticator_matches_ts_bypass_rules() {
             .with_container_acl(
                 ACCOUNT,
                 "broken",
-                Err(StorageErrorFactory::getAuthorizationFailure("phase7-context")),
+                Err(StorageErrorFactory::getAuthorizationFailure(
+                    "phase7-context",
+                )),
             ),
     );
     let authenticator = PublicAccessAuthenticator::new(Arc::clone(&metadata_store), logger());
 
     let request = make_request(HttpMethod::GET, "/container/blob.txt");
-    let container_context = make_context(Operation::Container_ListBlobFlatSegment, Some(CONTAINER), None);
+    let container_context = make_context(
+        Operation::Container_ListBlobFlatSegment,
+        Some(CONTAINER),
+        None,
+    );
     assert_eq!(
-        authenticator.validate(&request, &container_context).await.unwrap(),
+        authenticator
+            .validate(&request, &container_context)
+            .await
+            .unwrap(),
         Some(true)
     );
 
     let blob_context = make_context(Operation::Blob_Download, Some("blob-public"), Some(BLOB));
     assert_eq!(
-        authenticator.validate(&request, &blob_context).await.unwrap(),
+        authenticator
+            .validate(&request, &blob_context)
+            .await
+            .unwrap(),
         Some(true)
     );
 
-    let list_blob_context = make_context(Operation::Container_ListBlobFlatSegment, Some("blob-public"), None);
+    let list_blob_context = make_context(
+        Operation::Container_ListBlobFlatSegment,
+        Some("blob-public"),
+        None,
+    );
     assert_eq!(
-        authenticator.validate(&request, &list_blob_context).await.unwrap(),
+        authenticator
+            .validate(&request, &list_blob_context)
+            .await
+            .unwrap(),
         None
     );
 
     let broken_context = make_context(Operation::Blob_Download, Some("broken"), Some(BLOB));
-    assert_eq!(authenticator.validate(&request, &broken_context).await.unwrap(), None);
+    assert_eq!(
+        authenticator
+            .validate(&request, &broken_context)
+            .await
+            .unwrap(),
+        None
+    );
 
     let service_context = make_context(Operation::Service_GetProperties, None, None);
-    assert_eq!(authenticator.validate(&request, &service_context).await.unwrap(), None);
+    assert_eq!(
+        authenticator
+            .validate(&request, &service_context)
+            .await
+            .unwrap(),
+        None
+    );
 }

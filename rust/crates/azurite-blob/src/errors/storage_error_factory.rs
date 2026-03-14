@@ -620,7 +620,7 @@ impl StorageErrorFactory {
     }
 
     pub fn getInvalidAPIVersion(contextID: Option<&str>, apiVersion: Option<&str>) -> StorageError {
-        StorageError::new(400, String::from("InvalidHeaderValue"), format!("The API version {} is not supported by Azurite. Please upgrade Azurite to latest version and retry. If you are using Azurite in Visual Studio, please check you have installed latest Visual Studio patch. Azurite command line parameter \\\"--skipApiVersionCheck\\\" or Visual Studio Code configuration \\\"Skip Api Version Check\\\" can skip this error. ", apiVersion.unwrap_or("")), String::from(contextID.unwrap_or("")), StorageError::empty_extra())
+        StorageError::new(400, String::from("InvalidHeaderValue"), format!("The API version {} is not supported by Azurite. Please upgrade Azurite to latest version and retry. If you are using Azurite in Visual Studio, please check you have installed latest Visual Studio patch. Azurite command line parameter \"--skipApiVersionCheck\" or Visual Studio Code configuration \"Skip Api Version Check\" can skip this error. ", apiVersion.unwrap_or("")), String::from(contextID.unwrap_or("")), StorageError::empty_extra())
     }
 
     pub fn getBlobArchived(
