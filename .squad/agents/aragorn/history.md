@@ -1,4 +1,4 @@
-# Aragorn — History
+# Aragorn — History (Summarized)
 
 ## Project Context
 - **Project:** Azurite — Azure Storage Emulator (TypeScript to Rust port)
@@ -6,78 +6,59 @@
 - **Stack:** Node.js/TypeScript (source) → Rust (target)
 - **Goal:** Faithful TS→Rust translation prioritizing change propagation over idiomatic Rust
 
-## Learnings
+## Cumulative Milestones
 
-### Porting Strategy Available (2026-03-13)
-Gandalf has completed comprehensive porting strategy analysis. Review before starting implementation:
-- **Read first:** `rust/porting-db/STRATEGY.md` (1100 lines) — complete strategy with all architectural decisions
-- **Use as queue:** `rust/porting-db/PORTING-ORDER.md` (424 lines) — 17-phase implementation schedule in order
-- **Reference:** Follow type mappings, async patterns, and module organization from STRATEGY.md
-- **Record keeping:** Create per-file YAML records in `rust/porting-db/src/` per STRATEGY.md §16 format
+### Phase 0: Workspace Setup ✅
+- Five-crate Cargo workspace scaffolded under `rust/`
+- Strategy and porting order documented
+- `cargo check` succeeds
 
-### Rust Workspace Rooted Under `rust/` (2026-03-13)
-The Rust port is now scaffolded as a Cargo workspace rooted at `rust/Cargo.toml` with five members:
-- `rust/crates/azurite/Cargo.toml` — combined binary crate mirroring `src/azurite.ts`
-- `rust/crates/azurite-common/Cargo.toml` — shared library crate for `src/common/`
-- `rust/crates/azurite-blob/Cargo.toml` — blob service library + binary scaffold
-- `rust/crates/azurite-queue/Cargo.toml` — queue service library + binary scaffold
-- `rust/crates/azurite-table/Cargo.toml` — table service library + binary scaffold
-- Workspace dependencies are centralized in `rust/Cargo.toml` and Phase 0 tasks 0.1-0.6 are marked complete in `rust/porting-db/PORTING-ORDER.md`
-- Porting docs now live in `rust/porting-db/{STRATEGY.md,PORTING-ORDER.md,README.md}` and per-file YAML records belong under `rust/porting-db/src/`
-- `cargo check` succeeds from the `rust/` directory against the scaffolded workspace
+### Phase 1: Common Interfaces ✅
+- Ported 15 common interface files
+- Key decisions: Preserve contextID/contextId naming, keep IExtentMetadata/IExtentMetadataStore distinct, flatten IEnvironment aggregate trait
 
-### Phase 1 Analysis Complete: Key TS Patterns and Fidelity Concerns (2026-03-13)
-Faramir has analyzed all 15 Phase 1 files (common interfaces and shared types). **Critical implementation notes:**
-- **Trait object safety issue:** `IOperationQueue.operate<T>()` is generic and **not object-safe as a trait object in Rust**. Will likely need a concrete implementation or non-object-safe trait pattern. Do not force it into a trait object boundary without careful consideration.
-- **Model distinction (critical for propagation):** TS source has two extent metadata contracts:
-  - `IExtentMetadata` with fields `persistencyId`, `LastModifyInMS` (capital M)
-  - `IExtentMetadataStore` with fields `locationId`, `lastModifiedInMS` (lowercase m)
-  - These are intentionally different. Keep separate in Rust with explicit compatibility layer if bridging is needed. Do not collapse them.
-- **Naming inconsistency (preserve exactly):** `contextID` and `contextId` coexist in TS source. Preserve this inconsistency in Rust to maintain fidelity.
-- **Interface aggregation complexity:** `IEnvironment` aggregates three service traits with overlapping method names. May push toward flattened config type in Rust for ergonomics, but preserve TS semantics.
-- **Factory abstraction:** `IServerFactory` is narrower than concrete factory implementations. Preserve abstraction without assuming every TS factory directly implements it.
-- **Generic boundaries:** Watch for boxed stream/iterator boundaries when translating async lifecycles.
+### Phase 2: Persistence Implementations ✅
+- Ported OperationQueue, MemoryExtentStore, FSExtentStore, LokiExtentMetadata, AllExtentsAsyncIterator, ZeroBytesStream, Mutex
+- Fidelity: ZERO_EXTENT_ID copied to azurite-common; Loki's LastModifyInMS casing preserved; FIFO queue/mutex with Tokio
 
-### Phase 1 Common Interfaces Ported (2026-03-13)
-- Ported all 15 Phase 1 common interface records into `rust/crates/azurite-common/src/`, keeping TypeScript-facing names and module correspondence wherever Rust would allow it.
-- Introduced a shared `StorageError` placeholder in `azurite-common` so the new async traits can compile before the per-service error layers land.
-- Flattened `IEnvironment` into a local aggregate trait for Phase 1 because `azurite-common` cannot depend on future blob/queue/table environment traits without inverting the crate graph.
+### Phase 3: Common Authentication ✅
+- Ported IIPRange, AccountSASPermissions, AccountSASServices, AccountSASResourceTypes, IAccountSASSignatureValues
+- Fidelity: Validation-only sentinels (AnyPermission/AnyResourceType), canonical SAS order (rwdxlacuptfiy/btqf/sco), explicit SasIPRange→IIPRange adapter
+- Local HMAC/date helpers seeded pre-Phase 4
 
-### Phase 1 Complete; Phase 2 Fidelity Risks from Faramir (2026-03-13)
-Faramir's Phase 2 analysis is complete. **Critical implementation notes for Phase 2:**
-1. **`ZERO_EXTENT_ID` circular dependency**: Both `FSExtentStore.ts` and `MemoryExtentStore.ts` import `ZERO_EXTENT_ID = "*ZERO*"` from `src/blob/persistence/IBlobMetadataStore`. In Rust, `azurite-common` cannot depend on `azurite-blob`. Move or replicate this constant in `azurite-common` to break the cycle.
-2. **`LastModifyInMS` vs `lastModifiedInMS` field mismatch**: Loki stores field `LastModifyInMS` but `IExtentModel` interface uses `lastModifiedInMS` (different casing). Do NOT unify these in Rust — the query logic depends on exact field name.
-3. **Class name vs file name asymmetry**: File `LokiExtentMetadataStore.ts` exports class `LokiExtentMetadata` (not the file name). Preserve this asymmetry.
+### Phase 4: Utilities/Config Analysis (from Faramir) ✅
+- 11 files analyzed; fidelity hazards documented (Telemetry instaceID typo, knownHosts redaction quirk, WinstonLoggerStrategy contextID tab, Environment CLI duplication)
+- Decision D-002: Preserve quirks pending approval
 
-**Phase 2 TS patterns:**
-- `OperationQueue`: EventEmitter-based FIFO with dequeue on success/error → use `tokio::sync::Semaphore` with FIFO semantics
-- `Mutex`: Static-class global key mutex → `lazy_static!` + `tokio::sync::oneshot` channels for FIFO fairness
-- `ZeroBytesStream`: Node.js `Readable` 512-byte chunks → Rust `AsyncRead` `poll_read()` writing zeros directly
-- `MemoryExtentStore`: Two-level map with `SharedChunkStore` singleton → `lazy_static!` + `Arc<RwLock<...>>`
-- `FSExtentStore`: Complex 677-line class with `IAppendExtent` pool, two operation queues, FD caching, `fdatasync` per write
-- `AllExtentsAsyncIterator`: Snapshot-time pagination → preserve immutable snapshot, translate to `futures::stream::Stream`
+### Phase 5: Blob Generated Framework Analysis (from Faramir) ✅
+- 34 blob-generated files under src/blob/generated/ analyzed
 
-Test framework is ready (Boromir): 9 active tests passing, 9 placeholders in place. Tests will expand as Phase 2 translations complete.
+### Phase 6-7: Blob Errors/Auth Parity Tests ✅
+- 74 StorageErrorFactory helpers tested
+- SAS signature generation (service + UDK), auth flows tested
+- Fixed storage_error_factory quote escaping and lease_factory SignatureError signatures
+- 78 tests passing
 
-### Phase 2 Persistence Implementations Ported (2026-03-13)
-- Ported `OperationQueue`, `MemoryExtentStore`, `FSExtentStore`, `LokiExtentMetadata`, `AllExtentsAsyncIterator`, `ZeroBytesStream`, and `Mutex` into `rust/crates/azurite-common/src/`.
-- Kept fidelity-sensitive seams: copied `ZERO_EXTENT_ID = "*ZERO*"` into `azurite-common::persistence`, preserved Loki's stored `LastModifyInMS` casing apart from `IExtentModel.lastModifiedInMS`, and kept FIFO queue/mutex behavior with Tokio semaphores + oneshot handoff.
-- Validation after the port: `cargo check` and `cargo test -p azurite-common` both pass from `rust/`.
+### Phase 8: Lease Subsystem Translation ✅
+- 15 Rust files: ILeaseState trait object, LeaseStateFactory, 8 state implementations, ILease/LeaseImpl, minimal BlobModel/ContainerModel, ILeaseSyncer/ILeaseValidator/ILeaseActions
+- Key decisions: D-ILeaseState-ObjectSafety (Box<dyn>+lease() accessor), D-BlobModel-ContainerModel-Minimal, D-LeaseStateConstants (const &str), D-ContainerDeleteLeaseValidator-NullCollapse
+- Preserved TypeScript LeaseExpiredState.renew() lazy timer quirk
+- `cargo check` passes
 
-### Cross-Agent Status (2026-03-13 → 21:30)
-- **Faramir:** Phase 3 authentication analysis complete. 5 files analyzed; 3 critical fidelity constraints documented (sentinel enums, serialization order, IP range asymmetry). Ready for Phase 3 implementation.
-- **Boromir:** Phase 1 parity test coverage expanded. 26 active tests passing, 4 ignored placeholders for incomplete behavior. Workspace compiles cleanly; ready to unignore incrementally as Phase 3 translations complete.
-- **Samwise:** All systems operational. Ready for Phase 3 implementation review.
+### Phase 11-12: Blob Handlers/Server Analysis (from Faramir) ✅
+- 27 porting-db records seeded
+- Linked translation unit strategy: (1) PageBlobRangesManager core, (2) Batch pipeline isolated, (3) Server assembly with bootstrap quirks
+- Decision D-004: Follow linked strategy to prevent silent behavior normalization
 
-### Phase 3 Common Authentication Ported (2026-03-13)
-- Ported `IIPRange`, `AccountSASPermissions`, `AccountSASServices`, `AccountSASResourceTypes`, and `IAccountSASSignatureValues` into `rust/crates/azurite-common/src/authentication/`.
-- Preserved the fidelity-sensitive rules Faramir flagged: validation-only `AnyPermission`/`AnyResourceType` sentinels, canonical account-SAS serialization order (`rwdxlacuptfiy`, `btqf`, `sco`), and the explicit `SasIPRange` → `IIPRange` adapter boundary.
-- Added local Phase 3 HMAC/date helpers inside `i_account_sas_signature_values.rs` so account-SAS signing compiles before the full Phase 4 `utils.rs` port lands.
-- Validation: `cargo test -p azurite-common --lib && cargo check` succeeds from `rust/`. Full `cargo test -p azurite-common` still hits pre-existing Phase 2 integration-test trait-import issues outside this authentication port.
+## Current Status
+- **Cumulative:** 78 tests passing, 156 porting-db records, 193 Rust files
+- **Next phases:** Phase 9 (conditions) when scheduled; Phase 10 (handlers) pending Phase 8 validation
 
-### Cross-Agent Status (2026-03-13 → 22:10)
-- **Faramir:** Phase 4 utilities/config analysis COMPLETE. 11 files analyzed; fidelity hazards documented (Telemetry instaceID typo, knownHosts redaction quirk, WinstonLoggerStrategy contextID tab default, Environment CLI arg duplication). Awaiting decision approval on quirk preservation vs normalization.
-- **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules (OperationQueue, FSExtentStore, LokiExtentStore, etc.) all passing. Old placeholders removed; test suite clean at 36 active + 8 ignored.
+## Decision Log
+- D-001: Account-SAS compatibility structure (ACTIVE)
+- D-002: Preserve Phase 4 observable quirks (PENDING_APPROVAL)
+- D-003: Phase 8 lease subsystem design choices (ACTIVE)
+- D-004: Phase 11/12 linked translation unit strategy (ACTIVE)
 - **Samwise:** Phase 3 translation complete, Phase 4 analysis ready. Overall: 44 tests passing, 38 porting-db records, 108 Rust source files.
 
 ### Phase 4 common utilities/config/logger/environment ported (2026-03-13)
