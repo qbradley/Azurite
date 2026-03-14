@@ -140,3 +140,95 @@
 - **Coupled change:** Seeded 27 porting-db records for Phase 11-12 (from Faramir analysis). Received Phase 11-12 linked translation unit strategy from Faramir (page range core → batch pipeline → server assembly).
 
 **Next:** Phase 9 (blob conditions) ready when scheduled; Phase 10 handler work awaits Phase 8 integration validation.
+
+## Learnings
+
+### Phase 9 Blob Conditions Ported (2026-03-14)
+**Status:** ✅ Cargo check passes
+
+- **Deliverable:** 7 Rust files ported under `rust/crates/azurite-blob/src/conditions/`:
+  - `i_conditional_headers.rs` — `IConditionalHeaders` struct with `ifModifiedSince`, `ifUnmodifiedSince`, `ifMatch`, `ifNoneMatch`, `ifTags`
+  - `i_condition_resource.rs` — `IConditionResource` struct with `exist`, `etag`, `lastModified`, `blobItemWithTags`
+  - `i_conditional_headers_validator.rs` — `IConditionalHeadersValidator` trait
+  - `conditional_headers_adapter.rs` — Adapts `ModifiedAccessConditions` to `IConditionalHeaders`; strips quotes from etag lists, truncates milliseconds on dates
+  - `condition_resource_adapter.rs` — Adapts `BlobModel`/`ContainerModel` to `IConditionResource`; treats uncommitted blobs as nonexistent, panics on invalid etag (<3 chars)
+  - `read_conditional_headers_validator.rs` — `ReadConditionalHeadersValidator` + `validate_read_conditions()` convenience
+  - `write_conditional_headers_validator.rs` — `WriteConditionalHeadersValidator` + `validate_write_conditions()` + `validate_sequence_number_write_conditions()`; includes `validate_combinations()` that enforces single-etag and 2-header-max rules
+- **Fidelity preserved:** (1) Read validator: wildcard `*` in If-None-Match → `UnsatisfiableCondition` (not `ConditionNotMet`). (2) Write validator: wildcard `*` in If-None-Match for existing blob → returns Ok (not 412), matching TS TODO comment. (3) `validateCombinations()` allows only specific 2-header combos. (4) `ifTags` validation delegates to `generate_query_blob_with_tags_where_function()` from Phase 10 query interpreter. (5) Sequence number conditions: `<=`, `<`, `!=` semantics match TS exactly including float epsilon comparison.
+- **Cross-phase dependency:** Conditions validators reference `generate_query_blob_with_tags_where_function` from persistence/query_interpreter, so Phase 10 query interpreter had to be ported concurrently.
+
+### Phase 10 Blob Persistence Ported (2026-03-14)
+**Status:** ✅ Cargo check passes (10.7 LokiBlobMetadataStore deferred)
+
+- **Deliverable:** 9 of 10 Phase 10 items ported (all except 10.7 LokiBlobMetadataStore):
+  - `i_blob_metadata_store.rs` — Expanded from Phase 8 minimal model to full `IBlobMetadataStore` trait with all 40+ methods. Added model types: `IExtentChunk`, `ZERO_EXTENT_ID`, `ServicePropertiesModel`, `IContainerMetadata`, `SetContainerAccessPolicyOptions`, `ContainerLeaseResponse`, `PersistencyPageRange`, `BlobPrefixModel`, `GetBlobPropertiesRes`, `FilterBlobModel`, `BlobLeaseResponse`, `CreateSnapshotResponse`, `BlobId`, `GetPageRangeResponse`, `PersistencyBlockModel`, `BlockModel`, `BlockListEntry`, `GetBlockListResult`
+  - `query_interpreter/i_query_context.rs` — `IQueryContext = HashMap<String, String>` (replaces TS `any`)
+  - `query_interpreter/query_nodes/` — 13 files: `IQueryNode` trait + `TagContent`, `BinaryOperatorNode` base, `AndNode`, `OrNode`, `EqualsNode`, `NotEqualsNode`, `GreaterThanNode`, `GreaterThanEqualNode`, `LessThanNode`, `LessThanEqualNode`, `ConstantNode`, `KeyNode`, `ExpressionNode`
+  - `query_interpreter/query_parser.rs` — Full recursive-descent parser with `ParserContext` tokenizer. Preserves: unimplemented `not` grammar (documented but skipped), `or`/`<>` only for condition headers, `@container` only for `where`, asymmetric quoting (single quotes for values, double quotes allowed for keys), 10-unique-tag limit, doubled-quote escaping state machine
+  - `query_interpreter/query_interpreter.rs` — `execute_query()` and `generate_query_blob_with_tags_where_function()` with `@container` injection, identifier-reference validation, dual error surfaces (InvalidQueryParameterValue for `where`, InvalidHeaderValue for condition headers)
+  - `blob_referred_extents_async_iterator.rs` — Two-phase async iterator (blobs first, uncommitted blocks second) yielding batches of extent IDs
+  - `filter_blob_page.rs` — Generic page buffer for filtered blob listings with sorted-input assertion and continuation token semantics
+  - `page_with_delimiter.rs` — Generic page buffer with delimiter-based prefix squashing, insertion-order prefix tracking, duplicate-prefix-after-full behavior preserved
+- **Deferred:** 10.7 `LokiBlobMetadataStore` (3565 LOC) — the concrete metadata store implementation. This is the largest single file and requires wiring all Phase 8 lease machinery, condition validators, and query interpreter together against a concrete storage backend. Deferred to a dedicated follow-up.
+- **Design decisions:**
+  - D-FilterBlobModel-Concrete: Made `FilterBlobModel` a concrete struct (`name`, `containerName`, `tags`) rather than a type alias to `FilterBlobItem` (GeneratedObject). This gives typed access for conditions validators and query interpreter while still being constructible from BlobModel fields.
+  - D-IQueryNode-TraitObject: `IQueryNode` is a trait with `Box<dyn IQueryNode>` dispatch (like Phase 8's `ILeaseState`). `BinaryOperatorNode` is a concrete struct holding `left`/`right` children; each comparison node wraps it as `inner` field.
+  - D-PageWithDelimiter-InsertionOrder: Used a `Vec<String>` alongside `BTreeSet<String>` to track prefix insertion order, faithfully matching TS `Set` iteration semantics where results follow insertion order.
+- **Fidelity preserved per Faramir flags:** (1) `QueryParser` documents unary `not` but does not implement it — preserved exactly. (2) `setBlobTag()` ignoring `modifiedAccessConditions` — reflected in the full `IBlobMetadataStore` trait signature which accepts the parameter but the contract documents it as ignored. (3) Snapshot lease normalization to `Available/Unlocked` — will be enforced in the future 10.7 LokiBlobMetadataStore implementation.
+- **Coupled change:** Updated `getContainerACL` trait signature to include `leaseAccessConditions` parameter (matching TS interface). Fixed two callers in `blob_sas_authenticator.rs` and `public_access_authenticator.rs` to pass `None` for the new parameter.
+
+### Phase 10.7 LokiBlobMetadataStore Partial Translation (2026-03-14)
+**Status:** ⚠️ In Progress - Compilation errors present
+
+- **Deliverable:** 1733-line Rust translation of `LokiBlobMetadataStore.ts` (3565 LOC source) with core structure and ~35 of 51 methods implemented
+- **Architecture:** Replaced LokiJS with HashMap/BTreeMap-based in-memory collections:
+  - `services_collection`: HashMap<accountName, ServicePropertiesModel>
+  - `containers_collection`: BTreeMap<(accountName, containerName), ContainerModel>
+  - `blobs_collection`: BTreeMap<(accountName, containerName, blobName, snapshot), BlobModel>
+  - `blocks_collection`: BTreeMap<(accountName, containerName, blobName, blockName), BlockModel>
+- **Implemented methods (35/51):**
+  - Lifecycle: init, close, clean, is_initialized, is_closed
+  - Service: setServiceProperties, getServiceProperties
+  - Containers: listContainers, createContainer, getContainerProperties, deleteContainer, setContainerMetadata, getContainerACL, setContainerACL, checkContainerExist
+  - Container leases: acquireContainerLease, releaseContainerLease, renewContainerLease, breakContainerLease, changeContainerLease
+  - Blobs: filterBlobs, listBlobs, listAllBlobs, createBlob, createSnapshot, downloadBlob, getBlob, getBlobProperties, deleteBlob, setBlobHTTPHeaders, setBlobMetadata, checkBlobExist
+  - Blob leases: acquireBlobLease, releaseBlobLease, renewBlobLease, changeBlobLease, breakBlobLease
+  - Private helpers: escape_regex, get_container_with_lease_updated, get_container, get_blob_with_lease_updated, get_blob, parse_tier
+- **Unimplemented methods (16/51, placeholders with TODO comments):**
+  - Blob copy: startCopyFromURL, copyFromURL, setTier, getBlobType
+  - Blob tags: setBlobTag, getBlobTag
+  - Blob seal: sealBlob
+  - Blocks: stageBlock, appendBlock, commitBlockList, getBlockList, listUncommittedBlockPersistencyChunks
+  - Page blobs: uploadPages, clearRange, getPageRanges, resizePageBlob, updateSequenceNumber
+- **Fidelity preserved:**
+  - Snapshot lease normalization to Available/Unlocked (TS lines 3385-3395)
+  - setBlobTag ignoring modifiedAccessConditions (documented in placeholder)
+  - Marker-based pagination with maxResults+1 fetch pattern
+  - Lease sync on every container/blob read via LeaseFactory
+  - Four-collection structure matching Loki's design
+- **Compilation issues to resolve:**
+  1. Method naming mismatch: Trait uses camelCase (setServiceProperties) but implementation used snake_case (set_service_properties) — needs global rename
+  2. Parameter naming mismatch: Trait uses camelCase params (serviceProperties) but implementation used snake_case (service_properties) — needs global rename
+  3. Missing imports: IGCExtentProvider, convert_date_time_string_ms_to_7_digital, new_etag not found in azurite_common
+  4. Missing handlers::page_blob_ranges_manager module
+  5. Missing utils module in azurite-blob crate
+  6. Lease adapter API signature verification needed
+- **Next steps:**
+  1. Fix all camelCase method/parameter names to match trait
+  2. Add missing utility functions to azurite-common or azurite-blob
+  3. Create PageBlobRangesManager stub
+  4. Implement remaining 16 methods
+  5. Resolve all compilation errors
+  6. Run cargo check until passing
+  7. Update porting-db status to "ported"
+
+### Key file paths for Phase 10.7
+- `rust/crates/azurite-blob/src/persistence/loki_blob_metadata_store.rs` — 1733 lines, partial translation
+- `rust/crates/azurite-blob/src/persistence/mod.rs` — registered loki_blob_metadata_store module
+
+### Notes for future sessions
+- This is the largest single file in the entire port (3565 LOC TS source)
+- The translation preserves exact TS semantics including lazy lease updates, snapshot handling quirks, and marker pagination
+- HashMap/BTreeMap replacement for LokiJS maintains same collection boundaries and query semantics
+- Remaining 16 methods represent ~1000+ additional lines of complex blob/block/page logic
+- Once complete, this becomes the concrete implementation of IBlobMetadataStore used by all blob handlers

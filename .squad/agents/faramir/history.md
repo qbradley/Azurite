@@ -92,3 +92,44 @@ Completed comprehensive TypeScript analysis for Phases 1-4 (infrastructure, pers
   3. `PageBlobRangesManager` is the canonical page-range algorithm and must stay literal: split-first/last strategy, inclusive offsets, `ZERO_EXTENT_ID` hole filling, and even latent clamp-typo behavior are all documented. Phase 12 bootstrap also has compatibility quirks worth preserving (`BlobEnvironment.blobKeepAliveTimeout()` reads the wrong flag name, `BlobServerFactory` mutates `DEFAULT_BLOB_PERSISTENCE_ARRAY`, and `main.ts` configures logger/telemetry after server creation).
 - **Aragorn guidance:** Port Phase 11 in this order: `IPageBlobRangesManager`/`PageBlobRangesManager` → batch shims (`BlobBatchSub*`, `SubResponseTextBodyStream`, `BlobBatchHandler`) → `BaseHandler` + `ServiceHandler`/`ContainerHandler`/`BlobHandler` → `BlockBlobHandler`/`PageBlobHandler`/`AppendBlobHandler`. Then port Phase 12 as utilities/context/auth-preflight middleware → request listener factory → environment/config/server factory/main.
 
+
+### Phase 13 + Phase 14 Foundation Analysis (2026-03-14)
+
+**Phase 13: Blob GC (~1 file)**
+- Completed porting-db analysis: `BlobGCManager.ts` (293 lines)
+- **Key findings:**
+  1. GC manager implements state machine (Initializing → Running → Closing → Closed) with strict transitions
+  2. Mark-sweep algorithm uses Set deletion; TODO flag indicates future optimization pending (do NOT implement yet)
+  3. Background loop with EventEmitter-based abort signal for graceful shutdown
+  4. Lazy initialization of three extent providers on first start
+  5. Interruptible sleep with custom event-driven timeout mechanism
+- **Porting record created:** `rust/porting-db/src/blob/gc/BlobGCManager.md` with state machine, async patterns, and EventEmitter semantics documented
+
+**Phase 14: Queue Service Foundation (~9 files)**
+- Completed porting-db analysis: 9 core foundation files seeded with detailed records
+- **File list analyzed:**
+  - IQueueEnvironment.ts (17 lines): 15 async/sync config getters
+  - QueueConfiguration.ts (66 lines): Extends ConfigurationBase with Loki DB paths
+  - QueueEnvironment.ts (170 lines): CLI parser with lazy validation on getters
+  - IRequest.ts (26 lines, generated): Fluent interface, multi-value headers
+  - IResponse.ts (17 lines, generated): Builder pattern, polymorphic header values
+  - QueueStorageContext.ts (61 lines): Thin wrapper over Context, delegates to internal object
+  - StorageError.ts (67 lines): Extends MiddlewareError, constructs XML error body
+  - StorageErrorFactory.ts (340 lines): 27 static factory methods, queue-specific error codes
+  - IQueueMetadataStore.ts (317 lines): Composite interface (IGCExtentProvider + IDataStore + ICleaner), 21 methods
+- **Key findings:**
+  1. Queue foundation uses same generated patterns as blob Phase 5 (IRequest/IResponse, Context, errors)
+  2. QueueEnvironment has TWO async methods (location, debug) unlike blob
+  3. Validation is lazy in getters, not constructor (inMemoryPersistence ↔ location mutually exclusive)
+  4. StorageErrorFactory has inconsistent naming (get* prefix, bare verbs, camelCase methods)
+  5. IQueueMetadataStore combines three interfaces; message operations require pop-receipt validation
+- **Porting records created:** All 9 files documented under `rust/porting-db/src/queue/{generated,errors,context,persistence}/`
+- **Architecture note:** Queue service closely mirrors blob patterns but with distinct queue semantics (messages, pop-receipts, timeouts)
+
+**Deliverables:**
+- Phase 13: 1 porting-db record (BlobGCManager.md)
+- Phase 14: 9 porting-db records (foundation layer ready for handler/middleware analysis)
+- All records follow established format: file info, exported API, dependencies, type mappings, special handling, change propagation notes
+
+**Next phase:** Aragorn ready to begin Phase 13 (Blob GC) translation. Phase 14 foundation is stable; can proceed with generated framework expansion (32 generated files) and handler analysis in parallel.
+
