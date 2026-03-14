@@ -22,6 +22,7 @@ pub mod entity;
 pub mod errors;
 pub mod generated;
 pub mod handlers;
+pub mod i_table_environment;
 pub mod middlewares;
 pub mod persistence;
 pub mod table_configuration;
@@ -32,5 +33,12 @@ pub mod utils;
 
 pub use context::TableStorageContext;
 pub use errors::{NotImplementedError, StorageError, StorageErrorFactory};
+pub use i_table_environment::ITableEnvironment;
 pub use persistence::query_interpreter;
+pub use table_configuration::{
+    TableAccountKey, TableConfiguration, TableCorsConfiguration, TableLoggingConfiguration,
+    TableTlsConfiguration,
+};
+pub use table_environment::TableEnvironment;
+pub use table_request_listener_factory::TableRequestListenerFactory;
 pub use table_server::TableServer;

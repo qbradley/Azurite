@@ -1,12 +1,17 @@
-use std::sync::LazyLock;
+use std::{collections::BTreeMap, sync::LazyLock};
 
 use azurite_common::utils::utils::truncatedISO8061Date;
 use chrono::{DateTime, Utc};
 use regex::Regex;
+use url::Url;
 
 use crate::{
     errors::{StorageError, StorageErrorFactory},
-    generated::{context::Context, i_request::IRequest},
+    generated::{
+        artifacts::models::{GeneratedBody, GeneratedValue},
+        context::Context,
+        i_request::{IRequest, RequestHeaderValue},
+    },
 };
 
 use super::constants::{
@@ -317,7 +322,134 @@ pub fn get_utf8_byte_size(text: &str) -> usize {
     text.len()
 }
 
+pub fn generated_body_to_string(body: Option<&GeneratedBody>) -> Option<String> {
+    match body {
+        Some(GeneratedBody::Text(value)) => Some(value.clone()),
+        Some(GeneratedBody::Value(value)) => Some(match value {
+            GeneratedValue::String(value) => value.clone(),
+            _ => serde_json::to_string(&value.to_json_value()).unwrap_or_default(),
+        }),
+        Some(GeneratedBody::Stream(stream)) => Some(stream.read_to_string()),
+        None => None,
+    }
+}
+
+pub fn parse_header_block(header_block: &str) -> BTreeMap<String, RequestHeaderValue> {
+    let mut headers = BTreeMap::new();
+
+    for line in header_block
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+    {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        let key = name.trim().to_ascii_lowercase();
+        let value = value.trim().to_string();
+        match headers.remove(&key) {
+            Some(RequestHeaderValue::Single(existing)) => {
+                headers.insert(key, RequestHeaderValue::Multi(vec![existing, value]));
+            }
+            Some(RequestHeaderValue::Multi(mut existing)) => {
+                existing.push(value);
+                headers.insert(key, RequestHeaderValue::Multi(existing));
+            }
+            None => {
+                headers.insert(key, RequestHeaderValue::Single(value));
+            }
+        }
+    }
+
+    headers
+}
+
+pub fn extract_path_from_uri(uri: &str) -> Option<String> {
+    Url::parse(uri)
+        .ok()
+        .map(|url| url.path().to_string())
+        .or_else(|| {
+            uri.split_once("://")
+                .and_then(|(_, rest)| rest.find('/').map(|index| rest[index..].to_string()))
+        })
+}
+
+pub fn query_map_from_uri(uri: &str) -> BTreeMap<String, String> {
+    if let Ok(url) = Url::parse(uri) {
+        return url.query_pairs().into_owned().collect();
+    }
+
+    uri.split_once('?')
+        .map(|(_, query)| {
+            url::form_urlencoded::parse(query.as_bytes())
+                .into_owned()
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+pub fn extract_entity_keys_from_url_or_body(
+    uri: &str,
+    body: Option<&str>,
+) -> (Option<String>, Option<String>) {
+    let decoded_uri = percent_decode_string(uri);
+    let partition_key = extract_key_from_uri(&decoded_uri, "PartitionKey='", "',")
+        .map(decode_entity_key)
+        .or_else(|| extract_entity_key_from_body(body, "PartitionKey"));
+    let row_key = extract_key_from_uri(&decoded_uri, "RowKey='", "')")
+        .map(decode_entity_key)
+        .or_else(|| extract_entity_key_from_body(body, "RowKey"));
+
+    (partition_key, row_key)
+}
+
+fn extract_key_from_uri(uri: &str, prefix: &str, suffix: &str) -> Option<String> {
+    let start = uri.find(prefix)? + prefix.len();
+    let remainder = &uri[start..];
+    let end = remainder.find(suffix)?;
+    Some(remainder[..end].to_string())
+}
+
+fn extract_entity_key_from_body(body: Option<&str>, key: &str) -> Option<String> {
+    body.and_then(|body| serde_json::from_str::<serde_json::Value>(body).ok())
+        .and_then(|value| {
+            value
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .map(ToOwned::to_owned)
+        })
+}
+
+fn decode_entity_key(value: String) -> String {
+    value.replace("''", "'")
+}
+
+fn percent_decode_string(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut output = Vec::with_capacity(bytes.len());
+    let mut index = 0usize;
+
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            let hi = (bytes[index + 1] as char).to_digit(16);
+            let lo = (bytes[index + 2] as char).to_digit(16);
+            if let (Some(hi), Some(lo)) = (hi, lo) {
+                output.push(((hi << 4) | lo) as u8);
+                index += 3;
+                continue;
+            }
+        }
+        output.push(bytes[index]);
+        index += 1;
+    }
+
+    String::from_utf8(output).unwrap_or_else(|_| value.to_string())
+}
+
 pub use check_api_version as checkApiVersion;
+pub use extract_entity_keys_from_url_or_body as extractEntityKeysFromUrlOrBody;
+pub use extract_path_from_uri as extractPathFromUri;
+pub use generated_body_to_string as generatedBodyToString;
 pub use get_entity_odata_annotations_for_request as getEntityOdataAnnotationsForRequest;
 pub use get_entity_odata_annotations_for_response as getEntityOdataAnnotationsForResponse;
 pub use get_odata_annotations as getOdataAnnotations;
@@ -330,6 +462,8 @@ pub use get_utf8_byte_size as getUTF8ByteSize;
 pub use is_etag_valid as isEtagValid;
 pub use new_high_precision_timestamp as newHighPrecisionTimeStamp;
 pub use new_table_entity_etag as newTableEntityEtag;
+pub use parse_header_block as parseHeaderBlock;
+pub use query_map_from_uri as queryMapFromUri;
 pub use update_entity_odata_annotations_for_response as updateEntityOdataAnnotationsForResponse;
 pub use update_table_odata_annotations_for_response as updateTableOdataAnnotationsForResponse;
 pub use update_table_optional_odata_annotations_for_response as updateTableOptionalOdataAnnotationsForResponse;

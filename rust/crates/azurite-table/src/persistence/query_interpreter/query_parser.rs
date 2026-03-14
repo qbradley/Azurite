@@ -176,15 +176,15 @@ impl QueryParser {
     fn visit_identifier_or_constant(&mut self) -> Result<Box<dyn IQueryNode>, QueryError> {
         match self.tokens.peek() {
             Token::Identifier { value, .. } => {
-                self.tokens.next();
+                self.tokens.next_token();
                 Ok(Box::new(IdentifierNode::new(value)))
             }
             Token::Bool { value, .. } => {
-                self.tokens.next();
+                self.tokens.next_token();
                 Ok(Box::new(ConstantNode::boolean(value)))
             }
             Token::String { value, .. } => {
-                self.tokens.next();
+                self.tokens.next_token();
                 Ok(Box::new(ConstantNode::string(value)))
             }
             Token::Number { .. } => self.visit_number(),

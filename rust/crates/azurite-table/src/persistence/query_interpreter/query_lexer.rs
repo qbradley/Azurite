@@ -201,7 +201,7 @@ impl QueryLexer {
         }
     }
 
-    pub fn next(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token {
         let token = self.peek();
         self.token_position = token.position() + token.length();
         token

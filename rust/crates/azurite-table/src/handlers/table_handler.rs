@@ -507,7 +507,7 @@ impl ITableHandler for TableHandler {
     ) -> Result<TableBatchResponse, crate::errors::StorageError> {
         let request_body = body.read_to_string();
         self.check_body_limit(&context, Some(&request_body))?;
-        let batch_handler = TableBatchHandler::new(&context);
+        let batch_handler = TableBatchHandler::new(&context, self.clone());
         let response_body = batch_handler
             .process_batch_request_and_serialize_response(&request_body)
             .await?;
