@@ -9,7 +9,5 @@ rust-version.workspace = true
 azurite-blob = { path = "../azurite-blob" }
 azurite-queue = { path = "../azurite-queue" }
 azurite-table = { path = "../azurite-table" }
-clap.workspace = true
+azurite-common = { path = "../azurite-common" }
 tokio.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
