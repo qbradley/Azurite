@@ -209,11 +209,11 @@ mod tests {
     use azurite_common::storage_error::StorageError as CommonStorageError;
     use chrono::{Duration, Utc};
 
-    use base64::Engine as _;
     use crate::context::QueueStorageContext;
     use crate::generated::artifacts::operation::Operation;
     use crate::generated::context::Context;
     use crate::generated::i_request::{GeneratedHttpRequest, HttpMethod, RequestHeaderValue};
+    use base64::Engine as _;
 
     use super::super::i_authenticator::IAuthenticator;
     use super::QueueTokenAuthenticator;

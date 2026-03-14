@@ -224,7 +224,7 @@ pub async fn readStreamToString(mut data: ReadableStream) -> std::io::Result<Str
  * @memberof LokiQueueDataStore
  */
 pub fn getUTF8ByteSize(text: &str) -> usize {
-    text.as_bytes().len()
+    text.len()
 }
 
 /**

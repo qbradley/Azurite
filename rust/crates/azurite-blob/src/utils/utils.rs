@@ -19,8 +19,10 @@ use crate::{
 
 pub type BlobRange = (u64, u64);
 
+// Note: TypeScript uses negative lookahead (?!.*--) which Rust regex doesn't support
+// We validate no consecutive hyphens separately in the validation function
 static CONTAINER_NAME_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$").unwrap());
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("{message}")]

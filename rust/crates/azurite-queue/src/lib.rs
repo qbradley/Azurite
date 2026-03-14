@@ -21,6 +21,7 @@ pub mod errors;
 pub mod gc;
 pub mod generated;
 pub mod handlers;
+pub mod i_queue_environment;
 pub mod middlewares;
 pub mod persistence;
 pub mod queue_configuration;
@@ -29,4 +30,8 @@ pub mod queue_request_listener_factory;
 pub mod queue_server;
 pub mod utils;
 
+pub use i_queue_environment::IQueueEnvironment;
+pub use queue_configuration::QueueConfiguration;
+pub use queue_environment::QueueEnvironment;
+pub use queue_request_listener_factory::QueueRequestListenerFactory;
 pub use queue_server::QueueServer;

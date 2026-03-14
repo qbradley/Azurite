@@ -43,16 +43,14 @@ pub fn generateQueueSASSignature(
 ) -> (String, String) {
     ensure_permissions_and_expiry(queueSASSignatureValues);
 
-    let stringToSign = vec![
-        option_string(queueSASSignatureValues.permissions.clone()),
+    let stringToSign = [option_string(queueSASSignatureValues.permissions.clone()),
         option_date_string(queueSASSignatureValues.startTime.clone()),
         option_date_string(queueSASSignatureValues.expiryTime.clone()),
         getCanonicalName(accountName, &queueSASSignatureValues.queueName),
         option_string(queueSASSignatureValues.identifier.clone()),
         option_ip_range(queueSASSignatureValues.ipRange.clone()),
         option_protocol(queueSASSignatureValues.protocol.clone()),
-        queueSASSignatureValues.version.clone(),
-    ]
+        queueSASSignatureValues.version.clone()]
     .join("\n");
 
     let signature = computeHMACSHA256(&stringToSign, sharedKey);

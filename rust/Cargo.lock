@@ -256,6 +256,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "futures",
  "pretty_assertions",
  "quick-xml",
  "regex",
@@ -268,6 +269,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "url",
  "uuid",
 ]
 

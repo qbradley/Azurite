@@ -78,7 +78,10 @@ impl LokiQueueMetadataStore {
             .unwrap_or_else(Utc::now)
     }
 
-    fn metadata_matches(existing: Option<&IQueueMetadata>, candidate: Option<&IQueueMetadata>) -> bool {
+    fn metadata_matches(
+        existing: Option<&IQueueMetadata>,
+        candidate: Option<&IQueueMetadata>,
+    ) -> bool {
         match (existing, candidate) {
             (None, None) => true,
             (Some(_), None) | (None, Some(_)) => false,
@@ -113,7 +116,12 @@ impl LokiQueueMetadataStore {
         )
     }
 
-    fn checkQueueExist(&self, account: &str, queue: &str, context: Option<&Context>) -> Result<(), StorageError> {
+    fn checkQueueExist(
+        &self,
+        account: &str,
+        queue: &str,
+        context: Option<&Context>,
+    ) -> Result<(), StorageError> {
         let queues = self.queues_collection.read().unwrap();
         if queues.contains_key(&Self::queue_key(account, queue)) {
             return Ok(());
@@ -123,7 +131,12 @@ impl LokiQueueMetadataStore {
         Err(StorageErrorFactory::getQueueNotFound(request_id.as_deref()))
     }
 
-    fn clearExpiredMessages(&self, account: &str, queue: &str, context: Option<&Context>) -> Result<(), StorageError> {
+    fn clearExpiredMessages(
+        &self,
+        account: &str,
+        queue: &str,
+        context: Option<&Context>,
+    ) -> Result<(), StorageError> {
         self.checkQueueExist(account, queue, context)?;
 
         let query_time = Self::request_time(None, context);
@@ -196,7 +209,8 @@ impl IGCExtentProvider for LokiQueueMetadataStore {
         Box::pin(stream::unfold(Some(iterator), |state| async move {
             let mut iterator = state?;
             match iterator.next().await {
-                Ok((_, true)) => None,
+                Ok((extents, true)) if extents.is_empty() => None,
+                Ok((extents, true)) => Some((extents, None)),
                 Ok((extents, false)) => Some((extents, Some(iterator))),
                 Err(_) => None,
             }
@@ -226,7 +240,12 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
         &self,
         account: &str,
     ) -> Result<Option<ServicePropertiesModel>, StorageError> {
-        Ok(self.services_collection.read().unwrap().get(account).cloned())
+        Ok(self
+            .services_collection
+            .read()
+            .unwrap()
+            .get(account)
+            .cloned())
     }
 
     async fn listQueues(
@@ -258,9 +277,15 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
                 .then(left.record_id.cmp(&right.record_id))
         });
 
-        let mut limited = matching.into_iter().take(max_results + 1).collect::<Vec<_>>();
+        let mut limited = matching
+            .into_iter()
+            .take(max_results + 1)
+            .collect::<Vec<_>>();
         if limited.len() <= max_results {
-            return Ok((limited.into_iter().map(|stored| stored.model).collect(), None));
+            return Ok((
+                limited.into_iter().map(|stored| stored.model).collect(),
+                None,
+            ));
         }
 
         let next_marker = limited
@@ -309,7 +334,13 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
         }
 
         let record_id = self.next_queue_id.fetch_add(1, Ordering::SeqCst);
-        queues.insert(key, StoredQueueModel { record_id, model: queue });
+        queues.insert(
+            key,
+            StoredQueueModel {
+                record_id,
+                model: queue,
+            },
+        );
         Ok(QUEUE_STATUSCODE::CREATED)
     }
 
@@ -326,12 +357,11 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
             return Err(StorageErrorFactory::getQueueNotFound(request_id.as_deref()));
         }
 
-        self.messages_collection
-            .write()
-            .unwrap()
-            .retain(|(message_account, message_queue, _), _| {
+        self.messages_collection.write().unwrap().retain(
+            |(message_account, message_queue, _), _| {
                 !(message_account == account && message_queue == queue)
-            });
+            },
+        );
         Ok(())
     }
 
@@ -397,10 +427,13 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
 
         let key = Self::message_key(&message.accountName, &message.queueName, &message.messageId);
         let record_id = self.next_message_id.fetch_add(1, Ordering::SeqCst);
-        self.messages_collection
-            .write()
-            .unwrap()
-            .insert(key, StoredMessageModel { record_id, model: message });
+        self.messages_collection.write().unwrap().insert(
+            key,
+            StoredMessageModel {
+                record_id,
+                model: message,
+            },
+        );
         Ok(())
     }
 
@@ -466,13 +499,7 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
                     && message_queue == queue
                     && stored.model.timeNextVisible <= query_time
             })
-            .map(|(key, stored)| {
-                (
-                    key.clone(),
-                    stored.record_id,
-                    stored.model.timeNextVisible,
-                )
-            })
+            .map(|(key, stored)| (key.clone(), stored.record_id, stored.model.timeNextVisible))
             .collect();
 
         visible_keys.sort_by(|left, right| left.2.cmp(&right.2).then(left.1.cmp(&right.1)));
@@ -505,12 +532,16 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
         let mut messages = self.messages_collection.write().unwrap();
         let Some(stored) = messages.get(&key) else {
             let request_id = Self::request_id(context);
-            return Err(StorageErrorFactory::getMessageNotFound(request_id.as_deref()));
+            return Err(StorageErrorFactory::getMessageNotFound(
+                request_id.as_deref(),
+            ));
         };
 
         if stored.model.popReceipt != validatingPopReceipt {
             let request_id = Self::request_id(context);
-            return Err(StorageErrorFactory::getPopReceiptMismatch(request_id.as_deref()));
+            return Err(StorageErrorFactory::getPopReceiptMismatch(
+                request_id.as_deref(),
+            ));
         }
 
         messages.remove(&key);
@@ -530,12 +561,16 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
         let mut messages = self.messages_collection.write().unwrap();
         let Some(stored) = messages.get_mut(&key) else {
             let request_id = Self::request_id(context);
-            return Err(StorageErrorFactory::getMessageNotFound(request_id.as_deref()));
+            return Err(StorageErrorFactory::getMessageNotFound(
+                request_id.as_deref(),
+            ));
         };
 
         if stored.model.popReceipt != validatingPopReceipt {
             let request_id = Self::request_id(context);
-            return Err(StorageErrorFactory::getPopReceiptMismatch(request_id.as_deref()));
+            return Err(StorageErrorFactory::getPopReceiptMismatch(
+                request_id.as_deref(),
+            ));
         }
 
         stored.model.popReceipt = message.popReceipt;
@@ -555,12 +590,11 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
     ) -> Result<(), StorageError> {
         self.checkQueueExist(account, queue, context)?;
 
-        self.messages_collection
-            .write()
-            .unwrap()
-            .retain(|(message_account, message_queue, _), _| {
+        self.messages_collection.write().unwrap().retain(
+            |(message_account, message_queue, _), _| {
                 !(message_account == account && message_queue == queue)
-            });
+            },
+        );
         Ok(())
     }
 
@@ -578,17 +612,22 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
             .filter(|stored| stored.record_id > marker)
             .cloned()
             .collect();
-        listed.sort_by(|left, right| left.record_id.cmp(&right.record_id));
-        listed.truncate(max_results);
+        listed.sort_by_key(|left| left.record_id);
 
-        let next_marker = if listed.len() < max_results {
-            None
+        let mut limited = listed.into_iter().take(max_results + 1).collect::<Vec<_>>();
+        let has_more = limited.len() > max_results;
+        if has_more {
+            limited.truncate(max_results);
+        }
+
+        let next_marker = if has_more {
+            limited.last().map(|stored| stored.record_id)
         } else {
-            listed.last().map(|stored| stored.record_id)
+            None
         };
 
         Ok((
-            listed.into_iter().map(|stored| stored.model).collect(),
+            limited.into_iter().map(|stored| stored.model).collect(),
             next_marker,
         ))
     }
@@ -599,14 +638,16 @@ mod tests {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    use chrono::{Duration, TimeZone, Utc};
+    use chrono::{DateTime, Duration, TimeZone, Utc};
     use futures::StreamExt;
 
     use azurite_common::i_data_store::IDataStore;
     use azurite_common::i_gc_extent_provider::IGCExtentProvider;
     use azurite_common::persistence::i_extent_store::IExtentChunk;
 
-    use crate::generated::artifacts::models::{GeneratedValue, QueueItem, StorageServiceProperties};
+    use crate::generated::artifacts::models::{
+        GeneratedValue, QueueItem, StorageServiceProperties,
+    };
     use crate::persistence::i_queue_metadata_store::{
         IQueueMetadataStore, MessageModel, MessageUpdateProperties, QueueModel,
         ServicePropertiesModel,
@@ -633,7 +674,12 @@ mod tests {
         }
     }
 
-    fn message_model(account: &str, queue: &str, message_id: &str, visible_at: DateTime<Utc>) -> MessageModel {
+    fn message_model(
+        account: &str,
+        queue: &str,
+        message_id: &str,
+        visible_at: DateTime<Utc>,
+    ) -> MessageModel {
         MessageModel {
             accountName: account.to_string(),
             queueName: queue.to_string(),
@@ -653,21 +699,30 @@ mod tests {
         store.init().await.unwrap();
 
         let mut first = queue_model("devstoreaccount1", "orders");
-        first.metadata = Some(BTreeMap::from([(String::from("Owner"), String::from("team-a"))]));
+        first.metadata = Some(BTreeMap::from([(
+            String::from("Owner"),
+            String::from("team-a"),
+        )]));
         assert_eq!(
             store.createQueue(first, None).await.unwrap(),
             QUEUE_STATUSCODE::CREATED
         );
 
         let mut duplicate = queue_model("devstoreaccount1", "orders");
-        duplicate.metadata = Some(BTreeMap::from([(String::from("owner"), String::from("team-a"))]));
+        duplicate.metadata = Some(BTreeMap::from([(
+            String::from("owner"),
+            String::from("team-a"),
+        )]));
         assert_eq!(
             store.createQueue(duplicate, None).await.unwrap(),
             QUEUE_STATUSCODE::NOCONTENT
         );
 
         let mut conflict = queue_model("devstoreaccount1", "orders");
-        conflict.metadata = Some(BTreeMap::from([(String::from("owner"), String::from("team-b"))]));
+        conflict.metadata = Some(BTreeMap::from([(
+            String::from("owner"),
+            String::from("team-b"),
+        )]));
         let error = store.createQueue(conflict, None).await.unwrap_err();
         assert_eq!(error.storageErrorCode, "QueueAlreadyExists");
     }
@@ -681,7 +736,7 @@ mod tests {
             .await
             .unwrap();
 
-        let now = Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap();
+        let now = Utc.with_ymd_and_hms(2030, 1, 1, 12, 0, 0).unwrap();
         let first = message_model("devstoreaccount1", "orders", "m1", now);
         let second = message_model("devstoreaccount1", "orders", "m2", now);
         store.insertMessage(first, None).await.unwrap();
@@ -719,10 +774,16 @@ mod tests {
             timeNextVisible: now + Duration::seconds(90),
             persistency: Some(extent("updated")),
         };
-        store.updateMessage(update, "receipt-1", None).await.unwrap();
+        store
+            .updateMessage(update, "receipt-1", None)
+            .await
+            .unwrap();
 
         let listed = store.listMessages(Some(10), None).await.unwrap().0;
-        let updated = listed.into_iter().find(|message| message.messageId == "m1").unwrap();
+        let updated = listed
+            .into_iter()
+            .find(|message| message.messageId == "m1")
+            .unwrap();
         assert_eq!(updated.popReceipt, "receipt-2");
         assert_eq!(updated.persistency.id, "updated");
 
@@ -737,7 +798,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            store.getMessagesCount("devstoreaccount1", "orders", None)
+            store
+                .getMessagesCount("devstoreaccount1", "orders", None)
                 .await
                 .unwrap(),
             1
@@ -785,14 +847,9 @@ mod tests {
             .await
             .unwrap();
 
-        let now = Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap();
+        let now = Utc.with_ymd_and_hms(2030, 1, 1, 12, 0, 0).unwrap();
         for index in 0..1002 {
-            let message = message_model(
-                "devstoreaccount1",
-                "orders",
-                &format!("m-{index}"),
-                now,
-            );
+            let message = message_model("devstoreaccount1", "orders", &format!("m-{index}"), now);
             store.insertMessage(message, None).await.unwrap();
         }
 
