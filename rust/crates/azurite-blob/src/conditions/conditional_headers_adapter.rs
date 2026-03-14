@@ -1,9 +1,28 @@
-use chrono::{DateTime, Timelike, Utc};
+use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
 
 use crate::generated::artifacts::models::{GeneratedValue, ModifiedAccessConditions};
 use crate::generated::context::Context;
 
 use super::i_conditional_headers::IConditionalHeaders;
+
+/// Parse a date string that may be in ISO 8601, RFC 2822, or HTTP date format.
+fn parse_date(s: &str) -> Option<DateTime<Utc>> {
+    // Try ISO 8601 (e.g., "2026-03-14T19:43:32Z")
+    if let Ok(dt) = s.parse::<DateTime<Utc>>() {
+        return Some(dt);
+    }
+    // Try RFC 2822 (e.g., "Fri, 14 Mar 2026 19:43:32 GMT")
+    if let Ok(dt) = DateTime::parse_from_rfc2822(s) {
+        return Some(dt.with_timezone(&Utc));
+    }
+    // Try common HTTP date format (e.g., "Fri, 14 Mar 2026 19:43:32 GMT")
+    if let Ok(dt) =
+        NaiveDateTime::parse_from_str(s.trim_end_matches(" GMT"), "%a, %d %b %Y %H:%M:%S")
+    {
+        return Some(dt.and_utc());
+    }
+    None
+}
 
 /// Mirrors TypeScript `ConditionalHeadersAdapter` class.
 ///
@@ -66,7 +85,7 @@ impl ConditionalHeadersAdapter {
         if let Some(GeneratedValue::String(if_modified_since)) =
             modified_access_conditions.get("ifModifiedSince")
         {
-            if let Ok(dt) = if_modified_since.parse::<DateTime<Utc>>() {
+            if let Some(dt) = parse_date(if_modified_since) {
                 headers.ifModifiedSince = Some(truncate_millis(dt));
             }
         }
@@ -75,7 +94,7 @@ impl ConditionalHeadersAdapter {
         if let Some(GeneratedValue::String(if_unmodified_since)) =
             modified_access_conditions.get("ifUnmodifiedSince")
         {
-            if let Ok(dt) = if_unmodified_since.parse::<DateTime<Utc>>() {
+            if let Some(dt) = parse_date(if_unmodified_since) {
                 headers.ifUnmodifiedSince = Some(truncate_millis(dt));
             }
         }
