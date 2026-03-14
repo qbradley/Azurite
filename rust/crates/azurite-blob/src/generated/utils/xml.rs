@@ -26,26 +26,32 @@ pub fn parseXML(
         let mut children: Map<String, Value> = Map::new();
         let mut text = String::new();
 
+        fn insert_child(children: &mut Map<String, Value>, name: String, child_val: Value) {
+            if let Some(existing) = children.remove(&name) {
+                match existing {
+                    Value::Array(mut arr) => {
+                        arr.push(child_val);
+                        children.insert(name, Value::Array(arr));
+                    }
+                    _ => {
+                        children.insert(name, Value::Array(vec![existing, child_val]));
+                    }
+                }
+            } else {
+                children.insert(name, child_val);
+            }
+        }
+
         loop {
             match reader.read_event() {
                 Ok(Event::Start(e)) => {
                     let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let child_val = parse_element(reader)?;
-
-                    // Handle duplicate keys by converting to array
-                    if let Some(existing) = children.remove(&name) {
-                        match existing {
-                            Value::Array(mut arr) => {
-                                arr.push(child_val);
-                                children.insert(name, Value::Array(arr));
-                            }
-                            _ => {
-                                children.insert(name, Value::Array(vec![existing, child_val]));
-                            }
-                        }
-                    } else {
-                        children.insert(name, child_val);
-                    }
+                    insert_child(&mut children, name, child_val);
+                }
+                Ok(Event::Empty(e)) => {
+                    let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    insert_child(&mut children, name, Value::String(String::new()));
                 }
                 Ok(Event::Text(e)) => {
                     let t = e.unescape().map_err(|err| {
@@ -77,6 +83,10 @@ pub fn parseXML(
         match reader.read_event() {
             Ok(Event::Start(_)) => {
                 return parse_element(&mut reader);
+            }
+            Ok(Event::Empty(_)) => {
+                // Self-closing root: <BlockList/> → empty object
+                return Ok(Value::Object(Map::new()));
             }
             Ok(Event::Decl(_)) | Ok(Event::Comment(_)) | Ok(Event::PI(_)) => continue,
             Ok(Event::Eof) => return Ok(Value::Null),
