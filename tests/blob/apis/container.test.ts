@@ -622,8 +622,8 @@ describe("ContainerAPIs", () => {
       const appendBlobClient = containerClient.getAppendBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
-      appendBlobClient.create({ metadata: metadata });
-      appendBlobClient.seal();
+      await appendBlobClient.create({ metadata: metadata });
+      await appendBlobClient.seal();
       appendBlobClients.push(appendBlobClient);
     }
 
