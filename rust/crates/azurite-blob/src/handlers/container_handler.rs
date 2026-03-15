@@ -429,8 +429,13 @@ impl IContainerHandler for ContainerHandler {
             .await;
 
         let mut response = GeneratedResponse::new(202);
-        response.contentType = Some(format!("multipart/mixed; boundary={boundary}"));
-        response.body = Some(GeneratedBody::Text(response_body));
+        response.insert_field(
+            "contentType",
+            string_value(format!("multipart/mixed; boundary={boundary}")),
+        );
+        let stream =
+            crate::generated::i_request::GeneratedReadableStream::from_string(&response_body);
+        response.body = Some(GeneratedBody::Stream(stream));
         response.insert_field(
             "requestId",
             string_value(context.contextId().unwrap_or_default()),

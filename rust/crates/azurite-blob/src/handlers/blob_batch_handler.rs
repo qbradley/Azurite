@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use azurite_common::i_account_data_store::IAccountDataStore;
 use azurite_common::models::OAuthLevel;
+use chrono::Utc;
 use uuid::Uuid;
 
 use crate::authentication::{
@@ -129,6 +130,7 @@ fn setup_sub_request_context(
     disable_product_style: Option<bool>,
 ) {
     let blob_context = BlobStorageContext::new(context);
+    blob_context.setStartTime(Some(Utc::now()));
     blob_context.setXMsRequestID(Some(request_id.to_owned()));
     blob_context.setLoose(Some(loose));
     blob_context.setDisableProductStyleUrl(disable_product_style);
