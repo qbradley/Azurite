@@ -28,6 +28,7 @@ hyper = { version = "1", features = ["server", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio", "server-auto", "http1"] }
 jsonwebtoken = "9"
 md-5 = "0.10"
+openssl = "0.10"
 pretty_assertions = "1"
 quick-xml = { version = "0.37", features = ["serialize"] }
 regex = "1"

@@ -243,9 +243,50 @@ fn build_tls_acceptor(cert_material: CertMaterial) -> Result<TlsAcceptor, Storag
 
             Ok(TlsAcceptor::from(Arc::new(config)))
         }
-        CertMaterial::PFX { .. } => Err(StorageError::new(
-            "PFX/PKCS12 certificates are not yet supported. Please use PEM format (--cert and --key flags).",
-        )),
+        CertMaterial::PFX { pfx, passphrase } => {
+            let pkcs12 = openssl::pkcs12::Pkcs12::from_der(&pfx)
+                .map_err(|e| StorageError::new(format!("Failed to parse PFX file: {e}")))?;
+            let parsed = pkcs12
+                .parse2(&passphrase)
+                .map_err(|e| StorageError::new(format!("Failed to decrypt PFX file: {e}")))?;
+
+            let cert = parsed
+                .cert
+                .ok_or_else(|| StorageError::new("No certificate found in PFX file"))?;
+            let cert_der = cert
+                .to_der()
+                .map_err(|e| StorageError::new(format!("Failed to encode certificate: {e}")))?;
+            let mut certs = vec![rustls_pki_types::CertificateDer::from(cert_der)];
+            if let Some(chain) = parsed.ca {
+                for ca_cert in chain {
+                    let der = ca_cert.to_der().map_err(|e| {
+                        StorageError::new(format!("Failed to encode CA certificate: {e}"))
+                    })?;
+                    certs.push(rustls_pki_types::CertificateDer::from(der));
+                }
+            }
+
+            let pkey = parsed
+                .pkey
+                .ok_or_else(|| StorageError::new("No private key found in PFX file"))?;
+            let key_der = pkey
+                .private_key_to_der()
+                .map_err(|e| StorageError::new(format!("Failed to encode private key: {e}")))?;
+            let private_key = rustls_pki_types::PrivateKeyDer::try_from(key_der).map_err(|e| {
+                StorageError::new(format!("Failed to convert private key format: {e}"))
+            })?;
+
+            let config = ServerConfig::builder_with_provider(Arc::new(
+                rustls::crypto::aws_lc_rs::default_provider(),
+            ))
+            .with_safe_default_protocol_versions()
+            .map_err(|e| StorageError::new(format!("Failed to set TLS protocol versions: {e}")))?
+            .with_no_client_auth()
+            .with_single_cert(certs, private_key)
+            .map_err(|e| StorageError::new(format!("Failed to build TLS config: {e}")))?;
+
+            Ok(TlsAcceptor::from(Arc::new(config)))
+        }
     }
 }
 
@@ -280,8 +321,14 @@ async fn serve_tls(
                 Err(_) => return,
             };
             let io = TokioIo::new(tls_stream);
-            let hyper_service =
-                hyper::service::service_fn(move |req| tower_service.clone().call(req));
+            // Inject x-forwarded-proto so request_protocol() returns "https"
+            let hyper_service = hyper::service::service_fn(move |mut req: hyper::Request<_>| {
+                req.headers_mut().insert(
+                    hyper::header::HeaderName::from_static("x-forwarded-proto"),
+                    hyper::header::HeaderValue::from_static("https"),
+                );
+                tower_service.clone().call(req)
+            });
             let _ = AutoBuilder::new(hyper_util::rt::TokioExecutor::new())
                 .serve_connection_with_upgrades(io, hyper_service)
                 .await;

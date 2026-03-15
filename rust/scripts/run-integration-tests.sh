@@ -363,6 +363,67 @@ if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob
   if [[ ${https_fail} -gt 0 ]]; then
     test_exit_code=1
   fi
+
+  # ── OAuth test phase ─────────────────────────────────────────────────
+  # Restart with TLS + OAuth enabled
+  echo ""
+  echo "=== OAuth test phase ==="
+  echo "Stopping HTTPS server (pid ${SERVER_PID})..."
+  kill "${SERVER_PID}" 2>/dev/null || true
+  wait "${SERVER_PID}" 2>/dev/null || true
+  SERVER_PID=""
+
+  OAUTH_LOG="$(mktemp "${TMPDIR:-/tmp}/azurite-oauth.XXXXXX.log")"
+  echo "Starting Rust Azurite with TLS + OAuth basic..."
+
+  "${AZURITE_BIN}" \
+    --blobHost "${BLOB_HOST}" \
+    --blobPort "${BLOB_PORT}" \
+    --queueHost "${QUEUE_HOST}" \
+    --queuePort "${QUEUE_PORT}" \
+    --tableHost "${TABLE_HOST}" \
+    --tablePort "${TABLE_PORT}" \
+    --cert "tests/server.cert" \
+    --key "tests/server.key" \
+    --oauth basic \
+    --inMemoryPersistence \
+    >"${OAUTH_LOG}" 2>&1 &
+  SERVER_PID=$!
+
+  sleep 1
+  if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
+    echo "Rust Azurite (OAuth) failed to start." >&2
+    tail -n 20 "${OAUTH_LOG}" >&2 || true
+    exit 1
+  fi
+
+  oauth_pass=0
+  oauth_fail=0
+
+  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob" ]]; then
+    wait_for_endpoint "blob OAuth" "https://${BLOB_HOST}:${BLOB_PORT}/devstoreaccount1?comp=properties"
+    echo "Running blob OAuth tests..."
+    set +e
+    ${local_mocha} 'tests/blob/oauth.test.ts'
+    if [[ $? -eq 0 ]]; then ((oauth_pass++)); else ((oauth_fail++)); fi
+    set -e
+  fi
+
+  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "queue" ]]; then
+    wait_for_endpoint "queue OAuth" "https://${QUEUE_HOST}:${QUEUE_PORT}/devstoreaccount1?comp=properties"
+    echo "Running queue OAuth tests..."
+    set +e
+    ${local_mocha} 'tests/queue/oauth.test.ts'
+    if [[ $? -eq 0 ]]; then ((oauth_pass++)); else ((oauth_fail++)); fi
+    set -e
+  fi
+
+  echo "OAuth tests: ${oauth_pass} suites passed, ${oauth_fail} failed."
+  rm -f "${OAUTH_LOG}"
+
+  if [[ ${oauth_fail} -gt 0 ]]; then
+    test_exit_code=1
+  fi
 fi
 
 exit "${test_exit_code}"
