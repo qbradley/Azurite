@@ -128,7 +128,7 @@ for config in "${CONFIGS[@]}"; do
     --mode "${mode}" \
     --iterations "${ITERATIONS}" \
     --warmup "${WARMUP}" \
-    --json > "${json_file}" 2>&1 || {
+    --json > "${json_file}" || {
       echo "WARNING: Benchmark ${label} failed. Check ${json_file}" >&2
       # Write a placeholder so the summary script doesn't crash
       echo '{"label":"'"${label}"'","error":true}' > "${json_file}"
