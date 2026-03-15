@@ -177,6 +177,13 @@ async fn main_impl() -> Result<(), StorageError> {
 
 #[tokio::main]
 async fn main() {
+    // Install a panic hook that prints to stderr so panics in spawned tasks
+    // are never silently swallowed.
+    std::panic::set_hook(Box::new(|info| {
+        let bt = std::backtrace::Backtrace::force_capture();
+        eprintln!("PANIC: {info}\n{bt}");
+    }));
+
     if let Err(err) = main_impl().await {
         eprintln!("Exit due to unhandled error: {}", err);
         std::process::exit(1);

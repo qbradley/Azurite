@@ -195,10 +195,8 @@ impl TableBatchHandler {
         seen_rows: &mut HashSet<String>,
     ) -> Result<(), StorageError> {
         let method = request.request.getMethod();
-        let partition_key = table_context
-            .partitionKey()
-            .filter(|value| !value.is_empty());
-        let row_key = table_context.rowKey().filter(|value| !value.is_empty());
+        let partition_key = table_context.partitionKey();
+        let row_key = table_context.rowKey();
 
         if batch_partition_key.is_none() {
             *batch_partition_key = partition_key.clone();
