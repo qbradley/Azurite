@@ -125,7 +125,7 @@ wait_for_endpoint() {
       return 1
     fi
 
-    http_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 2 "${url}" || true)"
+    http_code="$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' --max-time 2 "${url}" || true)"
     if [[ "${http_code}" != "000" ]]; then
       echo "${service_name} responded with HTTP ${http_code}."
       return 0
@@ -149,22 +149,22 @@ run_service_tests() {
 
   case "${service}" in
     blob)
-      echo "Running TypeScript blob integration tests (excluding HTTPS/OAuth)..."
+      echo "Running TypeScript blob integration tests (excluding OAuth)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/blob/https.test.ts' \
         --ignore 'tests/blob/oauth.test.ts' \
         'tests/blob/*.test.ts' 'tests/blob/**/*.test.ts'
       ;;
     queue)
-      echo "Running TypeScript queue integration tests (excluding HTTPS/OAuth)..."
+      echo "Running TypeScript queue integration tests (excluding OAuth)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/queue/https.test.ts' \
         --ignore 'tests/queue/oauth.test.ts' \
         'tests/queue/*.test.ts' 'tests/queue/**/*.test.ts'
       ;;
     table)
-      echo "Running TypeScript table integration tests (excluding HTTPS/OAuth/CORS)..."
-      # Table CORS tests require HTTPS which is not yet supported
+      echo "Running TypeScript table integration tests (excluding OAuth/CORS)..."
+      # Table CORS tests require HTTPS and hardcode their own HTTPS server URL
       ${mocha_base} \
         --ignore 'tests/table/auth/tableCorsRequest.test.ts' \
         --ignore 'tests/table/auth/oauth.test.ts' \
@@ -299,6 +299,70 @@ if [[ ${test_exit_code} -ne 0 ]]; then
   echo "TypeScript integration tests failed with exit code ${test_exit_code}." >&2
 else
   echo "TypeScript integration tests completed successfully."
+fi
+
+# ── HTTPS test phase ─────────────────────────────────────────────────
+# Restart the server with TLS enabled and run HTTPS-specific tests.
+if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob" || "${AZURITE_TEST_SERVICES}" == "queue" ]]; then
+  echo ""
+  echo "=== HTTPS test phase ==="
+  echo "Stopping HTTP server (pid ${SERVER_PID})..."
+  kill "${SERVER_PID}" 2>/dev/null || true
+  wait "${SERVER_PID}" 2>/dev/null || true
+  SERVER_PID=""
+
+  HTTPS_LOG="$(mktemp "${TMPDIR:-/tmp}/azurite-https.XXXXXX.log")"
+  echo "Starting Rust Azurite with TLS (cert: tests/server.cert)..."
+
+  "${AZURITE_BIN}" \
+    --blobHost "${BLOB_HOST}" \
+    --blobPort "${BLOB_PORT}" \
+    --queueHost "${QUEUE_HOST}" \
+    --queuePort "${QUEUE_PORT}" \
+    --tableHost "${TABLE_HOST}" \
+    --tablePort "${TABLE_PORT}" \
+    --cert "tests/server.cert" \
+    --key "tests/server.key" \
+    --inMemoryPersistence \
+    >"${HTTPS_LOG}" 2>&1 &
+  SERVER_PID=$!
+
+  sleep 1
+  if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
+    echo "Rust Azurite (TLS) failed to start." >&2
+    tail -n 20 "${HTTPS_LOG}" >&2 || true
+    exit 1
+  fi
+
+  local_mocha="npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit"
+
+  https_pass=0
+  https_fail=0
+
+  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob" ]]; then
+    wait_for_endpoint "blob HTTPS" "https://${BLOB_HOST}:${BLOB_PORT}/devstoreaccount1?comp=properties"
+    echo "Running blob HTTPS tests..."
+    set +e
+    ${local_mocha} 'tests/blob/https.test.ts'
+    if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
+    set -e
+  fi
+
+  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "queue" ]]; then
+    wait_for_endpoint "queue HTTPS" "https://${QUEUE_HOST}:${QUEUE_PORT}/devstoreaccount1?comp=properties"
+    echo "Running queue HTTPS tests..."
+    set +e
+    ${local_mocha} 'tests/queue/https.test.ts'
+    if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
+    set -e
+  fi
+
+  echo "HTTPS tests: ${https_pass} suites passed, ${https_fail} failed."
+  rm -f "${HTTPS_LOG}"
+
+  if [[ ${https_fail} -gt 0 ]]; then
+    test_exit_code=1
+  fi
 fi
 
 exit "${test_exit_code}"
