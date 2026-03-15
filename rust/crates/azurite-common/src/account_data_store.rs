@@ -105,7 +105,7 @@ impl AccountDataStore {
         }
     }
 
-    fn refresh(&self) {
+    pub fn refresh(&self) {
         let env = std::env::var(AZURITE_ACCOUNTS_ENV).ok();
         let masked = env
             .as_deref()

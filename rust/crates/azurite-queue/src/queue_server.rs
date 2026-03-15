@@ -140,7 +140,11 @@ impl QueueServer {
         );
         let extentStore =
             build_extent_store(&configuration, extentMetadataStore.clone(), logger.clone());
-        let accountDataStore = Arc::new(AccountDataStore::new(logger));
+        let accountDataStore = {
+            let store = AccountDataStore::new(logger);
+            store.refresh();
+            Arc::new(store)
+        };
         let requestListenerFactory: Arc<dyn IRequestListenerFactory> =
             Arc::new(QueueRequestListenerFactory::new(
                 metadataStoreForFactory,

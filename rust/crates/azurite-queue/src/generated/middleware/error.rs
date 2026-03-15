@@ -1,8 +1,9 @@
+use crate::errors::StorageError;
 use crate::generated::artifacts::models::GeneratedValue;
 use crate::generated::context::Context;
 use crate::generated::errors::middleware_error::MiddlewareError;
 use crate::generated::i_request::IRequest;
-use crate::generated::i_response::IResponse;
+use crate::generated::i_response::{IResponse, ResponseHeaderValue};
 use crate::generated::utils::i_logger::ILogger;
 
 pub fn error_middleware<RQ: IRequest, RS: IResponse, L: ILogger + ?Sized>(
@@ -25,28 +26,32 @@ pub fn error_middleware<RQ: IRequest, RS: IResponse, L: ILogger + ?Sized>(
             "ErrorMiddleware: Received a MiddlewareError, fill error information to HTTP response",
             context.contextId().as_deref(),
         );
-        res.setStatusCode(err.statusCode);
-        if let Some(statusMessage) = &err.statusMessage {
-            res.setStatusMessage(statusMessage.clone());
-        }
-        if let Some(headers) = &err.headers {
-            for (key, value) in headers {
-                res.setHeader(key, Some(value.clone()));
-            }
-        }
-        if req.getMethod().to_string() != "HEAD" {
-            if let Some(contentType) = &err.contentType {
-                res.setContentType(Some(contentType.clone()));
-            }
-            if let Some(body) = &err.body {
-                match body {
-                    GeneratedValue::String(value) => res.getBodyStream().write_text(value),
-                    other => res
-                        .getBodyStream()
-                        .write_text(&serde_json::to_string(&other.to_json_value())?),
-                }
-            }
-        }
+        write_error_response(
+            req,
+            res,
+            err.statusCode,
+            err.statusMessage.as_deref(),
+            err.headers.as_ref(),
+            err.contentType.as_deref(),
+            err.body.as_ref(),
+        )?;
+        return Ok(());
+    }
+
+    if let Some(err) = err.downcast_ref::<StorageError>() {
+        logger.error(
+            "ErrorMiddleware: Received a StorageError, fill error information to HTTP response",
+            context.contextId().as_deref(),
+        );
+        write_error_response(
+            req,
+            res,
+            err.statusCode,
+            err.statusMessage.as_deref(),
+            err.headers.as_ref(),
+            err.contentType.as_deref(),
+            err.body.as_ref(),
+        )?;
         return Ok(());
     }
 
@@ -55,5 +60,39 @@ pub fn error_middleware<RQ: IRequest, RS: IResponse, L: ILogger + ?Sized>(
         context.contextId().as_deref(),
     );
     res.setStatusCode(500);
+    Ok(())
+}
+
+fn write_error_response<RQ: IRequest, RS: IResponse>(
+    req: &RQ,
+    res: &mut RS,
+    status_code: u16,
+    status_message: Option<&str>,
+    headers: Option<&std::collections::BTreeMap<String, ResponseHeaderValue>>,
+    content_type: Option<&str>,
+    body: Option<&GeneratedValue>,
+) -> crate::generated::GeneratedResult<()> {
+    res.setStatusCode(status_code);
+    if let Some(status_message) = status_message {
+        res.setStatusMessage(status_message.to_owned());
+    }
+    if let Some(headers) = headers {
+        for (key, value) in headers {
+            res.setHeader(key, Some(value.clone()));
+        }
+    }
+    if req.getMethod().to_string() != "HEAD" {
+        if let Some(content_type) = content_type {
+            res.setContentType(Some(content_type.to_owned()));
+        }
+        if let Some(body) = body {
+            match body {
+                GeneratedValue::String(value) => res.getBodyStream().write_text(value),
+                other => res
+                    .getBodyStream()
+                    .write_text(&serde_json::to_string(&other.to_json_value())?),
+            }
+        }
+    }
     Ok(())
 }
