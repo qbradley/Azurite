@@ -15,9 +15,7 @@ use crate::generated::utils::xml::parseXML;
 use crate::persistence::ServicePropertiesModel;
 use crate::utils::constants::TABLE_API_VERSION;
 
-use super::base_handler::{
-    get_string, json_value, normalize_cors_rule, rename_key, string_value, BaseHandler,
-};
+use super::base_handler::{get_string, json_value, rename_key, string_value, BaseHandler};
 
 #[derive(Clone)]
 pub struct ServiceHandler {
@@ -31,32 +29,32 @@ impl ServiceHandler {
 
     fn default_service_properties() -> StorageServiceProperties {
         let retention_policy =
-            GeneratedObject::from([(String::from("enabled"), GeneratedValue::Bool(false))]);
+            GeneratedObject::from([(String::from("Enabled"), GeneratedValue::Bool(false))]);
         let hour_metrics = GeneratedObject::from([
-            (String::from("enabled"), GeneratedValue::Bool(false)),
+            (String::from("Enabled"), GeneratedValue::Bool(false)),
             (
-                String::from("retentionPolicy"),
+                String::from("RetentionPolicy"),
                 GeneratedValue::Object(retention_policy.clone()),
             ),
-            (String::from("version"), string_value("1.0")),
+            (String::from("Version"), string_value("1.0")),
         ]);
         let logging = GeneratedObject::from([
-            (String::from("deleteProperty"), GeneratedValue::Bool(true)),
-            (String::from("read"), GeneratedValue::Bool(true)),
+            (String::from("Delete"), GeneratedValue::Bool(true)),
+            (String::from("Read"), GeneratedValue::Bool(true)),
             (
-                String::from("retentionPolicy"),
+                String::from("RetentionPolicy"),
                 GeneratedValue::Object(retention_policy.clone()),
             ),
-            (String::from("version"), string_value("1.0")),
-            (String::from("write"), GeneratedValue::Bool(true)),
+            (String::from("Version"), string_value("1.0")),
+            (String::from("Write"), GeneratedValue::Bool(true)),
         ]);
         let minute_metrics = GeneratedObject::from([
-            (String::from("enabled"), GeneratedValue::Bool(false)),
+            (String::from("Enabled"), GeneratedValue::Bool(false)),
             (
-                String::from("retentionPolicy"),
+                String::from("RetentionPolicy"),
                 GeneratedValue::Object(retention_policy),
             ),
-            (String::from("version"), string_value("1.0")),
+            (String::from("Version"), string_value("1.0")),
         ]);
 
         GeneratedObject::from([
@@ -102,10 +100,10 @@ impl IServiceHandler for ServiceHandler {
         if let Some(GeneratedValue::Array(cors_rules)) = storageServiceProperties.get_mut("cors") {
             for rule in cors_rules {
                 if let GeneratedValue::Object(rule) = rule {
-                    normalize_cors_rule(rule);
-                    rule.entry(String::from("allowedHeaders"))
+                    // Keep PascalCase keys for XML output
+                    rule.entry(String::from("AllowedHeaders"))
                         .or_insert_with(|| string_value(""));
-                    rule.entry(String::from("exposedHeaders"))
+                    rule.entry(String::from("ExposedHeaders"))
                         .or_insert_with(|| string_value(""));
                 }
             }
@@ -195,21 +193,23 @@ impl IServiceHandler for ServiceHandler {
 }
 
 fn normalize_service_properties(properties: &mut GeneratedObject) {
+    // Only rename top-level keys to camelCase — these match the response spec's
+    // modelProperties which the XML serializer uses to map back to PascalCase.
+    // Inner keys stay PascalCase since the spec doesn't have nested modelProperties.
     rename_key(properties, "Logging", "logging");
     rename_key(properties, "HourMetrics", "hourMetrics");
     rename_key(properties, "MinuteMetrics", "minuteMetrics");
     rename_key(properties, "Cors", "cors");
     rename_key(properties, "DefaultServiceVersion", "defaultServiceVersion");
 
+    // Coerce types in nested objects (keep PascalCase keys)
     if let Some(GeneratedValue::Object(logging)) = properties.get_mut("logging") {
-        rename_key(logging, "Version", "version");
-        rename_key(logging, "Delete", "deleteProperty");
-        rename_key(logging, "Read", "read");
-        rename_key(logging, "Write", "write");
-        rename_key(logging, "RetentionPolicy", "retentionPolicy");
-        if let Some(GeneratedValue::Object(retention)) = logging.get_mut("retentionPolicy") {
-            rename_key(retention, "Enabled", "enabled");
-            rename_key(retention, "Days", "days");
+        coerce_bool(logging, "Delete");
+        coerce_bool(logging, "Read");
+        coerce_bool(logging, "Write");
+        if let Some(GeneratedValue::Object(retention)) = logging.get_mut("RetentionPolicy") {
+            coerce_bool(retention, "Enabled");
+            coerce_int(retention, "Days");
         }
     }
     if let Some(GeneratedValue::Object(metrics)) = properties.get_mut("hourMetrics") {
@@ -221,7 +221,7 @@ fn normalize_service_properties(properties: &mut GeneratedObject) {
     if let Some(GeneratedValue::Array(cors_rules)) = properties.get_mut("cors") {
         for rule in cors_rules {
             if let GeneratedValue::Object(rule) = rule {
-                normalize_cors_rule(rule);
+                coerce_int(rule, "MaxAgeInSeconds");
             }
         }
     }
@@ -235,12 +235,26 @@ fn normalize_service_properties(properties: &mut GeneratedObject) {
 }
 
 fn normalize_metrics(metrics: &mut GeneratedObject) {
-    rename_key(metrics, "Version", "version");
-    rename_key(metrics, "Enabled", "enabled");
-    rename_key(metrics, "IncludeAPIs", "includeAPIs");
-    rename_key(metrics, "RetentionPolicy", "retentionPolicy");
-    if let Some(GeneratedValue::Object(retention)) = metrics.get_mut("retentionPolicy") {
-        rename_key(retention, "Enabled", "enabled");
-        rename_key(retention, "Days", "days");
+    // Keep PascalCase keys — they'll pass through XML serializer correctly
+    coerce_bool(metrics, "Enabled");
+    coerce_bool(metrics, "IncludeAPIs");
+    if let Some(GeneratedValue::Object(retention)) = metrics.get_mut("RetentionPolicy") {
+        coerce_bool(retention, "Enabled");
+        coerce_int(retention, "Days");
+    }
+}
+
+fn coerce_bool(obj: &mut GeneratedObject, key: &str) {
+    if let Some(GeneratedValue::String(s)) = obj.get(key) {
+        let val = s.eq_ignore_ascii_case("true");
+        obj.insert(key.to_string(), GeneratedValue::Bool(val));
+    }
+}
+
+fn coerce_int(obj: &mut GeneratedObject, key: &str) {
+    if let Some(GeneratedValue::String(s)) = obj.get(key) {
+        if let Ok(n) = s.parse::<f64>() {
+            obj.insert(key.to_string(), GeneratedValue::Number(n));
+        }
     }
 }

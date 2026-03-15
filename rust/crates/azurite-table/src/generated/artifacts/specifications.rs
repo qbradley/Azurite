@@ -45,8 +45,37 @@ pub struct OperationSpec {
 }
 
 static SPECIFICATIONS: LazyLock<Vec<OperationSpec>> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("metadata/specifications.generated.json"))
-        .expect("generated table specification metadata must deserialize")
+    let mut specs: Vec<OperationSpec> =
+        serde_json::from_str(include_str!("metadata/specifications.generated.json"))
+            .expect("generated table specification metadata must deserialize");
+
+    // Runtime overrides matching TS TableRequestListenerFactory.ts:
+    // Many table entity operations use JSON, not XML, despite spec saying isXML=true
+    for spec in &mut specs {
+        let op = spec.operation.as_str();
+        match op {
+            "Table_Create"
+            | "Table_Query"
+            | "Table_Delete"
+            | "Table_QueryEntities"
+            | "Table_QueryEntitiesWithPartitionAndRowKey"
+            | "Table_UpdateEntity"
+            | "Table_MergeEntity"
+            | "Table_DeleteEntity"
+            | "Table_InsertEntity" => {
+                spec.isXML = false;
+            }
+            // MERGE verb not supported by autorest generator, so the spec uses POST
+            // but Azure storage SDK sends MERGE HTTP method
+            "Table_MergeEntityWithMerge" => {
+                spec.httpMethod = String::from("MERGE");
+                spec.isXML = false;
+            }
+            _ => {}
+        }
+    }
+
+    specs
 });
 
 pub fn specifications() -> &'static [OperationSpec] {
