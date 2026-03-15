@@ -178,7 +178,11 @@ impl BlobServer {
             }
         }
 
-        let accountDataStore = Arc::new(AccountDataStore::new(logger));
+        let accountDataStore = {
+            let mut store = AccountDataStore::new(logger);
+            azurite_common::i_data_store::IDataStore::init(&mut store).await?;
+            Arc::new(store)
+        };
         let requestListenerFactory: Arc<dyn IRequestListenerFactory> =
             Arc::new(BlobRequestListenerFactory::new(
                 metadataStore,

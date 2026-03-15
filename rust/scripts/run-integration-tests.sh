@@ -234,6 +234,13 @@ if [[ -z "${AZURITE_BIN}" ]]; then
   exit 1
 fi
 
+# Configure multi-account / multi-key support required by SAS and
+# cross-account copy tests.  The sas.test.ts file sets this env var for the TS
+# server; we must match it for the Rust server.
+#   account1 = devstoreaccount1 (primary key + secondary key "testing_key")
+#   account2 = devstoreaccount2 (separate key for cross-account tests)
+export AZURITE_ACCOUNTS="devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==:testing_key;devstoreaccount2:MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg=="
+
 SERVER_LOG="$(mktemp "${TMPDIR:-/tmp}/azurite-integration.XXXXXX.log")"
 echo "Starting Rust Azurite from ${AZURITE_BIN}..."
 echo "Server log: ${SERVER_LOG}"

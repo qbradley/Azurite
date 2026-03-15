@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use base64::Engine as _;
 use tokio::{
     sync::oneshot,
     task::JoinHandle,
@@ -23,6 +23,40 @@ use crate::{
         EMULATOR_ACCOUNT_NAME,
     },
 };
+
+/// Decode a base64 string leniently, matching Node.js `Buffer.from(str, "base64")`.
+/// Node.js accepts both standard base64 (`+`, `/`) and URL-safe base64 (`-`, `_`)
+/// simultaneously, treating `-` as `+` (value 62) and `_` as `/` (value 63).
+/// It also silently ignores any remaining characters outside the base64 alphabet,
+/// tolerates missing padding, and allows non-zero trailing bits.
+fn lenient_base64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
+    use base64::alphabet::STANDARD as STANDARD_ALPHA;
+    use base64::engine::{GeneralPurpose, GeneralPurposeConfig};
+
+    let mut cleaned: String = input
+        .chars()
+        .filter_map(|c| match c {
+            '-' => Some('+'),
+            '_' => Some('/'),
+            c if c.is_ascii_alphanumeric() || c == '+' || c == '/' => Some(c),
+            '=' => Some('='),
+            _ => None,
+        })
+        .collect();
+
+    // Strip any trailing '=' and re-add the correct amount of padding.
+    let trimmed = cleaned.trim_end_matches('=');
+    let pad_needed = (4 - trimmed.len() % 4) % 4;
+    cleaned = format!("{}{}", trimmed, "=".repeat(pad_needed));
+
+    // Node.js tolerates non-zero trailing bits in the last symbol, so we must
+    // use `with_decode_allow_trailing_bits(true)`.
+    let lenient_engine = GeneralPurpose::new(
+        &STANDARD_ALPHA,
+        GeneralPurposeConfig::new().with_decode_allow_trailing_bits(true),
+    );
+    lenient_engine.decode(&cleaned)
+}
 
 #[allow(dead_code)]
 enum Status {
@@ -123,13 +157,11 @@ impl AccountDataStore {
                     )));
                 }
                 let account = parts[0];
-                let key1 = STANDARD
-                    .decode(parts[1])
+                let key1 = lenient_base64_decode(parts[1])
                     .map_err(|error| StorageError::new(error.to_string()))?;
                 let key2 = if parts.len() > 2 {
                     Some(
-                        STANDARD
-                            .decode(parts[2])
+                        lenient_base64_decode(parts[2])
                             .map_err(|error| StorageError::new(error.to_string()))?,
                     )
                 } else {

@@ -170,12 +170,23 @@ fn setup_sub_request_context(
 /// Convert a BlobBatchSubRequest into a GeneratedHttpRequest for use with
 /// IAuthenticator::validate and context storage.
 fn to_generated_request(req: &BlobBatchSubRequest) -> GeneratedHttpRequest {
+    // Parse query parameters from the URL so SAS authenticators can read them
+    // via getQuery() on the GeneratedHttpRequest.
+    let query: std::collections::BTreeMap<String, String> = url::Url::parse(&req.getUrl())
+        .map(|u| {
+            u.query_pairs()
+                .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                .collect()
+        })
+        .unwrap_or_default();
+
     GeneratedHttpRequest {
         method: req.getMethod(),
         url: req.getUrl(),
         endpoint: req.getEndpoint(),
         path: req.getPath(),
         headers: req.getHeaders(),
+        query,
         ..GeneratedHttpRequest::default()
     }
 }
@@ -607,10 +618,10 @@ impl<H: IHandlers + 'static> BlobBatchHandler<H> {
         req: &GeneratedHttpRequest,
         context: &Context,
     ) -> Result<bool, StorageError> {
-        for authenticator in &self.authenticators {
+        for authenticator in self.authenticators.iter() {
             match authenticator.validate(req, context).await {
-                Ok(Some(pass)) => return Ok(pass),
-                Ok(None) => continue,
+                Ok(Some(true)) => return Ok(true),
+                Ok(Some(false)) | Ok(None) => continue,
                 Err(e) => return Err(e),
             }
         }

@@ -1980,14 +1980,26 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
     async fn getBlobType(
         &self,
-        _account: &str,
-        _container: &str,
-        _blob: &str,
-        _snapshot: Option<&str>,
+        account: &str,
+        container: &str,
+        blob: &str,
+        snapshot: Option<&str>,
     ) -> Result<Option<BlobTypeResult>, StorageError> {
-        // Simplified implementation - full TS logic is more complex
-        // TODO: Implement full getBlobType logic from TS lines 1826-1858
-        Ok(None)
+        let snapshot = snapshot.unwrap_or("");
+        let key = (
+            account.to_string(),
+            container.to_string(),
+            blob.to_string(),
+            snapshot.to_string(),
+        );
+        let blobs = self.blobs_collection.read().unwrap();
+        match blobs.get(&key) {
+            Some(doc) => Ok(Some(BlobTypeResult {
+                blobType: get_string(&doc.properties, "blobType"),
+                isCommitted: doc.isCommitted.unwrap_or(true),
+            })),
+            None => Ok(None),
+        }
     }
 
     async fn startCopyFromURL(

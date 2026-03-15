@@ -237,9 +237,9 @@ impl IAuthenticator for AccountSASAuthenticator {
             if let (Some(containerName), Some(blobName)) =
                 (containerName.as_deref(), blobName.as_deref())
             {
-                if self.blobExist(&account, containerName, blobName).await?
-                    && !values.permissions.toString().contains('w')
-                {
+                let exists = self.blobExist(&account, containerName, blobName).await?;
+                let has_write = values.permissions.toString().contains('w');
+                if exists && !has_write {
                     return Err(StorageErrorFactory::getAuthorizationPermissionMismatch(
                         blobContext.contextId().as_deref().unwrap_or(""),
                     ));
