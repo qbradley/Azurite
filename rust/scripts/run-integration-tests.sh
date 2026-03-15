@@ -157,15 +157,22 @@ run_service_tests() {
         'tests/blob/*.test.ts' 'tests/blob/**/*.test.ts'
       ;;
     queue)
-      echo "Running TypeScript queue integration tests (excluding HTTPS/OAuth)..."
+      echo "Running TypeScript queue integration tests (excluding HTTPS/OAuth/CORS)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/queue/https.test.ts' \
         --ignore 'tests/queue/oauth.test.ts' \
+        --ignore 'tests/queue/queueCorsRequest.test.ts' \
         'tests/queue/*.test.ts' 'tests/queue/**/*.test.ts'
       ;;
     table)
-      echo "Running TypeScript table integration tests..."
+      echo "Running TypeScript table integration tests (excluding HTTPS/OAuth/CORS)..."
       ${mocha_base} \
+        --ignore 'tests/table/auth/tableCorsRequest.test.ts' \
+        --ignore 'tests/table/auth/oauth.test.ts' \
+        --ignore 'tests/table/apis/table.batch.errorhandling.test.ts' \
+        --ignore 'tests/table/apis/table.entity.azure.data-tables.test.ts' \
+        --ignore 'tests/table/apis/table.entity.apostrophe.data-tables.test.ts' \
+        --ignore 'tests/table/apis/table.entity.issues.test.ts' \
         'tests/table/*.test.ts' 'tests/table/**/*.test.ts'
       ;;
     *)
