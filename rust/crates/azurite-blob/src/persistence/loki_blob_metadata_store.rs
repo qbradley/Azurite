@@ -1764,7 +1764,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         container: &str,
         blob: &str,
         leaseId: &str,
-        _options: Option<&BlobReleaseLeaseOptionalParams>,
+        options: Option<&BlobReleaseLeaseOptionalParams>,
     ) -> Result<ReleaseBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
@@ -1772,6 +1772,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .ok_or_else(|| {
                 StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
             })?;
+
+        let modified_access_conditions =
+            options.and_then(|o| get_object(o, "modifiedAccessConditions"));
+        validate_write_conditions(
+            context,
+            modified_access_conditions.as_ref(),
+            Some(&blob_doc),
+        )?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -1801,7 +1809,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         container: &str,
         blob: &str,
         leaseId: &str,
-        _options: Option<&BlobRenewLeaseOptionalParams>,
+        options: Option<&BlobRenewLeaseOptionalParams>,
     ) -> Result<RenewBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
@@ -1809,6 +1817,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .ok_or_else(|| {
                 StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
             })?;
+
+        let modified_access_conditions =
+            options.and_then(|o| get_object(o, "modifiedAccessConditions"));
+        validate_write_conditions(
+            context,
+            modified_access_conditions.as_ref(),
+            Some(&blob_doc),
+        )?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -1843,7 +1859,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         blob: &str,
         leaseId: &str,
         proposed_leaseId: &str,
-        _options: Option<&BlobChangeLeaseOptionalParams>,
+        options: Option<&BlobChangeLeaseOptionalParams>,
     ) -> Result<ChangeBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
@@ -1851,6 +1867,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .ok_or_else(|| {
                 StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
             })?;
+
+        let modified_access_conditions =
+            options.and_then(|o| get_object(o, "modifiedAccessConditions"));
+        validate_write_conditions(
+            context,
+            modified_access_conditions.as_ref(),
+            Some(&blob_doc),
+        )?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -1884,7 +1908,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         container: &str,
         blob: &str,
         break_period: Option<i64>,
-        _options: Option<&BlobBreakLeaseOptionalParams>,
+        options: Option<&BlobBreakLeaseOptionalParams>,
     ) -> Result<BreakBlobLeaseResponse, StorageError> {
         let mut blob_doc = self
             .get_blob(account, container, blob, "")
@@ -1892,6 +1916,14 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             .ok_or_else(|| {
                 StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
             })?;
+
+        let modified_access_conditions =
+            options.and_then(|o| get_object(o, "modifiedAccessConditions"));
+        validate_write_conditions(
+            context,
+            modified_access_conditions.as_ref(),
+            Some(&blob_doc),
+        )?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
