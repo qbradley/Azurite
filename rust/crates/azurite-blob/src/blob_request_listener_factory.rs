@@ -148,7 +148,6 @@ impl RequestListenerState {
                 );
             }
         };
-
         let mut generated_request = build_generated_request(&parts, &body_bytes);
         let mut generated_response = GeneratedHttpResponse::default();
         let holder = Context::new_holder();

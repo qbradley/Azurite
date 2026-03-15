@@ -8,9 +8,7 @@ use chrono::Utc;
 use azurite_common::persistence::i_extent_store::{
     ExtentDataInput, IExtentChunk as CommonExtentChunk,
 };
-use azurite_common::utils::utils::{
-    convertRawHeadersToMetadata, getMD5FromStream, getMD5FromString, newEtag,
-};
+use azurite_common::utils::utils::{convertRawHeadersToMetadata, getMD5FromString, newEtag};
 
 use crate::context::blob_storage_context::BlobStorageContext;
 use crate::errors::{NotImplementedError, StorageError, StorageErrorFactory};
@@ -96,6 +94,7 @@ fn to_blob_extent(c: CommonExtentChunk) -> IExtentChunk {
 }
 
 /// Convert azurite-blob IExtentChunk back to the common form needed by readExtent.
+#[allow(dead_code)]
 fn to_common_extent(b: &IExtentChunk) -> CommonExtentChunk {
     CommonExtentChunk {
         id: b.id.clone(),
@@ -260,6 +259,27 @@ impl IBlockBlobHandler for BlockBlobHandler {
 
         let raw_data = body.read_to_vec();
         let content_length_u64 = contentLength as u64;
+
+        // Compute MD5 directly from the raw upload data before writing to
+        // extent store.  This avoids a second lock acquisition and a full
+        // read-back from the store that was the main blob-upload bottleneck.
+        let calculated_md5 = {
+            use md5::{Digest, Md5};
+            let mut hash = Md5::new();
+            hash.update(&raw_data);
+            hash.finalize().to_vec()
+        };
+
+        if let Some(expected) = expected_md5 {
+            let calculated_b64 = STANDARD.encode(&calculated_md5);
+            if expected != calculated_b64 {
+                return Err(Box::new(StorageErrorFactory::getInvalidOperation(
+                    context_id.as_deref(),
+                    Some("Provided contentMD5 doesn't match."),
+                )));
+            }
+        }
+
         let common_chunk = {
             let mut store = self.base.extentStore.lock().await;
             store
@@ -280,26 +300,6 @@ impl IBlockBlobHandler for BlockBlobHandler {
             )));
         }
         let blob_extent = to_blob_extent(common_chunk);
-
-        // Calculate MD5 from stored extent
-        let calculated_md5: Vec<u8> = {
-            let store = self.base.extentStore.lock().await;
-            let stream = store
-                .readExtent(Some(&to_common_extent(&blob_extent)), context_id.as_deref())
-                .await
-                .map_err(|e| map_common_err(e, context_id.as_deref()))?;
-            getMD5FromStream(stream).await?
-        };
-
-        if let Some(expected) = expected_md5 {
-            let calculated_b64 = STANDARD.encode(&calculated_md5);
-            if expected != calculated_b64 {
-                return Err(Box::new(StorageErrorFactory::getInvalidOperation(
-                    context_id.as_deref(),
-                    Some("Provided contentMD5 doesn't match."),
-                )));
-            }
-        }
 
         let raw_headers = request.getRawHeaders();
         let metadata_map = convertRawHeadersToMetadata(&raw_headers, context_id_str)
@@ -514,11 +514,27 @@ impl IBlockBlobHandler for BlockBlobHandler {
             .await?;
 
         let content_length_u64 = contentLength as u64;
+        let raw_data = body.read_to_vec();
+
+        // Validate MD5 before writing to extent store (avoids read-back)
+        if let Some(expected) = expected_md5 {
+            use md5::{Digest, Md5};
+            let mut hash = Md5::new();
+            hash.update(&raw_data);
+            let calculated_b64 = STANDARD.encode(hash.finalize());
+            if expected != calculated_b64 {
+                return Err(Box::new(StorageErrorFactory::getInvalidOperation(
+                    context_id.as_deref(),
+                    Some("Provided contentMD5 doesn't match."),
+                )));
+            }
+        }
+
         let common_chunk = {
             let mut store = self.base.extentStore.lock().await;
             store
                 .appendExtent(
-                    ExtentDataInput::Buffer(Bytes::from(body.read_to_vec())),
+                    ExtentDataInput::Buffer(Bytes::from(raw_data)),
                     Some(context_id_str),
                 )
                 .await
@@ -534,25 +550,6 @@ impl IBlockBlobHandler for BlockBlobHandler {
             )));
         }
         let blob_extent = to_blob_extent(common_chunk);
-
-        // Validate MD5 if provided
-        if let Some(expected) = expected_md5 {
-            let calculated_md5: Vec<u8> = {
-                let store = self.base.extentStore.lock().await;
-                let stream = store
-                    .readExtent(Some(&to_common_extent(&blob_extent)), context_id.as_deref())
-                    .await
-                    .map_err(|e| map_common_err(e, context_id.as_deref()))?;
-                getMD5FromStream(stream).await?
-            };
-            let calculated_b64 = STANDARD.encode(&calculated_md5);
-            if expected != calculated_b64 {
-                return Err(Box::new(StorageErrorFactory::getInvalidOperation(
-                    context_id.as_deref(),
-                    Some("Provided contentMD5 doesn't match."),
-                )));
-            }
-        }
 
         let block = BlockModel {
             accountName: account_name,
