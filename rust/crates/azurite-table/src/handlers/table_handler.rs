@@ -247,11 +247,12 @@ impl TableHandler {
         let injections = injections
             .into_iter()
             .map(|(key, value)| {
-                (
-                    key,
-                    serde_json::to_string(&value.to_json_value())
+                let serialized = match &value {
+                    GeneratedValue::String(s) => s.clone(),
+                    other => serde_json::to_string(&other.to_json_value())
                         .unwrap_or_else(|_| String::from("null")),
-                )
+                };
+                (key, serialized)
             })
             .collect();
         Ok(normalized.to_response_string(annotation_level, injections, includes))

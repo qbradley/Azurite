@@ -27,7 +27,9 @@ use crate::utils::constants::{
 };
 use crate::utils::utils::{getPopReceipt, getUTF8ByteSize, readStreamToString};
 
-use super::base_handler::{extract_message_text, get_i32, rfc1123_value, string_value, BaseHandler};
+use super::base_handler::{
+    extract_message_text, get_i32, rfc1123_value, string_value, BaseHandler,
+};
 
 #[derive(Clone)]
 pub struct MessagesHandler {

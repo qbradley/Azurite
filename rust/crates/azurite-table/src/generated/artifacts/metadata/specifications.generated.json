@@ -1,0 +1,3143 @@
+[
+  {
+    "operation": "Table_Query",
+    "httpMethod": "GET",
+    "path": "Tables",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "nextTableName"
+        ],
+        "mapper": {
+          "serializedName": "NextTableName",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "top"
+        ],
+        "mapper": {
+          "serializedName": "$top",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "select"
+        ],
+        "mapper": {
+          "serializedName": "$select",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "filter"
+        ],
+        "mapper": {
+          "serializedName": "$filter",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "bodyMapper": {
+          "serializedName": "TableQueryResponse",
+          "type": {
+            "name": "Composite",
+            "className": "TableQueryResponse",
+            "modelProperties": {
+              "odatametadata": {
+                "xmlName": "odata.metadata",
+                "serializedName": "odata\\.metadata",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "value": {
+                "xmlName": "value",
+                "xmlElementName": "TableResponseProperties",
+                "serializedName": "value",
+                "type": {
+                  "name": "Sequence",
+                  "element": {
+                    "type": {
+                      "name": "Composite",
+                      "className": "TableResponseProperties"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-query-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableQueryHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "xMsContinuationNextTableName": {
+                "serializedName": "x-ms-continuation-nexttablename",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {}
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_Create",
+    "httpMethod": "POST",
+    "path": "Tables",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "responsePreference"
+        ],
+        "mapper": {
+          "serializedName": "Prefer",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": "tableProperties",
+      "mapper": {
+        "serializedName": "TableProperties",
+        "type": {
+          "name": "Composite",
+          "className": "TableProperties",
+          "modelProperties": {
+            "tableName": {
+              "xmlName": "TableName",
+              "serializedName": "TableName",
+              "type": {
+                "name": "String"
+              }
+            }
+          }
+        },
+        "required": true
+      }
+    },
+    "contentType": "application/json;odata=nometadata; charset=utf-8",
+    "responses": {
+      "201": {
+        "bodyMapper": {
+          "serializedName": "TableResponse",
+          "type": {
+            "name": "Composite",
+            "className": "TableResponse",
+            "modelProperties": {
+              "odatametadata": {
+                "xmlName": "odata.metadata",
+                "serializedName": "odata\\.metadata",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "tableName": {
+                "xmlName": "TableName",
+                "serializedName": "TableName",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "odatatype": {
+                "xmlName": "odata.type",
+                "serializedName": "odata\\.type",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "odataid": {
+                "xmlName": "odata.id",
+                "serializedName": "odata\\.id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "odataeditLink": {
+                "xmlName": "odata.editLink",
+                "serializedName": "odata\\.editLink",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-create-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableCreateHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "preferenceApplied": {
+                "serializedName": "preference-applied",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-create-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableCreateHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "preferenceApplied": {
+                "serializedName": "preference-applied",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_Batch",
+    "httpMethod": "POST",
+    "path": "$batch",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "multipartContentType",
+        "mapper": {
+          "required": true,
+          "serializedName": "Content-Type",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "contentLength",
+        "mapper": {
+          "required": true,
+          "serializedName": "Content-Length",
+          "type": {
+            "name": "Number"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": "body",
+      "mapper": {
+        "required": true,
+        "serializedName": "body",
+        "type": {
+          "name": "Stream"
+        }
+      }
+    },
+    "contentType": "application/json;odata=nometadata; charset=utf-8",
+    "responses": {
+      "202": {
+        "bodyMapper": {
+          "serializedName": "Stream",
+          "type": {
+            "name": "Stream"
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-batch-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableBatchHeaders",
+            "modelProperties": {
+              "contentType": {
+                "serializedName": "content-type",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_Delete",
+    "httpMethod": "DELETE",
+    "path": "Tables('{table}')",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-delete-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableDeleteHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_QueryEntities",
+    "httpMethod": "GET",
+    "path": "{table}()",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "nextPartitionKey"
+        ],
+        "mapper": {
+          "serializedName": "NextPartitionKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "nextRowKey"
+        ],
+        "mapper": {
+          "serializedName": "NextRowKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "top"
+        ],
+        "mapper": {
+          "serializedName": "$top",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "select"
+        ],
+        "mapper": {
+          "serializedName": "$select",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "filter"
+        ],
+        "mapper": {
+          "serializedName": "$filter",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "bodyMapper": {
+          "serializedName": "Stream",
+          "type": {
+            "name": "Stream"
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-queryentities-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableQueryEntitiesHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "xMsContinuationNextPartitionKey": {
+                "serializedName": "x-ms-continuation-nextpartitionkey",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "xMsContinuationNextRowKey": {
+                "serializedName": "x-ms-continuation-nextrowkey",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_QueryEntitiesWithPartitionAndRowKey",
+    "httpMethod": "GET",
+    "path": "{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "partitionKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "partitionKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "rowKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "rowKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "select"
+        ],
+        "mapper": {
+          "serializedName": "$select",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "filter"
+        ],
+        "mapper": {
+          "serializedName": "$filter",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "bodyMapper": {
+          "serializedName": "Stream",
+          "type": {
+            "name": "Stream"
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-queryentitieswithpartitionandrowkey-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableQueryEntitiesWithPartitionAndRowKeyHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "eTag": {
+                "serializedName": "etag",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "xMsContinuationNextPartitionKey": {
+                "serializedName": "x-ms-continuation-nextpartitionkey",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "xMsContinuationNextRowKey": {
+                "serializedName": "x-ms-continuation-nextrowkey",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_UpdateEntity",
+    "httpMethod": "PUT",
+    "path": "{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "partitionKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "partitionKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "rowKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "rowKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "ifMatch"
+        ],
+        "mapper": {
+          "serializedName": "If-Match",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": [
+        "options",
+        "tableEntityProperties"
+      ],
+      "mapper": {
+        "serializedName": "tableEntityProperties",
+        "type": {
+          "name": "Dictionary",
+          "value": {
+            "type": {
+              "name": "Object"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-updateentity-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableUpdateEntityHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "eTag": {
+                "serializedName": "etag",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_MergeEntity",
+    "httpMethod": "PATCH",
+    "path": "{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "partitionKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "partitionKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "rowKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "rowKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "ifMatch"
+        ],
+        "mapper": {
+          "serializedName": "If-Match",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": [
+        "options",
+        "tableEntityProperties"
+      ],
+      "mapper": {
+        "serializedName": "tableEntityProperties",
+        "type": {
+          "name": "Dictionary",
+          "value": {
+            "type": {
+              "name": "Object"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-mergeentity-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableMergeEntityHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "eTag": {
+                "serializedName": "etag",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_DeleteEntity",
+    "httpMethod": "DELETE",
+    "path": "{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "partitionKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "partitionKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "rowKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "rowKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "ifMatch",
+        "mapper": {
+          "required": true,
+          "serializedName": "If-Match",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-deleteentity-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableDeleteEntityHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_MergeEntityWithMerge",
+    "httpMethod": "POST",
+    "path": "{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "partitionKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "partitionKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "rowKey",
+        "mapper": {
+          "required": true,
+          "serializedName": "rowKey",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "ifMatch"
+        ],
+        "mapper": {
+          "serializedName": "If-Match",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": [
+        "options",
+        "tableEntityProperties"
+      ],
+      "mapper": {
+        "serializedName": "tableEntityProperties",
+        "type": {
+          "name": "Dictionary",
+          "value": {
+            "type": {
+              "name": "Object"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-mergeentitywithmerge-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableMergeEntityWithMergeHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "eTag": {
+                "serializedName": "etag",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_InsertEntity",
+    "httpMethod": "POST",
+    "path": "{table}",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "queryOptions",
+          "format"
+        ],
+        "mapper": {
+          "serializedName": "$format",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "dataServiceVersion"
+        ],
+        "mapper": {
+          "serializedName": "DataServiceVersion",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "responsePreference"
+        ],
+        "mapper": {
+          "serializedName": "Prefer",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": [
+        "options",
+        "tableEntityProperties"
+      ],
+      "mapper": {
+        "serializedName": "tableEntityProperties",
+        "type": {
+          "name": "Dictionary",
+          "value": {
+            "type": {
+              "name": "Object"
+            }
+          }
+        }
+      }
+    },
+    "contentType": "application/json;odata=nometadata; charset=utf-8",
+    "responses": {
+      "201": {
+        "bodyMapper": {
+          "serializedName": "Stream",
+          "type": {
+            "name": "Stream"
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-insertentity-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableInsertEntityHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "eTag": {
+                "serializedName": "etag",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "preferenceApplied": {
+                "serializedName": "preference-applied",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "contentType": {
+                "serializedName": "content-type",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-insertentity-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableInsertEntityHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "eTag": {
+                "serializedName": "etag",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "preferenceApplied": {
+                "serializedName": "preference-applied",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "contentType": {
+                "serializedName": "content-type",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_GetAccessPolicy",
+    "httpMethod": "GET",
+    "path": "{table}",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": "comp",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "comp",
+          "defaultValue": "acl",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "bodyMapper": {
+          "xmlElementName": "SignedIdentifier",
+          "serializedName": "SignedIdentifiers",
+          "type": {
+            "name": "Sequence",
+            "element": {
+              "type": {
+                "name": "Composite",
+                "className": "SignedIdentifier"
+              }
+            }
+          }
+        },
+        "headersMapper": {
+          "serializedName": "table-getaccesspolicy-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableGetAccessPolicyHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Table_SetAccessPolicy",
+    "httpMethod": "PUT",
+    "path": "{table}",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      },
+      {
+        "parameterPath": "table",
+        "mapper": {
+          "required": true,
+          "serializedName": "table",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": "comp",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "comp",
+          "defaultValue": "acl",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": [
+        "options",
+        "tableAcl"
+      ],
+      "mapper": {
+        "xmlName": "SignedIdentifiers",
+        "xmlElementName": "SignedIdentifier",
+        "serializedName": "tableAcl",
+        "type": {
+          "name": "Sequence",
+          "element": {
+            "type": {
+              "name": "Composite",
+              "className": "SignedIdentifier"
+            }
+          }
+        }
+      }
+    },
+    "contentType": "application/xml; charset=utf-8",
+    "responses": {
+      "204": {
+        "headersMapper": {
+          "serializedName": "table-setaccesspolicy-headers",
+          "type": {
+            "name": "Composite",
+            "className": "TableSetAccessPolicyHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Service_SetProperties",
+    "httpMethod": "PUT",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": "restype",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "restype",
+          "defaultValue": "service",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "comp",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "comp",
+          "defaultValue": "properties",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "requestBody": {
+      "parameterPath": "tableServiceProperties",
+      "mapper": {
+        "xmlName": "StorageServiceProperties",
+        "serializedName": "TableServiceProperties",
+        "type": {
+          "name": "Composite",
+          "className": "TableServiceProperties",
+          "modelProperties": {
+            "logging": {
+              "xmlName": "Logging",
+              "serializedName": "Logging",
+              "type": {
+                "name": "Composite",
+                "className": "Logging"
+              }
+            },
+            "hourMetrics": {
+              "xmlName": "HourMetrics",
+              "serializedName": "HourMetrics",
+              "type": {
+                "name": "Composite",
+                "className": "Metrics"
+              }
+            },
+            "minuteMetrics": {
+              "xmlName": "MinuteMetrics",
+              "serializedName": "MinuteMetrics",
+              "type": {
+                "name": "Composite",
+                "className": "Metrics"
+              }
+            },
+            "cors": {
+              "xmlIsWrapped": true,
+              "xmlName": "Cors",
+              "xmlElementName": "CorsRule",
+              "serializedName": "Cors",
+              "type": {
+                "name": "Sequence",
+                "element": {
+                  "type": {
+                    "name": "Composite",
+                    "className": "CorsRule"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": true
+      }
+    },
+    "contentType": "application/xml; charset=utf-8",
+    "responses": {
+      "202": {
+        "headersMapper": {
+          "serializedName": "service-setproperties-headers",
+          "type": {
+            "name": "Composite",
+            "className": "ServiceSetPropertiesHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Service_GetProperties",
+    "httpMethod": "GET",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": "restype",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "restype",
+          "defaultValue": "service",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "comp",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "comp",
+          "defaultValue": "properties",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "bodyMapper": {
+          "xmlName": "StorageServiceProperties",
+          "serializedName": "TableServiceProperties",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceProperties",
+            "modelProperties": {
+              "logging": {
+                "xmlName": "Logging",
+                "serializedName": "Logging",
+                "type": {
+                  "name": "Composite",
+                  "className": "Logging"
+                }
+              },
+              "hourMetrics": {
+                "xmlName": "HourMetrics",
+                "serializedName": "HourMetrics",
+                "type": {
+                  "name": "Composite",
+                  "className": "Metrics"
+                }
+              },
+              "minuteMetrics": {
+                "xmlName": "MinuteMetrics",
+                "serializedName": "MinuteMetrics",
+                "type": {
+                  "name": "Composite",
+                  "className": "Metrics"
+                }
+              },
+              "cors": {
+                "xmlIsWrapped": true,
+                "xmlName": "Cors",
+                "xmlElementName": "CorsRule",
+                "serializedName": "Cors",
+                "type": {
+                  "name": "Sequence",
+                  "element": {
+                    "type": {
+                      "name": "Composite",
+                      "className": "CorsRule"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "headersMapper": {
+          "serializedName": "service-getproperties-headers",
+          "type": {
+            "name": "Composite",
+            "className": "ServiceGetPropertiesHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  },
+  {
+    "operation": "Service_GetStatistics",
+    "httpMethod": "GET",
+    "urlParameters": [
+      {
+        "parameterPath": "url",
+        "mapper": {
+          "required": true,
+          "serializedName": "url",
+          "defaultValue": "",
+          "type": {
+            "name": "String"
+          }
+        },
+        "skipEncoding": true
+      }
+    ],
+    "queryParameters": [
+      {
+        "parameterPath": [
+          "options",
+          "timeout"
+        ],
+        "mapper": {
+          "serializedName": "timeout",
+          "constraints": {
+            "InclusiveMinimum": 0
+          },
+          "type": {
+            "name": "Number"
+          }
+        }
+      },
+      {
+        "parameterPath": "restype",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "restype",
+          "defaultValue": "service",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": "comp",
+        "mapper": {
+          "required": true,
+          "isConstant": true,
+          "serializedName": "comp",
+          "defaultValue": "stats",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "headerParameters": [
+      {
+        "parameterPath": "version",
+        "mapper": {
+          "serializedName": "x-ms-version",
+          "type": {
+            "name": "String"
+          }
+        }
+      },
+      {
+        "parameterPath": [
+          "options",
+          "requestId"
+        ],
+        "mapper": {
+          "serializedName": "x-ms-client-request-id",
+          "type": {
+            "name": "String"
+          }
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "bodyMapper": {
+          "xmlName": "StorageServiceStats",
+          "serializedName": "TableServiceStats",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceStats",
+            "modelProperties": {
+              "geoReplication": {
+                "xmlName": "GeoReplication",
+                "serializedName": "GeoReplication",
+                "type": {
+                  "name": "Composite",
+                  "className": "GeoReplication"
+                }
+              }
+            }
+          }
+        },
+        "headersMapper": {
+          "serializedName": "service-getstatistics-headers",
+          "type": {
+            "name": "Composite",
+            "className": "ServiceGetStatisticsHeaders",
+            "modelProperties": {
+              "clientRequestId": {
+                "serializedName": "x-ms-client-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "requestId": {
+                "serializedName": "x-ms-request-id",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "version": {
+                "serializedName": "x-ms-version",
+                "type": {
+                  "name": "String"
+                }
+              },
+              "date": {
+                "serializedName": "date",
+                "type": {
+                  "name": "DateTimeRfc1123"
+                }
+              },
+              "errorCode": {
+                "serializedName": "x-ms-error-code",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "bodyMapper": {
+          "serializedName": "TableServiceError",
+          "type": {
+            "name": "Composite",
+            "className": "TableServiceError",
+            "modelProperties": {
+              "message": {
+                "xmlName": "Message",
+                "serializedName": "Message",
+                "type": {
+                  "name": "String"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isXML": true
+  }
+]

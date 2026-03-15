@@ -57,12 +57,12 @@ async fn dispatch_operation<H: IHandlers>(
 ) -> Result<crate::generated::artifacts::models::GeneratedResponse, StorageError> {
     match operation {
         Operation::Service_SetProperties => {
-            let storageServiceProperties =
-                extract_object(handler_parameters, "storageServiceProperties");
+            let tableServiceProperties =
+                extract_object(handler_parameters, "tableServiceProperties");
             let options = extract_object(handler_parameters, "options");
             handlers
                 .serviceHandler()
-                .setProperties(storageServiceProperties, options, context.clone())
+                .setProperties(tableServiceProperties, options, context.clone())
                 .await
         }
         Operation::Service_GetProperties => {
@@ -87,7 +87,7 @@ async fn dispatch_operation<H: IHandlers>(
                 .await
         }
         Operation::Table_Create => {
-            let table = extract_object(handler_parameters, "table");
+            let table = extract_object(handler_parameters, "tableProperties");
             let options = extract_object(handler_parameters, "options");
             handlers
                 .tableHandler()
@@ -124,16 +124,16 @@ async fn dispatch_operation<H: IHandlers>(
                 .await
         }
         Operation::Table_UpdateEntity => {
-            let entity = extract_object(handler_parameters, "entity");
             let options = extract_object(handler_parameters, "options");
+            let entity = extract_nested_object(&options, "tableEntityProperties");
             handlers
                 .tableHandler()
                 .updateEntity(entity, options, context.clone())
                 .await
         }
         Operation::Table_MergeEntity | Operation::Table_MergeEntityWithMerge => {
-            let entity = extract_object(handler_parameters, "entity");
             let options = extract_object(handler_parameters, "options");
+            let entity = extract_nested_object(&options, "tableEntityProperties");
             handlers
                 .tableHandler()
                 .mergeEntity(entity, options, context.clone())
@@ -147,8 +147,8 @@ async fn dispatch_operation<H: IHandlers>(
                 .await
         }
         Operation::Table_InsertEntity => {
-            let entity = extract_object(handler_parameters, "entity");
             let options = extract_object(handler_parameters, "options");
+            let entity = extract_nested_object(&options, "tableEntityProperties");
             handlers
                 .tableHandler()
                 .insertEntity(entity, options, context.clone())
@@ -162,8 +162,8 @@ async fn dispatch_operation<H: IHandlers>(
                 .await
         }
         Operation::Table_SetAccessPolicy => {
-            let signedIdentifiers = extract_object_array(handler_parameters, "signedIdentifiers");
             let options = extract_object(handler_parameters, "options");
+            let signedIdentifiers = extract_nested_object_array(&options, "tableAcl");
             handlers
                 .tableHandler()
                 .setAccessPolicy(signedIdentifiers, options, context.clone())
@@ -174,6 +174,14 @@ async fn dispatch_operation<H: IHandlers>(
 
 fn extract_object(parameters: &GeneratedObject, key: &str) -> GeneratedObject {
     parameters
+        .get(key)
+        .and_then(GeneratedValue::as_object)
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn extract_nested_object(parent: &GeneratedObject, key: &str) -> GeneratedObject {
+    parent
         .get(key)
         .and_then(GeneratedValue::as_object)
         .cloned()
@@ -194,6 +202,18 @@ fn extract_object_array(parameters: &GeneratedObject, key: &str) -> Vec<Generate
             .filter_map(GeneratedValue::as_object)
             .cloned()
             .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn extract_nested_object_array(parent: &GeneratedObject, key: &str) -> Vec<GeneratedObject> {
+    match parent.get(key) {
+        Some(GeneratedValue::Array(values)) => values
+            .iter()
+            .filter_map(GeneratedValue::as_object)
+            .cloned()
+            .collect(),
+        Some(GeneratedValue::Object(obj)) => vec![obj.clone()],
         _ => Vec::new(),
     }
 }

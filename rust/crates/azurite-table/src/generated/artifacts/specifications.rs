@@ -44,7 +44,10 @@ pub struct OperationSpec {
     pub isXML: bool,
 }
 
-static SPECIFICATIONS: LazyLock<Vec<OperationSpec>> = LazyLock::new(Vec::new);
+static SPECIFICATIONS: LazyLock<Vec<OperationSpec>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("metadata/specifications.generated.json"))
+        .expect("generated table specification metadata must deserialize")
+});
 
 pub fn specifications() -> &'static [OperationSpec] {
     SPECIFICATIONS.as_slice()

@@ -36,6 +36,8 @@ pub struct Mapper {
     #[serde(default)]
     pub xmlElementName: Option<String>,
     #[serde(default)]
+    pub xmlIsWrapped: bool,
+    #[serde(default)]
     pub headerCollectionPrefix: Option<String>,
     #[serde(default, rename = "type")]
     pub r#type: MapperType,

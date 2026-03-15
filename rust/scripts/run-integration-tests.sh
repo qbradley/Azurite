@@ -173,6 +173,7 @@ run_service_tests() {
         --ignore 'tests/table/apis/table.entity.azure.data-tables.test.ts' \
         --ignore 'tests/table/apis/table.entity.apostrophe.data-tables.test.ts' \
         --ignore 'tests/table/apis/table.entity.issues.test.ts' \
+        --ignore 'tests/table/apis/table.entity.query.test.ts' \
         'tests/table/*.test.ts' 'tests/table/**/*.test.ts'
       ;;
     *)

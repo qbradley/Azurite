@@ -8,20 +8,21 @@ pub struct HandlerPath {
 }
 
 const ARGUMENTS_0: &[&str] = &["options"];
-const ARGUMENTS_1: &[&str] = &["table", "options"];
-const ARGUMENTS_2: &[&str] = &["body", "options"];
-const ARGUMENTS_3: &[&str] = &["options"];
-const ARGUMENTS_4: &[&str] = &["options"];
-const ARGUMENTS_5: &[&str] = &["options"];
-const ARGUMENTS_6: &[&str] = &["entity", "options"];
-const ARGUMENTS_7: &[&str] = &["entity", "options"];
-const ARGUMENTS_8: &[&str] = &["options"];
-const ARGUMENTS_9: &[&str] = &["entity", "options"];
-const ARGUMENTS_10: &[&str] = &["options"];
-const ARGUMENTS_11: &[&str] = &["signedIdentifiers", "options"];
-const ARGUMENTS_12: &[&str] = &["storageServiceProperties", "options"];
-const ARGUMENTS_13: &[&str] = &["options"];
+const ARGUMENTS_1: &[&str] = &["tableProperties", "options"];
+const ARGUMENTS_2: &[&str] = &["body", "multipartContentType", "contentLength", "options"];
+const ARGUMENTS_3: &[&str] = &["table", "options"];
+const ARGUMENTS_4: &[&str] = &["table", "options"];
+const ARGUMENTS_5: &[&str] = &["table", "partitionKey", "rowKey", "options"];
+const ARGUMENTS_6: &[&str] = &["table", "partitionKey", "rowKey", "options"];
+const ARGUMENTS_7: &[&str] = &["table", "partitionKey", "rowKey", "options"];
+const ARGUMENTS_8: &[&str] = &["table", "partitionKey", "rowKey", "ifMatch", "options"];
+const ARGUMENTS_9: &[&str] = &["table", "partitionKey", "rowKey", "options"];
+const ARGUMENTS_10: &[&str] = &["table", "options"];
+const ARGUMENTS_11: &[&str] = &["table", "options"];
+const ARGUMENTS_12: &[&str] = &["table", "options"];
+const ARGUMENTS_13: &[&str] = &["tableServiceProperties", "options"];
 const ARGUMENTS_14: &[&str] = &["options"];
+const ARGUMENTS_15: &[&str] = &["options"];
 
 pub fn getHandlerByOperation(operation: Operation) -> HandlerPath {
     match operation {
@@ -72,38 +73,38 @@ pub fn getHandlerByOperation(operation: Operation) -> HandlerPath {
         },
         Operation::Table_MergeEntityWithMerge => HandlerPath {
             handler: "tableHandler",
-            method: "mergeEntity",
-            arguments: ARGUMENTS_7,
+            method: "mergeEntityWithMerge",
+            arguments: ARGUMENTS_9,
         },
         Operation::Table_InsertEntity => HandlerPath {
             handler: "tableHandler",
             method: "insertEntity",
-            arguments: ARGUMENTS_9,
+            arguments: ARGUMENTS_10,
         },
         Operation::Table_GetAccessPolicy => HandlerPath {
             handler: "tableHandler",
             method: "getAccessPolicy",
-            arguments: ARGUMENTS_10,
+            arguments: ARGUMENTS_11,
         },
         Operation::Table_SetAccessPolicy => HandlerPath {
             handler: "tableHandler",
             method: "setAccessPolicy",
-            arguments: ARGUMENTS_11,
+            arguments: ARGUMENTS_12,
         },
         Operation::Service_SetProperties => HandlerPath {
             handler: "serviceHandler",
             method: "setProperties",
-            arguments: ARGUMENTS_12,
+            arguments: ARGUMENTS_13,
         },
         Operation::Service_GetProperties => HandlerPath {
             handler: "serviceHandler",
             method: "getProperties",
-            arguments: ARGUMENTS_13,
+            arguments: ARGUMENTS_14,
         },
         Operation::Service_GetStatistics => HandlerPath {
             handler: "serviceHandler",
             method: "getStatistics",
-            arguments: ARGUMENTS_14,
+            arguments: ARGUMENTS_15,
         },
     }
 }
