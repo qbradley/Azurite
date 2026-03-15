@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::generated::artifacts::mappers::Mapper;
+use crate::generated::artifacts::mappers::{get_mapper, Mapper};
 use crate::generated::artifacts::models::{
     GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
 };
@@ -167,10 +167,23 @@ pub async fn serialize<R: IResponse, L: ILogger + ?Sized>(
                 res.getBodyStream().write_bytes(&stream.read_to_vec());
             }
         } else {
-            let body = wrap_sequence_body(handlerResponse.body_value().to_json_value(), bodyMapper);
+            let body = handlerResponse.body_value().to_json_value();
             if spec.isXML {
+                let xmlReadyBody = apply_model_mapping(&body, bodyMapper);
+                let xmlReadyBody =
+                    if bodyMapper.r#type.name == "Sequence" && xmlReadyBody.is_array() {
+                        if let Some(element_name) = bodyMapper.xmlElementName.as_deref() {
+                            let mut wrapper = serde_json::Map::new();
+                            wrapper.insert(element_name.to_string(), xmlReadyBody);
+                            serde_json::Value::Object(wrapper)
+                        } else {
+                            xmlReadyBody
+                        }
+                    } else {
+                        xmlReadyBody
+                    };
                 let xmlBody = stringifyXML(
-                    &body,
+                    &xmlReadyBody,
                     bodyMapper
                         .xmlName
                         .as_deref()
@@ -277,15 +290,102 @@ fn serialize_header_value(value: &GeneratedValue) -> Option<ResponseHeaderValue>
     }
 }
 
-fn wrap_sequence_body(body: serde_json::Value, mapper: &Mapper) -> serde_json::Value {
-    if mapper.r#type.name == "Sequence" {
-        if let Some(element_name) = &mapper.xmlElementName {
-            let mut wrapped = serde_json::Map::new();
-            wrapped.insert(element_name.clone(), body);
-            return serde_json::Value::Object(wrapped);
+fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(object) => {
+            if let Some(properties) = resolve_model_properties(mapper) {
+                let mut result = serde_json::Map::new();
+                for (key, value) in object {
+                    if let Some(property_mapper) = properties.get(key) {
+                        let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
+                            && property_mapper.xmlElementName.is_some()
+                            && !property_mapper.xmlIsWrapped;
+                        if is_unwrapped_sequence {
+                            let element_name =
+                                property_mapper.xmlElementName.as_ref().unwrap().clone();
+                            let mapped_array = map_sequence_elements(value, property_mapper);
+                            result.insert(element_name, mapped_array);
+                        } else {
+                            let mapped_key = mapped_name(property_mapper).unwrap_or(key).to_owned();
+                            let mapped_value = apply_model_mapping(value, property_mapper);
+                            result.insert(mapped_key, mapped_value);
+                        }
+                    } else if resolve_additional_properties(mapper).is_some() {
+                        result.insert(key.clone(), value.clone());
+                    }
+                }
+                serde_json::Value::Object(result)
+            } else {
+                serde_json::Value::Object(object.clone())
+            }
         }
+        serde_json::Value::Array(values) => {
+            let mapped_values = if let Some(element_mapper) = mapper.r#type.element.as_deref() {
+                values
+                    .iter()
+                    .map(|value| apply_model_mapping(value, element_mapper))
+                    .collect()
+            } else {
+                values.clone()
+            };
+            let mapped_array = serde_json::Value::Array(mapped_values);
+            if mapper.xmlIsWrapped {
+                if let Some(element_name) = mapper.xmlElementName.as_ref() {
+                    let mut wrapped = serde_json::Map::new();
+                    wrapped.insert(element_name.clone(), mapped_array);
+                    serde_json::Value::Object(wrapped)
+                } else {
+                    mapped_array
+                }
+            } else {
+                mapped_array
+            }
+        }
+        _ => value.clone(),
     }
-    body
+}
+
+fn map_sequence_elements(value: &serde_json::Value, mapper: &Mapper) -> serde_json::Value {
+    match value {
+        serde_json::Value::Array(values) => {
+            let mapped = if let Some(element_mapper) = mapper.r#type.element.as_deref() {
+                values
+                    .iter()
+                    .map(|v| apply_model_mapping(v, element_mapper))
+                    .collect()
+            } else {
+                values.clone()
+            };
+            serde_json::Value::Array(mapped)
+        }
+        _ => value.clone(),
+    }
+}
+
+fn resolve_model_properties(mapper: &Mapper) -> Option<&BTreeMap<String, Mapper>> {
+    if !mapper.r#type.modelProperties.is_empty() {
+        Some(&mapper.r#type.modelProperties)
+    } else {
+        mapper
+            .r#type
+            .className
+            .as_deref()
+            .and_then(get_mapper)
+            .map(|resolved| &resolved.r#type.modelProperties)
+            .filter(|properties| !properties.is_empty())
+    }
+}
+
+fn resolve_additional_properties(_mapper: &Mapper) -> Option<&Mapper> {
+    // Queue mappers don't use additionalProperties
+    None
+}
+
+fn mapped_name(mapper: &Mapper) -> Option<&str> {
+    mapper
+        .xmlName
+        .as_deref()
+        .or(mapper.serializedName.as_deref())
 }
 
 pub fn setParametersValue(

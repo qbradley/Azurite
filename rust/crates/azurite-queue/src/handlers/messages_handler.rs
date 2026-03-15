@@ -27,7 +27,7 @@ use crate::utils::constants::{
 };
 use crate::utils::utils::{getPopReceipt, getUTF8ByteSize, readStreamToString};
 
-use super::base_handler::{extract_message_text, get_i32, json_value, string_value, BaseHandler};
+use super::base_handler::{extract_message_text, get_i32, rfc1123_value, string_value, BaseHandler};
 
 #[derive(Clone)]
 pub struct MessagesHandler {
@@ -409,11 +409,11 @@ fn enqueued_message_to_object(message: &MessageModel) -> GeneratedObject {
         ),
         (
             String::from("insertionTime"),
-            json_value(message.insertionTime),
+            rfc1123_value(message.insertionTime),
         ),
         (
             String::from("expirationTime"),
-            json_value(message.expirationTime),
+            rfc1123_value(message.expirationTime),
         ),
         (
             String::from("popReceipt"),
@@ -421,7 +421,7 @@ fn enqueued_message_to_object(message: &MessageModel) -> GeneratedObject {
         ),
         (
             String::from("timeNextVisible"),
-            json_value(message.timeNextVisible),
+            rfc1123_value(message.timeNextVisible),
         ),
     ])
 }
@@ -444,11 +444,11 @@ fn peeked_message_to_object(message: &MessageModel, text: String) -> GeneratedOb
         ),
         (
             String::from("insertionTime"),
-            json_value(message.insertionTime),
+            rfc1123_value(message.insertionTime),
         ),
         (
             String::from("expirationTime"),
-            json_value(message.expirationTime),
+            rfc1123_value(message.expirationTime),
         ),
         (
             String::from("dequeueCount"),

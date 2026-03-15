@@ -68,6 +68,10 @@ pub(crate) fn string_value(value: impl Into<String>) -> GeneratedValue {
     GeneratedValue::String(value.into())
 }
 
+pub(crate) fn rfc1123_value(dt: chrono::DateTime<chrono::Utc>) -> GeneratedValue {
+    GeneratedValue::String(dt.format("%a, %d %b %Y %H:%M:%S GMT").to_string())
+}
+
 pub(crate) fn json_value<T: serde::Serialize>(value: T) -> GeneratedValue {
     GeneratedValue::from(serde_json::to_value(value).unwrap_or(serde_json::Value::Null))
 }

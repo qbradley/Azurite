@@ -22,7 +22,7 @@ use crate::utils::constants::{
 };
 use crate::utils::utils::{getPopReceipt, getUTF8ByteSize};
 
-use super::base_handler::{extract_message_text, json_value, string_value, BaseHandler};
+use super::base_handler::{extract_message_text, rfc1123_value, string_value, BaseHandler};
 
 #[derive(Clone)]
 pub struct MessageIdHandler {
@@ -140,7 +140,7 @@ impl IMessageIdHandler for MessageIdHandler {
 
         let mut response = GeneratedResponse::new(204);
         response.insert_field("popReceipt", string_value(new_pop_receipt));
-        response.insert_field("timeNextVisible", json_value(time_next_visible));
+        response.insert_field("timeNextVisible", rfc1123_value(time_next_visible));
         self.base
             .add_response_metadata(&mut response, &options, &context, true);
         Ok(response)
