@@ -540,6 +540,12 @@ fn normalize_service_properties(properties: &mut GeneratedObject) {
     if let Some(GeneratedValue::Object(static_website)) = properties.get_mut("staticWebsite") {
         normalize_static_website(static_website);
     }
+
+    // Unwrap XML-deserialized CORS structure into a flat array of rules.
+    // XML produces: {"cors": {"CorsRule": <single-rule-object | array>}}
+    // We normalize to: {"cors": [<rule>, <rule>, ...]}
+    normalize_cors_property(properties);
+
     if let Some(GeneratedValue::Array(cors_rules)) = properties.get_mut("cors") {
         for rule in cors_rules {
             if let GeneratedValue::Object(rule) = rule {
@@ -599,6 +605,42 @@ fn normalize_cors_rule(rule: &mut GeneratedObject) {
     rename_key(rule, "AllowedHeaders", "allowedHeaders");
     rename_key(rule, "ExposedHeaders", "exposedHeaders");
     rename_key(rule, "MaxAgeInSeconds", "maxAgeInSeconds");
+}
+
+/// Unwrap the XML-deserialized CORS wrapper into a flat array.
+///
+/// XML `<Cors><CorsRule>...</CorsRule></Cors>` deserializes as:
+///   - Single rule:  `{"cors": {"CorsRule": {<rule fields>}}}`
+///   - Multi rules:  `{"cors": {"CorsRule": [{<rule>}, {<rule>}]}}`
+///   - Already flat:  `{"cors": [{<rule>}, ...]}`  (no-op)
+///   - Empty string:  `{"cors": ""}` → `{"cors": []}`
+fn normalize_cors_property(properties: &mut GeneratedObject) {
+    let cors_val = match properties.remove("cors") {
+        Some(v) => v,
+        None => return,
+    };
+
+    let rules = match cors_val {
+        // Already a flat array — keep as-is
+        GeneratedValue::Array(_) => cors_val,
+        // Object wrapper: extract CorsRule / corsRule
+        GeneratedValue::Object(mut obj) => {
+            let inner = obj
+                .remove("CorsRule")
+                .or_else(|| obj.remove("corsRule"))
+                .unwrap_or(GeneratedValue::Array(Vec::new()));
+            match inner {
+                GeneratedValue::Array(arr) => GeneratedValue::Array(arr),
+                GeneratedValue::Object(_) => GeneratedValue::Array(vec![inner]),
+                _ => GeneratedValue::Array(Vec::new()),
+            }
+        }
+        // Empty string means no CORS rules
+        GeneratedValue::String(s) if s.is_empty() => GeneratedValue::Array(Vec::new()),
+        _ => GeneratedValue::Array(Vec::new()),
+    };
+
+    properties.insert("cors".to_string(), rules);
 }
 
 fn normalize_retention_policy(retention_policy: &mut GeneratedObject) {

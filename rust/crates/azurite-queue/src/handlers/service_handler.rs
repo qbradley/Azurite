@@ -326,6 +326,9 @@ fn normalize_service_properties(properties: &mut GeneratedObject) {
     if let Some(GeneratedValue::Object(metrics)) = properties.get_mut("minuteMetrics") {
         normalize_metrics(metrics);
     }
+
+    normalize_cors_property(properties);
+
     if let Some(GeneratedValue::Array(cors_rules)) = properties.get_mut("cors") {
         for rule in cors_rules {
             if let GeneratedValue::Object(rule) = rule {
@@ -364,6 +367,33 @@ fn normalize_cors_rule(rule: &mut GeneratedObject) {
     rename_key(rule, "AllowedHeaders", "allowedHeaders");
     rename_key(rule, "ExposedHeaders", "exposedHeaders");
     rename_key(rule, "MaxAgeInSeconds", "maxAgeInSeconds");
+}
+
+/// Unwrap the XML-deserialized CORS wrapper into a flat array.
+fn normalize_cors_property(properties: &mut GeneratedObject) {
+    let cors_val = match properties.remove("cors") {
+        Some(v) => v,
+        None => return,
+    };
+
+    let rules = match cors_val {
+        GeneratedValue::Array(_) => cors_val,
+        GeneratedValue::Object(mut obj) => {
+            let inner = obj
+                .remove("CorsRule")
+                .or_else(|| obj.remove("corsRule"))
+                .unwrap_or(GeneratedValue::Array(Vec::new()));
+            match inner {
+                GeneratedValue::Array(arr) => GeneratedValue::Array(arr),
+                GeneratedValue::Object(_) => GeneratedValue::Array(vec![inner]),
+                _ => GeneratedValue::Array(Vec::new()),
+            }
+        }
+        GeneratedValue::String(s) if s.is_empty() => GeneratedValue::Array(Vec::new()),
+        _ => GeneratedValue::Array(Vec::new()),
+    };
+
+    properties.insert("cors".to_string(), rules);
 }
 
 fn normalize_retention_policy(retention_policy: &mut GeneratedObject) {

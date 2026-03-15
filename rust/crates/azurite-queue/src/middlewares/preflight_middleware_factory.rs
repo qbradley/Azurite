@@ -464,20 +464,32 @@ impl PreflightMiddlewareFactory {
 }
 
 fn cors_rules(properties: &ServicePropertiesModel) -> Vec<GeneratedObject> {
-    properties
+    let cors_val = properties
         .properties
         .get("cors")
-        .or_else(|| properties.properties.get("Cors"))
-        .and_then(|value| match value {
-            GeneratedValue::Array(values) => Some(
-                values
-                    .iter()
-                    .filter_map(|value| value.as_object().cloned())
-                    .collect::<Vec<_>>(),
-            ),
-            _ => None,
-        })
-        .unwrap_or_default()
+        .or_else(|| properties.properties.get("Cors"));
+
+    let Some(cors_val) = cors_val else {
+        return Vec::new();
+    };
+
+    match cors_val {
+        GeneratedValue::Array(values) => values
+            .iter()
+            .filter_map(|value| value.as_object().cloned())
+            .collect(),
+        GeneratedValue::Object(obj) => {
+            let inner = obj.get("CorsRule").or_else(|| obj.get("corsRule"));
+            match inner {
+                Some(GeneratedValue::Array(arr)) => {
+                    arr.iter().filter_map(|v| v.as_object().cloned()).collect()
+                }
+                Some(GeneratedValue::Object(single)) => vec![single.clone()],
+                _ => Vec::new(),
+            }
+        }
+        _ => Vec::new(),
+    }
 }
 
 fn field_string(value: &GeneratedObject, key: &str) -> Option<String> {

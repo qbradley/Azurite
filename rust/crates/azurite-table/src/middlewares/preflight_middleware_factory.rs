@@ -464,24 +464,53 @@ impl PreflightMiddlewareFactory {
 }
 
 fn cors_rules(properties: &ServicePropertiesModel) -> Vec<GeneratedObject> {
-    properties
+    let cors_val = properties
         .properties
         .get("cors")
-        .or_else(|| properties.properties.get("Cors"))
-        .and_then(|value| match value {
-            GeneratedValue::Array(values) => Some(
-                values
-                    .iter()
-                    .filter_map(|value| value.as_object().cloned())
-                    .collect::<Vec<_>>(),
-            ),
-            _ => None,
-        })
-        .unwrap_or_default()
+        .or_else(|| properties.properties.get("Cors"));
+
+    let Some(cors_val) = cors_val else {
+        return Vec::new();
+    };
+
+    match cors_val {
+        // Already a flat array of rule objects
+        GeneratedValue::Array(values) => values
+            .iter()
+            .filter_map(|value| value.as_object().cloned())
+            .collect(),
+        // XML wrapper: {"CorsRule": <single object or array>}
+        GeneratedValue::Object(obj) => {
+            let inner = obj.get("CorsRule").or_else(|| obj.get("corsRule"));
+            match inner {
+                Some(GeneratedValue::Array(arr)) => {
+                    arr.iter().filter_map(|v| v.as_object().cloned()).collect()
+                }
+                Some(GeneratedValue::Object(single)) => vec![single.clone()],
+                _ => Vec::new(),
+            }
+        }
+        _ => Vec::new(),
+    }
 }
 
 fn field_string(value: &GeneratedObject, key: &str) -> Option<String> {
-    value.get(key).and_then(GeneratedValue::as_string)
+    // Try camelCase first, then PascalCase for table compatibility
+    value
+        .get(key)
+        .and_then(GeneratedValue::as_string)
+        .or_else(|| {
+            let pascal = to_pascal_case(key);
+            value.get(&pascal).and_then(GeneratedValue::as_string)
+        })
+}
+
+fn to_pascal_case(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+    }
 }
 
 fn message_details(message: &str) -> BTreeMap<String, String> {

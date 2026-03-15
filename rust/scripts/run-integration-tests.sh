@@ -149,23 +149,22 @@ run_service_tests() {
 
   case "${service}" in
     blob)
-      echo "Running TypeScript blob integration tests (excluding HTTPS/OAuth/CORS)..."
+      echo "Running TypeScript blob integration tests (excluding HTTPS/OAuth)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/blob/https.test.ts' \
         --ignore 'tests/blob/oauth.test.ts' \
-        --ignore 'tests/blob/blobCorsRequest.test.ts' \
         'tests/blob/*.test.ts' 'tests/blob/**/*.test.ts'
       ;;
     queue)
-      echo "Running TypeScript queue integration tests (excluding HTTPS/OAuth/CORS)..."
+      echo "Running TypeScript queue integration tests (excluding HTTPS/OAuth)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/queue/https.test.ts' \
         --ignore 'tests/queue/oauth.test.ts' \
-        --ignore 'tests/queue/queueCorsRequest.test.ts' \
         'tests/queue/*.test.ts' 'tests/queue/**/*.test.ts'
       ;;
     table)
       echo "Running TypeScript table integration tests (excluding HTTPS/OAuth/CORS)..."
+      # Table CORS tests require HTTPS which is not yet supported
       ${mocha_base} \
         --ignore 'tests/table/auth/tableCorsRequest.test.ts' \
         --ignore 'tests/table/auth/oauth.test.ts' \

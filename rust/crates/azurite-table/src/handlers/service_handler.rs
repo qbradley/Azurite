@@ -225,6 +225,20 @@ fn normalize_service_properties(properties: &mut GeneratedObject) {
             }
         }
     }
+    // Also handle the XML wrapper form: {"cors": {"CorsRule": [...]}}
+    if let Some(GeneratedValue::Object(cors_obj)) = properties.get("cors") {
+        if let Some(GeneratedValue::Array(rules)) = cors_obj
+            .get("CorsRule")
+            .or_else(|| cors_obj.get("corsRule"))
+        {
+            for rule in rules {
+                if let GeneratedValue::Object(_) = rule {
+                    // coerce_int on CorsRule entries if nested
+                    // handled below after flattening for middleware
+                }
+            }
+        }
+    }
 
     if get_string(properties, "defaultServiceVersion").is_none() {
         properties.insert(
