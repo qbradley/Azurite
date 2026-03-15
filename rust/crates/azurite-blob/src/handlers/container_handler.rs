@@ -347,7 +347,7 @@ impl IContainerHandler for ContainerHandler {
                     lastModified: Some(date),
                     etag: Some(eTag.clone()),
                     publicAccess: get_string(&options, "access"),
-                    containerAcl: get_signed_identifier_array(&options, "containerAcl"),
+                    containerAcl: normalize_signed_identifiers(&options, "containerAcl"),
                     leaseAccessConditions: get_object(&options, "leaseAccessConditions"),
                     modifiedAccessConditions: get_object(&options, "modifiedAccessConditions"),
                 },
@@ -845,7 +845,11 @@ async fn list_blobs(
             let tag_count = value
                 .get("blobTags")
                 .and_then(GeneratedValue::as_object)
-                .map(|tags| tags.len() as i64)
+                .and_then(|tags| tags.get("blobTagSet"))
+                .and_then(|v| match v {
+                    GeneratedValue::Array(arr) => Some(arr.len() as i64),
+                    _ => None,
+                })
                 .unwrap_or(0);
             if !includeTags {
                 value.remove("blobTags");
@@ -854,7 +858,7 @@ async fn list_blobs(
                 if let Some(etag) = properties.get("etag").and_then(GeneratedValue::as_string) {
                     properties.insert("etag".into(), string_value(etag.trim_matches('"')));
                 }
-                if includeTags {
+                if tag_count > 0 {
                     properties.insert("tagCount".into(), json_value(tag_count));
                 }
                 let access_tier_inferred = properties
@@ -1005,6 +1009,74 @@ fn get_signed_identifier_array(map: &GeneratedObject, key: &str) -> Option<Vec<S
                 .cloned()
                 .collect(),
         ),
+        _ => None,
+    }
+}
+
+/// Normalize XML-parsed signed identifiers to model format.
+/// XML parse produces: { "SignedIdentifier": { ... } } or { "SignedIdentifier": [ ... ] }
+/// Model needs: [ { "id": "...", "accessPolicy": { "start": "...", "expiry": "...", "permission": "..." } } ]
+fn normalize_signed_identifiers(map: &GeneratedObject, key: &str) -> Option<Vec<SignedIdentifier>> {
+    // First try: already an array (e.g., from JSON body)
+    if let Some(result) = get_signed_identifier_array(map, key) {
+        if !result.is_empty() {
+            return Some(result);
+        }
+    }
+
+    // Second try: XML-parsed object with "SignedIdentifier" key
+    let obj = map.get(key).and_then(GeneratedValue::as_object)?;
+    let si_raw = obj.get("SignedIdentifier")?;
+
+    // Collect into a vec of GeneratedValue::Object items
+    let items: Vec<&GeneratedObject> = match si_raw {
+        GeneratedValue::Object(single) => vec![single],
+        GeneratedValue::Array(arr) => arr.iter().filter_map(GeneratedValue::as_object).collect(),
+        _ => return None,
+    };
+
+    let result: Vec<SignedIdentifier> = items
+        .into_iter()
+        .map(|xml_si| {
+            let mut si = SignedIdentifier::new();
+            // XML "Id" → model "id"
+            if let Some(id) = xml_si.get("Id").and_then(extract_text) {
+                si.insert("id".into(), GeneratedValue::String(id));
+            }
+            // XML "AccessPolicy" → model "accessPolicy"
+            if let Some(GeneratedValue::Object(ap_xml)) = xml_si.get("AccessPolicy") {
+                let mut ap = GeneratedObject::new();
+                if let Some(v) = ap_xml.get("Start").and_then(extract_text) {
+                    ap.insert("start".into(), GeneratedValue::String(v));
+                }
+                if let Some(v) = ap_xml.get("Expiry").and_then(extract_text) {
+                    ap.insert("expiry".into(), GeneratedValue::String(v));
+                }
+                if let Some(v) = ap_xml.get("Permission").and_then(extract_text) {
+                    ap.insert("permission".into(), GeneratedValue::String(v));
+                }
+                si.insert("accessPolicy".into(), GeneratedValue::Object(ap));
+            }
+            si
+        })
+        .collect();
+
+    if result.is_empty() {
+        None
+    } else {
+        Some(result)
+    }
+}
+
+/// Extract text from an XML-parsed value that may be a string directly
+/// or an object with "$text" key.
+fn extract_text(val: &GeneratedValue) -> Option<String> {
+    match val {
+        GeneratedValue::String(s) => Some(s.clone()),
+        GeneratedValue::Object(obj) => obj
+            .get("$text")
+            .and_then(GeneratedValue::as_string)
+            .map(|s| s.to_string()),
         _ => None,
     }
 }

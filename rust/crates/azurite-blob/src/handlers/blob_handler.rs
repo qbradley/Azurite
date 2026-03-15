@@ -235,6 +235,11 @@ impl IBlobHandler for BlobHandler {
                     );
                 }
             }
+
+            // Tag count
+            if let Some(tc) = get_blob_tags_count(res.blobTags.as_ref()) {
+                response.insert_field("tagCount", GeneratedValue::Number(tc as f64));
+            }
         }
 
         Ok(response)
@@ -1925,7 +1930,7 @@ fn extract_text_value(obj: &GeneratedObject, key: &str) -> Option<String> {
 
 /// Validate blob tags against Azure Storage rules.
 /// Mirrors validateBlobTag from blob/utils/utils.ts.
-fn validate_blob_tags(
+pub(crate) fn validate_blob_tags(
     tags: &GeneratedObject,
     context_id: &str,
 ) -> crate::generated::GeneratedResult<()> {
@@ -1969,9 +1974,19 @@ fn validate_blob_tags(
 }
 
 /// Allowed characters in blob tag keys/values.
+/// Matches TS ContainsInvalidTagCharacter: a-z A-Z 0-9 space + - . / : = _
 fn contains_invalid_tag_character(s: &str) -> bool {
-    !s.chars()
-        .all(|c| c.is_ascii_alphanumeric() || " +-.:=_/@#&'\"!$%^*(){}[]\\<>?`~,;|".contains(c))
+    !s.chars().all(|c| {
+        c.is_ascii_alphanumeric()
+            || c == ' '
+            || c == '+'
+            || c == '-'
+            || c == '.'
+            || c == '/'
+            || c == ':'
+            || c == '='
+            || c == '_'
+    })
 }
 
 /// Read all bytes from an async stream.

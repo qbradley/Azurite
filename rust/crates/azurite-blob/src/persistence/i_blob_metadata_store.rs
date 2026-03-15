@@ -150,6 +150,7 @@ pub struct GetBlobPropertiesRes {
     pub properties: BlobPropertiesInternal,
     pub metadata: Option<BlobMetadata>,
     pub blobCommittedBlockCount: Option<i64>,
+    pub blobTags: Option<BlobTags>,
 }
 
 /// Mirrors `FilterBlobModel = FilterBlobItem`.

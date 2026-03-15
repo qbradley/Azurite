@@ -405,6 +405,12 @@ impl IBlockBlobHandler for BlockBlobHandler {
             .as_deref()
             .and_then(|s| get_tags_from_string(s, context_id_str));
 
+        if let Some(ref t) = blob_tags {
+            if let Some(obj) = t.as_object() {
+                super::blob_handler::validate_blob_tags(obj, context_id_str)?;
+            }
+        }
+
         let blob = BlobModel {
             deleted: Some(false),
             metadata: metadata_map.map(to_generated_metadata),
@@ -736,6 +742,12 @@ impl IBlockBlobHandler for BlockBlobHandler {
             .and_then(GeneratedValue::as_string)
             .as_deref()
             .and_then(|s| get_tags_from_string(s, context_id_str));
+
+        if let Some(ref t) = blob_tags {
+            if let Some(obj) = t.as_object() {
+                super::blob_handler::validate_blob_tags(obj, context_id_str)?;
+            }
+        }
 
         let blob = BlobModel {
             accountName: account_name,

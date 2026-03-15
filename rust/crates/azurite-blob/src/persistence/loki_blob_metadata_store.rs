@@ -1073,8 +1073,33 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                     tags: blob.blobTags.clone(),
                 };
 
-                if where_clause.is_some() && filter_fn(&candidate).is_empty() {
-                    return None;
+                if where_clause.is_some() {
+                    let matched_tags = filter_fn(&candidate);
+                    if matched_tags.is_empty() {
+                        return None;
+                    }
+                    // Return only the matched tags, excluding internal keys like @container
+                    let tag_set: Vec<GeneratedValue> = matched_tags
+                        .into_iter()
+                        .filter(|tc| !tc.key.as_ref().is_some_and(|k| k.starts_with('@')))
+                        .map(|tc| {
+                            let mut tag = GeneratedObject::new();
+                            if let Some(k) = tc.key {
+                                tag.insert("key".into(), GeneratedValue::String(k));
+                            }
+                            if let Some(v) = tc.value {
+                                tag.insert("value".into(), GeneratedValue::String(v));
+                            }
+                            GeneratedValue::Object(tag)
+                        })
+                        .collect();
+                    let mut tags_obj = GeneratedObject::new();
+                    tags_obj.insert("blobTagSet".into(), GeneratedValue::Array(tag_set));
+                    return Some(FilterBlobModel {
+                        name: name.clone(),
+                        containerName: cont.clone(),
+                        tags: Some(tags_obj),
+                    });
                 }
 
                 Some(candidate)
@@ -1458,6 +1483,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             properties: blob_doc.properties,
             metadata: blob_doc.metadata,
             blobCommittedBlockCount,
+            blobTags: blob_doc.blobTags,
         })
     }
 

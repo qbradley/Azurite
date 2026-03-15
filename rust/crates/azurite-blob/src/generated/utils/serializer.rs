@@ -161,6 +161,20 @@ pub async fn serialize<R: IResponse, L: ILogger + ?Sized>(
             let body = handlerResponse.body_value().to_json_value();
             if spec.isXML {
                 let xmlReadyBody = apply_model_mapping(&body, bodyMapper);
+                // For Sequence body types, wrap array in {xmlElementName: [items]}
+                // so quick_xml produces <Root><Element>...</Element></Root>
+                let xmlReadyBody =
+                    if bodyMapper.r#type.name == "Sequence" && xmlReadyBody.is_array() {
+                        if let Some(element_name) = bodyMapper.xmlElementName.as_deref() {
+                            let mut wrapper = serde_json::Map::new();
+                            wrapper.insert(element_name.to_string(), xmlReadyBody);
+                            serde_json::Value::Object(wrapper)
+                        } else {
+                            xmlReadyBody
+                        }
+                    } else {
+                        xmlReadyBody
+                    };
                 let xmlBody = stringifyXML(
                     &xmlReadyBody,
                     bodyMapper
