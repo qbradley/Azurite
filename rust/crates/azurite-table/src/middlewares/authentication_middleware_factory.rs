@@ -48,8 +48,10 @@ impl AuthenticationMiddleware {
         );
 
         for authenticator in authenticators {
-            if let Some(pass) = authenticator.validate(req, context).await? {
-                return Ok(pass);
+            match authenticator.validate(req, context).await? {
+                Some(true) => return Ok(true),
+                // Continue to next authenticator on false or None
+                _ => continue,
             }
         }
 
@@ -179,7 +181,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn authentication_stops_after_first_explicit_failure() {
+    async fn authentication_continues_past_explicit_failure() {
         let calls = Arc::new(Mutex::new(Vec::new()));
         let factory = AuthenticationMiddlewareFactory::new(Arc::new(TestLogger));
         let middleware = factory.createAuthenticationMiddleware(vec![
@@ -204,16 +206,18 @@ mod tests {
         let table_context = TableStorageContext::new(&context);
         table_context.setAccount(Some(String::from("devstoreaccount1")));
 
-        let error = middleware
+        middleware
             .apply(
                 &table_context,
                 &GeneratedHttpRequest::default(),
                 &GeneratedHttpResponse::default(),
             )
             .await
-            .unwrap_err();
+            .unwrap();
 
-        assert_eq!(error.storageErrorCode, "AuthorizationFailure");
-        assert_eq!(*calls.lock().unwrap(), vec!["shared-key", "account-sas"]);
+        assert_eq!(
+            *calls.lock().unwrap(),
+            vec!["shared-key", "account-sas", "table-sas"]
+        );
     }
 }

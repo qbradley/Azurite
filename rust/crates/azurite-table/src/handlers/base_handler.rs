@@ -212,6 +212,7 @@ pub(crate) fn rename_key(object: &mut GeneratedObject, from: &str, to: &str) {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn normalize_cors_rule(rule: &mut GeneratedObject) {
     rename_key(rule, "AllowedOrigins", "allowedOrigins");
     rename_key(rule, "AllowedMethods", "allowedMethods");

@@ -392,11 +392,11 @@ impl TableHandler {
             Some(accept),
         );
         let mut response = GeneratedObject::new();
-        response.insert(String::from("tableName"), string_value(table.to_string()));
-        add_optional(&mut response, "odatametadata", annotations.odatametadata);
-        add_optional(&mut response, "odatatype", annotations.odatatype);
-        add_optional(&mut response, "odataid", annotations.odataid);
-        add_optional(&mut response, "odataeditLink", annotations.odataeditLink);
+        response.insert(String::from("TableName"), string_value(table.to_string()));
+        add_optional(&mut response, "odata.metadata", annotations.odatametadata);
+        add_optional(&mut response, "odata.type", annotations.odatatype);
+        add_optional(&mut response, "odata.id", annotations.odataid);
+        add_optional(&mut response, "odata.editLink", annotations.odataeditLink);
         response
     }
 }
@@ -436,7 +436,7 @@ impl ITableHandler for TableHandler {
                 "",
                 &self.base.odata_annotation_url_prefix(&context, &account),
             );
-            response.insert_field("odatametadata", string_value(annotation.odatametadata));
+            response.insert_field("odata.metadata", string_value(annotation.odatametadata));
         }
 
         let table_values = tables
@@ -449,10 +449,10 @@ impl ITableHandler for TableHandler {
                     Some(&accept),
                 );
                 let mut value = GeneratedObject::new();
-                value.insert(String::from("tableName"), string_value(props.tableName));
-                add_optional(&mut value, "odatatype", props.odatatype);
-                add_optional(&mut value, "odataid", props.odataid);
-                add_optional(&mut value, "odataeditLink", props.odataeditLink);
+                value.insert(String::from("TableName"), string_value(props.tableName));
+                add_optional(&mut value, "odata.type", props.odatatype);
+                add_optional(&mut value, "odata.id", props.odataid);
+                add_optional(&mut value, "odata.editLink", props.odataeditLink);
                 GeneratedValue::Object(value)
             })
             .collect();
@@ -900,21 +900,21 @@ impl ITableHandler for TableHandler {
             .map(|identifier| {
                 let mut access_policy = GeneratedObject::new();
                 access_policy.insert(
-                    String::from("start"),
+                    String::from("Start"),
                     string_value(identifier.accessPolicy.start),
                 );
                 access_policy.insert(
-                    String::from("expiry"),
+                    String::from("Expiry"),
                     string_value(identifier.accessPolicy.expiry),
                 );
                 access_policy.insert(
-                    String::from("permission"),
+                    String::from("Permission"),
                     string_value(identifier.accessPolicy.permission),
                 );
                 let mut object = GeneratedObject::new();
-                object.insert(String::from("id"), string_value(identifier.id));
+                object.insert(String::from("Id"), string_value(identifier.id));
                 object.insert(
-                    String::from("accessPolicy"),
+                    String::from("AccessPolicy"),
                     GeneratedValue::Object(access_policy),
                 );
                 GeneratedValue::Object(object)
@@ -953,18 +953,25 @@ impl ITableHandler for TableHandler {
             }
             let mut acl = Vec::with_capacity(signed_identifiers.len());
             for identifier in signed_identifiers {
-                let Some(id) = get_string(&identifier, "id") else {
+                // XML produces PascalCase keys; also check lowercase for JSON
+                let Some(id) =
+                    get_string(&identifier, "Id").or_else(|| get_string(&identifier, "id"))
+                else {
                     return Err(StorageErrorFactory::getInvalidXmlDocument(&context));
                 };
                 let access_policy = identifier
-                    .get("accessPolicy")
+                    .get("AccessPolicy")
+                    .or_else(|| identifier.get("accessPolicy"))
                     .and_then(GeneratedValue::as_object)
                     .ok_or_else(|| StorageErrorFactory::getInvalidXmlDocument(&context))?;
-                let start = get_string(access_policy, "start")
+                let start = get_string(access_policy, "Start")
+                    .or_else(|| get_string(access_policy, "start"))
                     .ok_or_else(|| StorageErrorFactory::getInvalidXmlDocument(&context))?;
-                let expiry = get_string(access_policy, "expiry")
+                let expiry = get_string(access_policy, "Expiry")
+                    .or_else(|| get_string(access_policy, "expiry"))
                     .ok_or_else(|| StorageErrorFactory::getInvalidXmlDocument(&context))?;
-                let permission = get_string(access_policy, "permission")
+                let permission = get_string(access_policy, "Permission")
+                    .or_else(|| get_string(access_policy, "permission"))
                     .ok_or_else(|| StorageErrorFactory::getInvalidXmlDocument(&context))?;
                 if permission
                     .chars()

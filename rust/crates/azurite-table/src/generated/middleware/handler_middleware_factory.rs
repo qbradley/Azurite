@@ -163,7 +163,7 @@ async fn dispatch_operation<H: IHandlers>(
         }
         Operation::Table_SetAccessPolicy => {
             let options = extract_object(handler_parameters, "options");
-            let signedIdentifiers = extract_nested_object_array(&options, "tableAcl");
+            let signedIdentifiers = extract_signed_identifiers(&options, "tableAcl");
             handlers
                 .tableHandler()
                 .setAccessPolicy(signedIdentifiers, options, context.clone())
@@ -195,6 +195,7 @@ fn extract_stream(parameters: &GeneratedObject, key: &str) -> GeneratedReadableS
         .unwrap_or_default()
 }
 
+#[allow(dead_code)]
 fn extract_object_array(parameters: &GeneratedObject, key: &str) -> Vec<GeneratedObject> {
     match parameters.get(key) {
         Some(GeneratedValue::Array(values)) => values
@@ -215,6 +216,33 @@ fn extract_nested_object_array(parent: &GeneratedObject, key: &str) -> Vec<Gener
             .collect(),
         Some(GeneratedValue::Object(obj)) => vec![obj.clone()],
         _ => Vec::new(),
+    }
+}
+
+/// Extract SignedIdentifier elements from the XML-parsed tableAcl structure.
+/// parseXML produces: `{"SignedIdentifier": {...}}` for one, or
+/// `{"SignedIdentifier": [{...}, {...}]}` for multiple.
+/// We need to unwrap the `SignedIdentifier` key to get the inner objects.
+fn extract_signed_identifiers(parent: &GeneratedObject, key: &str) -> Vec<GeneratedObject> {
+    let acl_value = match parent.get(key) {
+        Some(v) => v,
+        None => return Vec::new(),
+    };
+    // Try to get the inner SignedIdentifier element(s)
+    let inner = acl_value
+        .as_object()
+        .and_then(|obj| obj.get("SignedIdentifier"));
+    match inner {
+        Some(GeneratedValue::Array(values)) => values
+            .iter()
+            .filter_map(GeneratedValue::as_object)
+            .cloned()
+            .collect(),
+        Some(GeneratedValue::Object(obj)) => vec![obj.clone()],
+        _ => {
+            // Fallback: treat the value itself as the identifiers array
+            extract_nested_object_array(parent, key)
+        }
     }
 }
 

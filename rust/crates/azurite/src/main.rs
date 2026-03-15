@@ -163,9 +163,33 @@ async fn main_impl() -> Result<(), StorageError> {
     AzuriteTelemetryClient::TraceStartEvent("").await;
 
     let shutdown_signal = async {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("failed to install CTRL+C signal handler");
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{signal, SignalKind};
+            // Register SIGHUP handler to prevent default termination.
+            // The server should survive terminal disconnects (e.g., when
+            // launched as a background process by test runners).
+            let mut sighup =
+                signal(SignalKind::hangup()).expect("failed to install SIGHUP handler");
+            let mut sigterm =
+                signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+            loop {
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => { break; }
+                    _ = sigterm.recv() => { break; }
+                    _ = sighup.recv() => {
+                        // Ignore SIGHUP — keep running
+                        continue;
+                    }
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to install CTRL+C signal handler");
+        }
     };
 
     shutdown_signal.await;

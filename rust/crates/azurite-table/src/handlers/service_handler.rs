@@ -178,9 +178,9 @@ impl IServiceHandler for ServiceHandler {
         }
 
         let mut geo_replication = GeneratedObject::new();
-        geo_replication.insert(String::from("status"), string_value("live"));
+        geo_replication.insert(String::from("Status"), string_value("live"));
         geo_replication.insert(
-            String::from("lastSyncTime"),
+            String::from("LastSyncTime"),
             json_value(BaseHandler::start_time(&context)),
         );
 
