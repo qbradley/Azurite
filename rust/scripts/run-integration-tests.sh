@@ -142,29 +142,29 @@ wait_for_endpoint() {
 run_service_tests() {
   local service="$1"
 
-  # We run mocha directly (bypassing npm run test:*) so we can exclude
-  # HTTPS / OAuth / CORS test files that require TLS support which
-  # the Rust server does not yet provide.
+  # Phase 1: HTTP tests – these work without TLS.
+  # Exclude test files that hardcode HTTPS URLs (they run in the TLS phase).
   local mocha_base="npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit"
 
   case "${service}" in
     blob)
-      echo "Running TypeScript blob integration tests (excluding OAuth)..."
+      echo "Running TypeScript blob integration tests (HTTP phase)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/blob/https.test.ts' \
         --ignore 'tests/blob/oauth.test.ts' \
         'tests/blob/*.test.ts' 'tests/blob/**/*.test.ts'
       ;;
     queue)
-      echo "Running TypeScript queue integration tests (excluding OAuth)..."
+      echo "Running TypeScript queue integration tests (HTTP phase)..."
       ${mocha_base} --grep @loki \
         --ignore 'tests/queue/https.test.ts' \
         --ignore 'tests/queue/oauth.test.ts' \
         'tests/queue/*.test.ts' 'tests/queue/**/*.test.ts'
       ;;
     table)
-      echo "Running TypeScript table integration tests (excluding OAuth/CORS)..."
-      # Table CORS tests require HTTPS and hardcode their own HTTPS server URL
+      echo "Running TypeScript table integration tests (HTTP phase)..."
+      # These files use @azure/data-tables SDK which hardcodes https:// URLs.
+      # They run in the TLS phase instead.
       ${mocha_base} \
         --ignore 'tests/table/auth/tableCorsRequest.test.ts' \
         --ignore 'tests/table/auth/oauth.test.ts' \
@@ -302,67 +302,82 @@ else
 fi
 
 # ── HTTPS test phase ─────────────────────────────────────────────────
-# Restart the server with TLS enabled and run HTTPS-specific tests.
-if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob" || "${AZURITE_TEST_SERVICES}" == "queue" ]]; then
-  echo ""
-  echo "=== HTTPS test phase ==="
-  echo "Stopping HTTP server (pid ${SERVER_PID})..."
-  kill "${SERVER_PID}" 2>/dev/null || true
-  wait "${SERVER_PID}" 2>/dev/null || true
-  SERVER_PID=""
+# Restart the server with TLS enabled and run HTTPS-specific tests
+# plus table tests that hardcode https:// URLs.
+echo ""
+echo "=== HTTPS + TLS-requiring test phase ==="
+echo "Stopping HTTP server (pid ${SERVER_PID})..."
+kill "${SERVER_PID}" 2>/dev/null || true
+wait "${SERVER_PID}" 2>/dev/null || true
+SERVER_PID=""
 
-  HTTPS_LOG="$(mktemp "${TMPDIR:-/tmp}/azurite-https.XXXXXX.log")"
-  echo "Starting Rust Azurite with TLS (cert: tests/server.cert)..."
+HTTPS_LOG="$(mktemp "${TMPDIR:-/tmp}/azurite-https.XXXXXX.log")"
+echo "Starting Rust Azurite with TLS (cert: tests/server.cert)..."
 
-  "${AZURITE_BIN}" \
-    --blobHost "${BLOB_HOST}" \
-    --blobPort "${BLOB_PORT}" \
-    --queueHost "${QUEUE_HOST}" \
-    --queuePort "${QUEUE_PORT}" \
-    --tableHost "${TABLE_HOST}" \
-    --tablePort "${TABLE_PORT}" \
-    --cert "tests/server.cert" \
-    --key "tests/server.key" \
-    --inMemoryPersistence \
-    >"${HTTPS_LOG}" 2>&1 &
-  SERVER_PID=$!
+"${AZURITE_BIN}" \
+  --blobHost "${BLOB_HOST}" \
+  --blobPort "${BLOB_PORT}" \
+  --queueHost "${QUEUE_HOST}" \
+  --queuePort "${QUEUE_PORT}" \
+  --tableHost "${TABLE_HOST}" \
+  --tablePort "${TABLE_PORT}" \
+  --cert "tests/server.cert" \
+  --key "tests/server.key" \
+  --inMemoryPersistence \
+  >"${HTTPS_LOG}" 2>&1 &
+SERVER_PID=$!
 
-  sleep 1
-  if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
-    echo "Rust Azurite (TLS) failed to start." >&2
-    tail -n 20 "${HTTPS_LOG}" >&2 || true
-    exit 1
-  fi
+sleep 1
+if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
+  echo "Rust Azurite (TLS) failed to start." >&2
+  tail -n 20 "${HTTPS_LOG}" >&2 || true
+  exit 1
+fi
 
-  local_mocha="npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit"
+local_mocha="npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 AZURITE_TEST_INMEMORYPERSISTENCE=1 mocha --require ts-node/register --no-timeouts --recursive --exit"
 
-  https_pass=0
-  https_fail=0
+https_pass=0
+https_fail=0
 
-  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob" ]]; then
-    wait_for_endpoint "blob HTTPS" "https://${BLOB_HOST}:${BLOB_PORT}/devstoreaccount1?comp=properties"
-    echo "Running blob HTTPS tests..."
-    set +e
-    ${local_mocha} 'tests/blob/https.test.ts'
-    if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
-    set -e
-  fi
+if service_selected blob; then
+  wait_for_endpoint "blob HTTPS" "https://${BLOB_HOST}:${BLOB_PORT}/devstoreaccount1?comp=properties"
+  echo "Running blob HTTPS tests..."
+  set +e
+  ${local_mocha} 'tests/blob/https.test.ts'
+  if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
+  set -e
+fi
 
-  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "queue" ]]; then
-    wait_for_endpoint "queue HTTPS" "https://${QUEUE_HOST}:${QUEUE_PORT}/devstoreaccount1?comp=properties"
-    echo "Running queue HTTPS tests..."
-    set +e
-    ${local_mocha} 'tests/queue/https.test.ts'
-    if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
-    set -e
-  fi
+if service_selected queue; then
+  wait_for_endpoint "queue HTTPS" "https://${QUEUE_HOST}:${QUEUE_PORT}/devstoreaccount1?comp=properties"
+  echo "Running queue HTTPS tests..."
+  set +e
+  ${local_mocha} 'tests/queue/https.test.ts'
+  if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
+  set -e
+fi
 
-  echo "HTTPS tests: ${https_pass} suites passed, ${https_fail} failed."
-  rm -f "${HTTPS_LOG}"
+if service_selected table; then
+  wait_for_endpoint "table HTTPS" "https://${TABLE_HOST}:${TABLE_PORT}/devstoreaccount1/Tables"
+  echo "Running table TLS-requiring tests (data-tables SDK, CORS, batch)..."
+  set +e
+  ${local_mocha} \
+    'tests/table/apis/table.entity.azure.data-tables.test.ts' \
+    'tests/table/apis/table.entity.query.test.ts' \
+    'tests/table/apis/table.entity.issues.test.ts' \
+    'tests/table/apis/table.entity.apostrophe.data-tables.test.ts' \
+    'tests/table/apis/table.batch.errorhandling.test.ts' \
+    'tests/table/auth/tableCorsRequest.test.ts'
+  if [[ $? -eq 0 ]]; then ((https_pass++)); else ((https_fail++)); fi
+  set -e
+fi
 
-  if [[ ${https_fail} -gt 0 ]]; then
-    test_exit_code=1
-  fi
+echo "HTTPS/TLS tests: ${https_pass} suites passed, ${https_fail} failed."
+rm -f "${HTTPS_LOG}"
+
+if [[ ${https_fail} -gt 0 ]]; then
+  test_exit_code=1
+fi
 
   # ── OAuth test phase ─────────────────────────────────────────────────
   # Restart with TLS + OAuth enabled
@@ -400,7 +415,7 @@ if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob
   oauth_pass=0
   oauth_fail=0
 
-  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob" ]]; then
+  if service_selected blob; then
     wait_for_endpoint "blob OAuth" "https://${BLOB_HOST}:${BLOB_PORT}/devstoreaccount1?comp=properties"
     echo "Running blob OAuth tests..."
     set +e
@@ -409,11 +424,20 @@ if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob
     set -e
   fi
 
-  if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "queue" ]]; then
+  if service_selected queue; then
     wait_for_endpoint "queue OAuth" "https://${QUEUE_HOST}:${QUEUE_PORT}/devstoreaccount1?comp=properties"
     echo "Running queue OAuth tests..."
     set +e
     ${local_mocha} 'tests/queue/oauth.test.ts'
+    if [[ $? -eq 0 ]]; then ((oauth_pass++)); else ((oauth_fail++)); fi
+    set -e
+  fi
+
+  if service_selected table; then
+    wait_for_endpoint "table OAuth" "https://${TABLE_HOST}:${TABLE_PORT}/devstoreaccount1/Tables"
+    echo "Running table OAuth tests..."
+    set +e
+    ${local_mocha} 'tests/table/auth/oauth.test.ts'
     if [[ $? -eq 0 ]]; then ((oauth_pass++)); else ((oauth_fail++)); fi
     set -e
   fi
@@ -424,6 +448,5 @@ if [[ "${AZURITE_TEST_SERVICES}" == "all" || "${AZURITE_TEST_SERVICES}" == "blob
   if [[ ${oauth_fail} -gt 0 ]]; then
     test_exit_code=1
   fi
-fi
 
 exit "${test_exit_code}"

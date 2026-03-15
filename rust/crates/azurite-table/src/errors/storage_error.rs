@@ -83,6 +83,49 @@ impl StorageError {
         }
     }
 
+    /// Create a StorageError that always uses XML body format, regardless of Accept header.
+    /// Used by authenticators to match TypeScript behavior where auth-stage errors are XML.
+    pub fn new_xml(
+        statusCode: u16,
+        storageErrorCode: impl Into<String>,
+        storageErrorMessage: impl Into<String>,
+        storageRequestID: impl Into<String>,
+        storageAdditionalErrorMessages: BTreeMap<String, String>,
+    ) -> Self {
+        let storageErrorCode = storageErrorCode.into();
+        let storageErrorMessage = storageErrorMessage.into();
+        let storageRequestID = storageRequestID.into();
+        let message = format_error_message(&storageErrorMessage, &storageRequestID);
+
+        let body = build_body_xml(&storageErrorCode, &message, &storageAdditionalErrorMessages);
+
+        let mut headers = BTreeMap::new();
+        headers.insert(
+            String::from("x-ms-error-code"),
+            ResponseHeaderValue::from(storageErrorCode.clone()),
+        );
+        headers.insert(
+            String::from("x-ms-request-id"),
+            ResponseHeaderValue::from(storageRequestID.clone()),
+        );
+        headers.insert(
+            String::from("x-ms-version"),
+            ResponseHeaderValue::from(TABLE_API_VERSION),
+        );
+
+        Self {
+            statusCode,
+            message: storageErrorMessage.clone(),
+            statusMessage: Some(storageErrorMessage.clone()),
+            headers: Some(headers),
+            body: Some(GeneratedValue::String(body)),
+            contentType: Some(String::from("application/xml")),
+            storageErrorCode,
+            storageErrorMessage,
+            storageRequestID,
+        }
+    }
+
     pub fn empty_extra() -> BTreeMap<String, String> {
         BTreeMap::new()
     }

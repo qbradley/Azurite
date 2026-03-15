@@ -51,7 +51,15 @@ impl IQueryNode for BinaryDataNode {
         context: &dyn IQueryContext,
         other: &dyn IQueryNode,
     ) -> Result<Option<QueryComparison>, QueryError> {
-        Ok(Some(self.inner.compare(context, other)?))
+        // Must use our own evaluate() (hex→base64) rather than ValueNode::evaluate() (raw hex)
+        let this_value = self.evaluate(context)?;
+        let other_value = other.evaluate(context)?;
+        if this_value.is_undefined() || other_value.is_undefined() || other_value.is_null() {
+            return Ok(Some(QueryComparison::Nan));
+        }
+        Ok(Some(QueryComparison::from_ordering(
+            this_value.relational_compare(&other_value),
+        )))
     }
 
     fn static_type(&self) -> Option<QueryStaticType> {

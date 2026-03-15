@@ -180,6 +180,11 @@ fn to_generated_request(req: &BlobBatchSubRequest) -> GeneratedHttpRequest {
         })
         .unwrap_or_default();
 
+    // Derive protocol from x-forwarded-proto header (propagated from parent TLS request)
+    let protocol = req
+        .getHeader("x-forwarded-proto")
+        .unwrap_or_else(|| String::from("http"));
+
     GeneratedHttpRequest {
         method: req.getMethod(),
         url: req.getUrl(),
@@ -187,6 +192,7 @@ fn to_generated_request(req: &BlobBatchSubRequest) -> GeneratedHttpRequest {
         path: req.getPath(),
         headers: req.getHeaders(),
         query,
+        protocol,
         ..GeneratedHttpRequest::default()
     }
 }
@@ -449,6 +455,19 @@ impl<H: IHandlers + 'static> BlobBatchHandler<H> {
             }
 
             results.push(sub_req);
+        }
+
+        // Propagate x-forwarded-proto from the parent batch request so that
+        // OAuth authenticators see the correct protocol for sub-requests.
+        if let Some(proto) = batch_request.getHeader("x-forwarded-proto") {
+            for sub_req in results.iter_mut() {
+                if sub_req.getHeader("x-forwarded-proto").is_none() {
+                    sub_req.setHeader(
+                        "x-forwarded-proto".to_owned(),
+                        Some(RequestHeaderValue::Single(proto.clone())),
+                    );
+                }
+            }
         }
 
         if results.is_empty() {

@@ -341,16 +341,29 @@ impl IServiceHandler for ServiceHandler {
         response.insert_field("signedTid", string_value(tid));
         response.insert_field("signedService", string_value("b"));
         response.insert_field("signedVersion", string_value(BLOB_API_VERSION));
-        if let Some(start) = keyInfo.get("start") {
-            response.insert_field("signedStart", start.clone());
-        }
-        if let Some(expiry) = keyInfo.get("expiry") {
-            response.insert_field("signedExpiry", expiry.clone());
-        }
-        response.insert_field(
-            "value",
-            string_value(format!("{}:{}:{}", oid, tid, BLOB_API_VERSION)),
+        // XML parser preserves PascalCase element names (Start/Expiry)
+        let start = keyInfo
+            .get("Start")
+            .or_else(|| keyInfo.get("start"))
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        let expiry = keyInfo
+            .get("Expiry")
+            .or_else(|| keyInfo.get("expiry"))
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        response.insert_field("signedStart", string_value(&start));
+        response.insert_field("signedExpiry", string_value(&expiry));
+
+        // Derive proper HMAC key value (same algorithm used for SAS verification)
+        let key_value = crate::authentication::blob_sas_authenticator::getUserDelegationKeyValue(
+            oid,
+            tid,
+            &start,
+            &expiry,
+            BLOB_API_VERSION,
         );
+        response.insert_field("value", string_value(key_value));
         Ok(response)
     }
 

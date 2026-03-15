@@ -434,7 +434,7 @@ fn parse_date_or_string(value: &DateOrString) -> chrono::DateTime<chrono::Utc> {
     }
 }
 
-fn getUserDelegationKeyValue(
+pub fn getUserDelegationKeyValue(
     signedObjectid: &str,
     signedTenantid: &str,
     signedStartsOn: &str,

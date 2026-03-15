@@ -112,7 +112,7 @@ impl IAuthenticator for TableSharedKeyLiteAuthenticator {
         let accountProperties = self
             .dataStore
             .getAccount(&account)
-            .ok_or_else(|| StorageErrorFactory::ResourceNotFound(content))?;
+            .ok_or_else(|| StorageErrorFactory::ResourceNotFoundXml(content))?;
 
         let stringToSign =
             self.build_string_to_sign(req, &account, tableContext.authenticationPath().as_deref());

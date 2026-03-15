@@ -253,6 +253,19 @@ impl StorageErrorFactory {
         )
     }
 
+    /// ResourceNotFound with XML body (for auth-stage errors, matching TS behavior).
+    pub fn ResourceNotFoundXml(context: &Context) -> StorageError {
+        StorageError::new_xml(
+            404,
+            "ResourceNotFound",
+            "The specified resource does not exist.",
+            context
+                .contextId()
+                .unwrap_or_else(|| DEFAULT_ID.to_string()),
+            StorageError::empty_extra(),
+        )
+    }
+
     pub fn getEntityNotFound(context: &Context) -> StorageError {
         Self::create(
             context,

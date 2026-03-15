@@ -110,7 +110,7 @@ impl IAuthenticator for AccountSASAuthenticator {
         let accountProperties = self
             .accountDataStore
             .getAccount(&account)
-            .ok_or_else(|| StorageErrorFactory::ResourceNotFound(content))?;
+            .ok_or_else(|| StorageErrorFactory::ResourceNotFoundXml(content))?;
 
         let signature = decodeIfExist(req.getQuery("sig").as_deref());
         let values = match self.getAccountSASSignatureValuesFromRequest(req) {
