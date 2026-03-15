@@ -3,7 +3,7 @@ use azurite_common::authentication::{ipRangeToString, IIPRange, SASProtocolOrStr
 use azurite_common::utils::utils::{computeHMACSHA256, truncatedISO8061Date};
 use serde::{Deserialize, Serialize};
 
-const QUEUE_CANONICAL_NAME_PREFIX: &str = "/queueservices";
+const QUEUE_CANONICAL_NAME_PREFIX: &str = "/queue";
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
