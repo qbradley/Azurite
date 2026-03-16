@@ -6,7 +6,7 @@ use crate::generated::context::Context;
 use super::i_conditional_headers::IConditionalHeaders;
 
 /// Parse a date string that may be in ISO 8601, RFC 2822, or HTTP date format.
-fn parse_date(s: &str) -> Option<DateTime<Utc>> {
+pub(crate) fn parse_date(s: &str) -> Option<DateTime<Utc>> {
     // Try ISO 8601 (e.g., "2026-03-14T19:43:32Z")
     if let Ok(dt) = s.parse::<DateTime<Utc>>() {
         return Some(dt);

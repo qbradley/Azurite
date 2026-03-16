@@ -1,8 +1,9 @@
-use chrono::{DateTime, Timelike, Utc};
+use chrono::{DateTime, Timelike};
 
 use crate::generated::artifacts::models::GeneratedValue;
 use crate::persistence::{BlobModel, ContainerModel, FilterBlobModel};
 
+use super::conditional_headers_adapter::parse_date;
 use super::i_condition_resource::IConditionResource;
 
 /// Mirrors TypeScript `ConditionResourceAdapter` class.
@@ -91,7 +92,7 @@ where
     let lastModified = properties
         .get("lastModified")
         .and_then(|v| match v {
-            GeneratedValue::String(s) => s.parse::<DateTime<Utc>>().ok(),
+            GeneratedValue::String(s) => parse_date(s),
             GeneratedValue::Number(n) => DateTime::from_timestamp_millis(*n as i64),
             _ => None,
         })

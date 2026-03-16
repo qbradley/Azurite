@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use azurite_common::utils::utils::formatRfc1123;
 use chrono::{DateTime, Utc};
 
 use crate::authentication::IAuthenticator;
@@ -62,7 +63,10 @@ impl BaseHandler {
         response.insert_field("requestId", string_value(Self::request_id(context)));
         response.insert_field("version", string_value(TABLE_API_VERSION));
         if include_date {
-            response.insert_field("date", json_value(Self::start_time(context)));
+            response.insert_field(
+                "date",
+                string_value(formatRfc1123(Self::start_time(context))),
+            );
         }
         if let Some(client_request_id) = get_string(options, "requestId") {
             response.insert_field("clientRequestId", string_value(client_request_id));
@@ -142,10 +146,6 @@ impl BaseHandler {
 
 pub(crate) fn string_value(value: impl Into<String>) -> GeneratedValue {
     GeneratedValue::String(value.into())
-}
-
-pub(crate) fn json_value<T: serde::Serialize>(value: T) -> GeneratedValue {
-    GeneratedValue::from(serde_json::to_value(value).unwrap_or(serde_json::Value::Null))
 }
 
 pub(crate) fn get_string(map: &GeneratedObject, key: &str) -> Option<String> {

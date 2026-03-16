@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use azurite_common::utils::utils::formatRfc1123;
 use serde_json::Value;
 
 use crate::context::TableStorageContext;
@@ -15,7 +16,7 @@ use crate::generated::utils::xml::parseXML;
 use crate::persistence::ServicePropertiesModel;
 use crate::utils::constants::TABLE_API_VERSION;
 
-use super::base_handler::{get_string, json_value, rename_key, string_value, BaseHandler};
+use super::base_handler::{get_string, rename_key, string_value, BaseHandler};
 
 #[derive(Clone)]
 pub struct ServiceHandler {
@@ -181,7 +182,7 @@ impl IServiceHandler for ServiceHandler {
         geo_replication.insert(String::from("Status"), string_value("live"));
         geo_replication.insert(
             String::from("LastSyncTime"),
-            json_value(BaseHandler::start_time(&context)),
+            string_value(formatRfc1123(BaseHandler::start_time(&context))),
         );
 
         let mut response = GeneratedResponse::new(200);

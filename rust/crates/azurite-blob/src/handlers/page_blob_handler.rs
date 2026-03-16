@@ -7,7 +7,7 @@ use chrono::Utc;
 use azurite_common::persistence::i_extent_store::{
     ExtentDataInput, IExtentChunk as CommonExtentChunk,
 };
-use azurite_common::utils::utils::{convertRawHeadersToMetadata, newEtag};
+use azurite_common::utils::utils::{convertRawHeadersToMetadata, formatRfc1123, newEtag};
 
 use crate::context::blob_storage_context::BlobStorageContext;
 use crate::errors::{NotImplementedError, StorageError, StorageErrorFactory};
@@ -252,11 +252,11 @@ impl IPageBlobHandler for PageBlobHandler {
         let mut properties = models::BlobPropertiesInternal::new();
         properties.insert(
             "creationTime".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert(
             "lastModified".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert("etag".to_string(), GeneratedValue::String(etag.clone()));
         properties.insert(
@@ -360,7 +360,7 @@ impl IPageBlobHandler for PageBlobHandler {
 
         let mut response = GeneratedResponse::new(201);
         response.insert_field("eTag", GeneratedValue::String(etag));
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         if let Some(md5) = content_md5 {
             response.insert_field("contentMD5", GeneratedValue::String(md5));
         }
@@ -372,7 +372,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -528,7 +528,7 @@ impl IPageBlobHandler for PageBlobHandler {
         if let Some(v) = etag {
             response.insert_field("eTag", GeneratedValue::String(v));
         }
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         // contentMD5: undefined per TS comment (TODO)
         if let Some(v) = blob_sequence_number {
             response.insert_field("blobSequenceNumber", GeneratedValue::Number(v));
@@ -541,7 +541,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -661,7 +661,7 @@ impl IPageBlobHandler for PageBlobHandler {
         if let Some(v) = etag {
             response.insert_field("eTag", GeneratedValue::String(v));
         }
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         // contentMD5: undefined per TS comment (TODO)
         if let Some(v) = blob_sequence_number {
             response.insert_field("blobSequenceNumber", GeneratedValue::Number(v));
@@ -674,7 +674,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
         }
@@ -779,7 +779,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "blobContentLength",
             GeneratedValue::Number(blob_content_length as f64),
         );
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field(
             "requestId",
             GeneratedValue::String(context_id_str.to_string()),
@@ -788,7 +788,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
         }
@@ -866,7 +866,7 @@ impl IPageBlobHandler for PageBlobHandler {
         if let Some(v) = last_modified {
             response.insert_field("lastModified", GeneratedValue::String(v));
         } else {
-            response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+            response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         }
         if let Some(v) = blob_sequence_number {
             response.insert_field("blobSequenceNumber", GeneratedValue::Number(v));
@@ -879,7 +879,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
         }
@@ -947,7 +947,7 @@ impl IPageBlobHandler for PageBlobHandler {
         if let Some(v) = last_modified {
             response.insert_field("lastModified", GeneratedValue::String(v));
         } else {
-            response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+            response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         }
         if let Some(v) = blob_sequence_number {
             response.insert_field("blobSequenceNumber", GeneratedValue::Number(v));
@@ -960,7 +960,7 @@ impl IPageBlobHandler for PageBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
         }

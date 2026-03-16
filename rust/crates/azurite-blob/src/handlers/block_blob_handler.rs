@@ -8,7 +8,9 @@ use chrono::Utc;
 use azurite_common::persistence::i_extent_store::{
     ExtentDataInput, IExtentChunk as CommonExtentChunk,
 };
-use azurite_common::utils::utils::{convertRawHeadersToMetadata, getMD5FromString, newEtag};
+use azurite_common::utils::utils::{
+    convertRawHeadersToMetadata, formatRfc1123, getMD5FromString, newEtag,
+};
 
 use crate::context::blob_storage_context::BlobStorageContext;
 use crate::errors::{NotImplementedError, StorageError, StorageErrorFactory};
@@ -311,11 +313,11 @@ impl IBlockBlobHandler for BlockBlobHandler {
         let mut properties = models::BlobPropertiesInternal::new();
         properties.insert(
             "creationTime".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert(
             "lastModified".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert("etag".to_string(), GeneratedValue::String(etag.clone()));
         properties.insert(
@@ -369,7 +371,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
         properties.insert("serverEncrypted".to_string(), GeneratedValue::Bool(true));
         properties.insert(
             "accessTierChangeTime".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
 
         // Access tier handling
@@ -446,7 +448,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
 
         let mut response = GeneratedResponse::new(201);
         response.insert_field("eTag", GeneratedValue::String(etag));
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("contentMD5", GeneratedValue::String(calculated_md5_b64));
         response.insert_field(
             "requestId",
@@ -456,7 +458,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -582,7 +584,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -661,11 +663,11 @@ impl IBlockBlobHandler for BlockBlobHandler {
         let mut properties = models::BlobPropertiesInternal::new();
         properties.insert(
             "lastModified".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert(
             "creationTime".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert("etag".to_string(), GeneratedValue::String(etag.clone()));
         properties.insert(
@@ -784,7 +786,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
 
         let mut response = GeneratedResponse::new(201);
         response.insert_field("eTag", GeneratedValue::String(etag));
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("contentMD5", GeneratedValue::String(content_md5_b64));
         response.insert_field(
             "requestId",
@@ -794,7 +796,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -907,7 +909,7 @@ impl IBlockBlobHandler for BlockBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("committedBlocks", GeneratedValue::Array(committed_blocks));
         response.insert_field(
             "uncommittedBlocks",

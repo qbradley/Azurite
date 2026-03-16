@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use azurite_common::persistence::i_extent_store::IExtentChunk as CommonIExtentChunk;
-use azurite_common::utils::utils::convertRawHeadersToMetadata;
+use azurite_common::utils::utils::{convertRawHeadersToMetadata, formatRfc1123};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use tokio::io::AsyncReadExt;
 use url::Url;
@@ -170,12 +170,11 @@ impl IBlobHandler for BlobHandler {
         response.insert_field("requestId", string_value(&ctx_id));
         response.insert_field("version", string_value(BLOB_API_VERSION));
         if let Some(t) = start_time {
-            response.insert_field("date", json_value(t));
+            response.insert_field("date", string_value(formatRfc1123(t)));
         }
         if let Some(cri) = client_request_id {
             response.insert_field("clientRequestId", string_value(cri));
         }
-
         // metadata is included in both paths
         if let Some(metadata) = &res.metadata {
             response.insert_field("metadata", GeneratedValue::Object(metadata.clone()));
@@ -1078,7 +1077,7 @@ impl IBlobHandler for BlobHandler {
             response.insert_field("clientRequestId", string_value(cri));
         }
         if let Some(t) = start_time {
-            response.insert_field("date", json_value(t));
+            response.insert_field("date", string_value(formatRfc1123(t)));
         }
         Ok(response)
     }
@@ -2036,10 +2035,6 @@ fn string_value(value: impl Into<String>) -> GeneratedValue {
     GeneratedValue::String(value.into())
 }
 
-fn json_value<T: serde::Serialize>(value: T) -> GeneratedValue {
-    GeneratedValue::from(serde_json::to_value(value).unwrap_or(serde_json::Value::Null))
-}
-
 /// Copy a field from a properties map to a response with a possibly different field name.
 /// Used to map e.g. `etag` → `eTag`.
 fn copy_prop_field(
@@ -2079,7 +2074,7 @@ fn set_common_fields(
     response.insert_field("requestId", string_value(&ctx_id));
     response.insert_field("version", string_value(BLOB_API_VERSION));
     if let Some(t) = start_time {
-        response.insert_field("date", json_value(t));
+        response.insert_field("date", string_value(formatRfc1123(t)));
     }
     if let Some(cri) = client_request_id {
         response.insert_field("clientRequestId", string_value(cri));

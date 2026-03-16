@@ -98,6 +98,13 @@ pub fn computeHMACSHA256(stringToSign: &str, key: &[u8]) -> String {
     STANDARD.encode(hmac.finalize().into_bytes())
 }
 
+/// Format a DateTime<Utc> as RFC 1123 (e.g., "Tue, 16 Mar 2026 14:23:08 GMT").
+/// Required by the Azure Storage REST API for all date response headers.
+#[allow(non_snake_case)]
+pub fn formatRfc1123(dt: DateTime<Utc>) -> String {
+    dt.format("%a, %d %b %Y %H:%M:%S GMT").to_string()
+}
+
 #[allow(non_snake_case)]
 pub fn truncatedISO8061Date(
     date: DateTime<Utc>,
@@ -170,4 +177,49 @@ where
         hash.update(&buffer[..read]);
     }
     Ok(hash.finalize().to_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn test_format_rfc1123() {
+        // Tue, 16 Mar 2026 14:23:08 GMT
+        let dt = Utc.with_ymd_and_hms(2026, 3, 16, 14, 23, 8).unwrap();
+        assert_eq!(formatRfc1123(dt), "Mon, 16 Mar 2026 14:23:08 GMT");
+
+        // Epoch
+        let epoch = Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap();
+        assert_eq!(formatRfc1123(epoch), "Thu, 01 Jan 1970 00:00:00 GMT");
+
+        // Leap day
+        let leap = Utc.with_ymd_and_hms(2024, 2, 29, 12, 0, 0).unwrap();
+        assert_eq!(formatRfc1123(leap), "Thu, 29 Feb 2024 12:00:00 GMT");
+    }
+
+    #[test]
+    fn test_format_rfc1123_not_iso8601() {
+        let dt = Utc.with_ymd_and_hms(2026, 3, 16, 14, 23, 8).unwrap();
+        let formatted = formatRfc1123(dt);
+        // Must NOT look like ISO 8601 (e.g., "2026-03-16T14:23:08+00:00")
+        assert!(
+            !formatted.contains("T14:"),
+            "RFC 1123 must not contain ISO 8601 'T' date-time separator, got: {formatted}"
+        );
+        assert!(
+            !formatted.contains('+'),
+            "RFC 1123 must not contain '+' offset, got: {formatted}"
+        );
+        assert!(
+            formatted.ends_with("GMT"),
+            "RFC 1123 must end with 'GMT', got: {formatted}"
+        );
+        // Must start with a day-of-week abbreviation
+        assert!(
+            formatted.starts_with("Mon, "),
+            "RFC 1123 must start with day abbreviation, got: {formatted}"
+        );
+    }
 }

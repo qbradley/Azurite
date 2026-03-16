@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use azurite_common::i_account_data_store::IAccountDataStore;
-use azurite_common::utils::utils::{convertRawHeadersToMetadata, newEtag};
+use azurite_common::utils::utils::{convertRawHeadersToMetadata, formatRfc1123, newEtag};
 use chrono::Utc;
 use serde::Serialize;
 
@@ -94,7 +94,10 @@ impl IContainerHandler for ContainerHandler {
 
         let mut properties = GeneratedObject::new();
         properties.insert("etag".into(), string_value(etag.clone()));
-        properties.insert("lastModified".into(), json_value(lastModified));
+        properties.insert(
+            "lastModified".into(),
+            string_value(formatRfc1123(lastModified)),
+        );
         properties.insert("leaseStatus".into(), string_value("unlocked"));
         properties.insert("leaseState".into(), string_value("available"));
         if let Some(access) = get_string(&options, "access") {
@@ -126,7 +129,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         response.insert_field("eTag", string_value(etag));
-        response.insert_field("lastModified", json_value(lastModified));
+        response.insert_field("lastModified", string_value(formatRfc1123(lastModified)));
         response.insert_field("version", string_value(BLOB_API_VERSION));
         Ok(response)
     }
@@ -218,7 +221,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         response.insert_field("version", string_value(BLOB_API_VERSION));
         Ok(response)
@@ -269,9 +272,9 @@ impl IContainerHandler for ContainerHandler {
         if let Some(client_request_id) = get_string(&options, "requestId") {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
-        response.insert_field("date", json_value(date));
+        response.insert_field("date", string_value(formatRfc1123(date)));
         response.insert_field("eTag", string_value(eTag));
-        response.insert_field("lastModified", json_value(date));
+        response.insert_field("lastModified", string_value(formatRfc1123(date)));
         Ok(response)
     }
 
@@ -355,9 +358,9 @@ impl IContainerHandler for ContainerHandler {
             .await?;
 
         let mut response = GeneratedResponse::new(200);
-        response.insert_field("date", json_value(date));
+        response.insert_field("date", string_value(formatRfc1123(date)));
         response.insert_field("eTag", string_value(eTag));
-        response.insert_field("lastModified", json_value(date));
+        response.insert_field("lastModified", string_value(formatRfc1123(date)));
         response.insert_field(
             "requestId",
             string_value(context.contextId().unwrap_or_default()),
@@ -442,7 +445,7 @@ impl IContainerHandler for ContainerHandler {
         );
         response.insert_field("version", string_value(BLOB_API_VERSION));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(client_request_id) = get_string(&options, "requestId") {
             response.insert_field("clientRequestId", string_value(client_request_id));
@@ -492,7 +495,7 @@ impl IContainerHandler for ContainerHandler {
         );
         response.insert_field("version", string_value(BLOB_API_VERSION));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         response.insert_field("serviceEndpoint", string_value(serviceEndpoint));
         if let Some(where_clause) = where_clause {
@@ -539,7 +542,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(etag) = res.properties.get("etag") {
             response.insert_field("eTag", etag.clone());
@@ -581,7 +584,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(etag) = res.get("etag") {
             response.insert_field("eTag", etag.clone());
@@ -620,7 +623,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(leaseId) = res.leaseId {
             response.insert_field("leaseId", string_value(leaseId));
@@ -661,7 +664,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(etag) = res.properties.get("etag") {
             response.insert_field("eTag", etag.clone());
@@ -705,7 +708,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("clientRequestId", string_value(client_request_id));
         }
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(etag) = res.properties.get("etag") {
             response.insert_field("eTag", etag.clone());
@@ -759,7 +762,7 @@ impl IContainerHandler for ContainerHandler {
         response.insert_field("skuName", string_value(EMULATOR_ACCOUNT_SKUNAME));
         response.insert_field("accountKind", string_value(EMULATOR_ACCOUNT_KIND));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         response.insert_field("version", string_value(BLOB_API_VERSION));
         Ok(response)
@@ -829,7 +832,7 @@ async fn list_blobs(
     );
     response.insert_field("version", string_value(BLOB_API_VERSION));
     if let Some(start_time) = context.startTime() {
-        response.insert_field("date", json_value(start_time));
+        response.insert_field("date", string_value(formatRfc1123(start_time)));
     }
     response.insert_field("serviceEndpoint", string_value(serviceEndpoint));
     response.insert_field("containerName", string_value(containerName));

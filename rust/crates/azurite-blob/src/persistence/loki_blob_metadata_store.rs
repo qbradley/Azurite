@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use base64::Engine;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::stream::{self, BoxStream};
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -127,9 +127,23 @@ fn context_id(context: &Context) -> String {
 
 fn get_datetime(map: &GeneratedObject, key: &str) -> Option<DateTime<Utc>> {
     get_string(map, key).and_then(|value| {
+        // Try RFC 3339/ISO 8601 first, then RFC 1123 / RFC 2822
         DateTime::parse_from_rfc3339(&value)
             .ok()
             .map(|value| value.with_timezone(&Utc))
+            .or_else(|| {
+                DateTime::parse_from_rfc2822(&value)
+                    .ok()
+                    .map(|value| value.with_timezone(&Utc))
+            })
+            .or_else(|| {
+                NaiveDateTime::parse_from_str(
+                    value.trim_end_matches(" GMT"),
+                    "%a, %d %b %Y %H:%M:%S",
+                )
+                .ok()
+                .map(|dt| dt.and_utc())
+            })
     })
 }
 

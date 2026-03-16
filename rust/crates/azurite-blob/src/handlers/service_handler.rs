@@ -1,8 +1,5 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use azurite_common::i_account_data_store::IAccountDataStore;
-
 use crate::context::blob_storage_context::BlobStorageContext;
 use crate::errors::StorageErrorFactory;
 use crate::generated::artifacts::models::{
@@ -20,6 +17,9 @@ use crate::generated::handlers::i_service_handler::IServiceHandler;
 use crate::generated::i_request::{GeneratedReadableStream, IRequest};
 use crate::generated::utils::xml::parseXML;
 use crate::persistence::ServicePropertiesModel;
+use async_trait::async_trait;
+use azurite_common::i_account_data_store::IAccountDataStore;
+use azurite_common::utils::utils::formatRfc1123;
 
 use super::base_handler::BaseHandler;
 use super::batch_handlers_bundle::{
@@ -229,7 +229,10 @@ impl IServiceHandler for ServiceHandler {
         let mut geo_replication = GeneratedObject::new();
         geo_replication.insert("status".into(), string_value("live"));
         if let Some(start_time) = context.startTime() {
-            geo_replication.insert("lastSyncTime".into(), json_value(start_time));
+            geo_replication.insert(
+                "lastSyncTime".into(),
+                string_value(formatRfc1123(start_time)),
+            );
         }
 
         let mut response = GeneratedResponse::new(200);
@@ -239,7 +242,7 @@ impl IServiceHandler for ServiceHandler {
         );
         response.insert_field("version", string_value(BLOB_API_VERSION));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(client_request_id) = get_string(&options, "requestId") {
             response.insert_field("clientRequestId", string_value(client_request_id));
@@ -385,7 +388,7 @@ impl IServiceHandler for ServiceHandler {
         response.insert_field("skuName", string_value(EMULATOR_ACCOUNT_SKUNAME));
         response.insert_field("accountKind", string_value(EMULATOR_ACCOUNT_KIND));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         response.insert_field(
             "isHierarchicalNamespaceEnabled",
@@ -458,7 +461,7 @@ impl IServiceHandler for ServiceHandler {
         );
         response.insert_field("version", string_value(BLOB_API_VERSION));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         if let Some(client_request_id) = get_string(&options, "requestId") {
             response.insert_field("clientRequestId", string_value(client_request_id));
@@ -504,7 +507,7 @@ impl IServiceHandler for ServiceHandler {
         );
         response.insert_field("version", string_value(BLOB_API_VERSION));
         if let Some(start_time) = context.startTime() {
-            response.insert_field("date", json_value(start_time));
+            response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         response.insert_field("serviceEndpoint", string_value(serviceEndpoint));
         if let Some(where_clause) = where_clause {

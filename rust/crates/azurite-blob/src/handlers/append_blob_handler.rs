@@ -8,7 +8,9 @@ use chrono::Utc;
 use azurite_common::persistence::i_extent_store::{
     ExtentDataInput, IExtentChunk as CommonExtentChunk,
 };
-use azurite_common::utils::utils::{convertRawHeadersToMetadata, getMD5FromStream, newEtag};
+use azurite_common::utils::utils::{
+    convertRawHeadersToMetadata, formatRfc1123, getMD5FromStream, newEtag,
+};
 
 use crate::context::blob_storage_context::BlobStorageContext;
 use crate::errors::{NotImplementedError, StorageError, StorageErrorFactory};
@@ -169,11 +171,11 @@ impl IAppendBlobHandler for AppendBlobHandler {
         let mut properties = models::BlobPropertiesInternal::new();
         properties.insert(
             "creationTime".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert(
             "lastModified".to_string(),
-            GeneratedValue::String(date.to_rfc3339()),
+            GeneratedValue::String(formatRfc1123(date)),
         );
         properties.insert("etag".to_string(), GeneratedValue::String(etag.clone()));
         properties.insert("contentLength".to_string(), GeneratedValue::Number(0.0));
@@ -272,7 +274,7 @@ impl IAppendBlobHandler for AppendBlobHandler {
 
         let mut response = GeneratedResponse::new(201);
         response.insert_field("eTag", GeneratedValue::String(etag));
-        response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         if let Some(md5) = content_md5 {
             response.insert_field("contentMD5", GeneratedValue::String(md5));
         }
@@ -284,7 +286,7 @@ impl IAppendBlobHandler for AppendBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -477,7 +479,7 @@ impl IAppendBlobHandler for AppendBlobHandler {
         if let Some(v) = last_modified {
             response.insert_field("lastModified", GeneratedValue::String(v));
         } else {
-            response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+            response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         }
         if let Some(md5_bytes) = content_md5_bytes {
             response.insert_field(
@@ -492,7 +494,7 @@ impl IAppendBlobHandler for AppendBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         // blobAppendOffset is the pre-append contentLength, returned as string
         response.insert_field(
             "blobAppendOffset",
@@ -566,7 +568,7 @@ impl IAppendBlobHandler for AppendBlobHandler {
         if let Some(v) = last_modified {
             response.insert_field("lastModified", GeneratedValue::String(v));
         } else {
-            response.insert_field("lastModified", GeneratedValue::String(date.to_rfc3339()));
+            response.insert_field("lastModified", GeneratedValue::String(formatRfc1123(date)));
         }
         if let Some(crid) = client_request_id {
             response.insert_field("clientRequestId", GeneratedValue::String(crid));
@@ -575,7 +577,7 @@ impl IAppendBlobHandler for AppendBlobHandler {
             "version",
             GeneratedValue::String(BLOB_API_VERSION.to_string()),
         );
-        response.insert_field("date", GeneratedValue::String(date.to_rfc3339()));
+        response.insert_field("date", GeneratedValue::String(formatRfc1123(date)));
         if let Some(sealed) = is_sealed {
             response.insert_field("isSealed", GeneratedValue::Bool(sealed));
         }

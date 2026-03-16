@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 
 use azurite_common::persistence::i_extent_store::IExtentStore;
+use azurite_common::utils::utils::formatRfc1123;
 
 use crate::generated::artifacts::models::{GeneratedObject, GeneratedResponse, GeneratedValue};
 use crate::generated::context::Context;
@@ -56,7 +57,10 @@ impl BaseHandler {
         response.insert_field("requestId", string_value(Self::request_id(context)));
         response.insert_field("version", string_value(QUEUE_API_VERSION));
         if include_date {
-            response.insert_field("date", json_value(Self::start_time(context)));
+            response.insert_field(
+                "date",
+                string_value(formatRfc1123(Self::start_time(context))),
+            );
         }
         if let Some(client_request_id) = get_string(options, "requestId") {
             response.insert_field("clientRequestId", string_value(client_request_id));
@@ -69,7 +73,7 @@ pub(crate) fn string_value(value: impl Into<String>) -> GeneratedValue {
 }
 
 pub(crate) fn rfc1123_value(dt: chrono::DateTime<chrono::Utc>) -> GeneratedValue {
-    GeneratedValue::String(dt.format("%a, %d %b %Y %H:%M:%S GMT").to_string())
+    GeneratedValue::String(formatRfc1123(dt))
 }
 
 pub(crate) fn json_value<T: serde::Serialize>(value: T) -> GeneratedValue {
