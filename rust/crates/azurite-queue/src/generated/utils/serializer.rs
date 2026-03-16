@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use chrono::DateTime;
+
 use crate::generated::artifacts::mappers::{get_mapper, Mapper};
 use crate::generated::artifacts::models::{
     GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
@@ -153,6 +155,11 @@ pub async fn serialize<R: IResponse, L: ILogger + ?Sized>(
                         }
                     }
                 } else if let Some(serializedName) = &mapper.serializedName {
+                    let value = if mapper.r#type.name == "DateTimeRfc1123" {
+                        &ensure_rfc1123(value)
+                    } else {
+                        value
+                    };
                     if let Some(serialized) = serialize_header_value(value) {
                         res.setHeader(serializedName, Some(serialized));
                     }
@@ -421,4 +428,23 @@ fn set_nested_value(
             set_nested_value(child, rest, parameterValue);
         }
     }
+}
+
+/// Safety net: if a date string is in ISO 8601 format but the mapper expects
+/// DateTimeRfc1123, convert it. Mirrors the TypeScript serializer behavior.
+fn ensure_rfc1123(value: &GeneratedValue) -> GeneratedValue {
+    if let GeneratedValue::String(s) = value {
+        if s.contains(',') {
+            return value.clone();
+        }
+        if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+            let utc = dt.with_timezone(&chrono::Utc);
+            return GeneratedValue::String(utc.format("%a, %d %b %Y %H:%M:%S GMT").to_string());
+        }
+        if let Ok(dt) = s.parse::<DateTime<chrono::FixedOffset>>() {
+            let utc = dt.with_timezone(&chrono::Utc);
+            return GeneratedValue::String(utc.format("%a, %d %b %Y %H:%M:%S GMT").to_string());
+        }
+    }
+    value.clone()
 }

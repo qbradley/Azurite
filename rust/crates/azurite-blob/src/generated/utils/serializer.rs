@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use chrono::DateTime;
+
 use crate::generated::artifacts::mappers::{get_mapper, Mapper};
 use crate::generated::artifacts::models::{
     GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
@@ -144,6 +146,11 @@ pub async fn serialize<R: IResponse, L: ILogger + ?Sized>(
                         }
                     }
                 } else if let Some(serializedName) = &mapper.serializedName {
+                    let value = if mapper.r#type.name == "DateTimeRfc1123" {
+                        &ensure_rfc1123(value)
+                    } else {
+                        value
+                    };
                     if let Some(serialized) = serialize_header_value(value) {
                         res.setHeader(serializedName, Some(serialized));
                     }
@@ -252,6 +259,7 @@ fn deserialize_primitive(mapper: &Mapper, value: Option<GeneratedValue>) -> Gene
             .as_number()
             .map(GeneratedValue::Number)
             .unwrap_or(GeneratedValue::Null),
+        "DateTimeRfc1123" => ensure_rfc1123(&value),
         "Sequence" => match value {
             GeneratedValue::Array(values) => GeneratedValue::Array(values),
             GeneratedValue::String(value) => GeneratedValue::Array(
@@ -561,4 +569,27 @@ mod tests {
         assert!(!body.contains("<requestId>"), "{body}");
         assert!(!body.contains("<version>2025-11-05</version>"), "{body}");
     }
+}
+
+/// Safety net: if a date string is in ISO 8601 format but the mapper expects
+/// DateTimeRfc1123, convert it. This mirrors the TypeScript serializer behavior
+/// where `ms-rest-js` auto-converts Date objects to `toUTCString()` (RFC 1123).
+fn ensure_rfc1123(value: &GeneratedValue) -> GeneratedValue {
+    if let GeneratedValue::String(s) = value {
+        // Already RFC 1123 if it contains a comma (e.g., "Mon, 16 Mar 2026 ...")
+        if s.contains(',') {
+            return value.clone();
+        }
+        // Try parsing as ISO 8601 and reformatting as RFC 1123
+        if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+            let utc = dt.with_timezone(&chrono::Utc);
+            return GeneratedValue::String(utc.format("%a, %d %b %Y %H:%M:%S GMT").to_string());
+        }
+        // Also handle chrono's nanosecond ISO 8601 format (e.g., "2026-03-16T16:11:46.625132943+00:00")
+        if let Ok(dt) = s.parse::<DateTime<chrono::FixedOffset>>() {
+            let utc = dt.with_timezone(&chrono::Utc);
+            return GeneratedValue::String(utc.format("%a, %d %b %Y %H:%M:%S GMT").to_string());
+        }
+    }
+    value.clone()
 }
