@@ -193,6 +193,25 @@ Created comprehensive quality report at `.squad/decisions/inbox/boromir-quality-
 - Test status summary (1031 passing)
 - Production readiness assessment (APPROVED)
 
+### 2026-03-16: Differential TS-vs-Rust REST Harness
+
+**Context:** Built a standalone parity harness at `rust/scripts/differential-test.sh` + `rust/scripts/differential_test.py` to launch the TypeScript and Rust Azurite services side-by-side and diff raw REST responses.
+
+**Implementation Notes:**
+- Used the per-service Rust binaries (`azurite-blob`, `azurite-queue`, `azurite-table`) instead of the unified binary because the existing integration runner documents unresolved unified startup issues.
+- Started the TypeScript services from source via `node -r ts-node/register src/{blob,queue,table}/main.ts` so the harness can run without a separate npm-global install step.
+- Sent identical signed HTTP requests to both stacks with a fixed host header and shared request timestamp/request ID per scenario to avoid false positives from request construction.
+- Compared headers semantically (unordered names, ordered duplicate values), normalized XML/JSON bodies, and stripped dynamic response fields such as request IDs, queue pop receipts, and body timestamps.
+
+**Run Results (first execution):**
+- **Pass:** list containers, create queue, put message, get messages, query entities
+- **Fail:** blob ETag parity across create/upload/download/properties/page/lease/metadata, snapshot adds Rust-only `x-ms-request-server-encrypted`, copy blob returned TS `501 APINotImplemented` vs Rust `500`, create-table response added Rust-only `preferenceApplied` + `version`, insert-entity ETags diverged
+
+**Key Learnings:**
+1. A differential harness needs semantic normalization for transport framing (`chunked` vs `content-length`) and structured-body ordering, otherwise the signal is drowned by HTTP implementation details instead of service behavior.
+2. Fixing the request wire identity matters: reusing the same `Date`/`x-ms-date`, `x-ms-client-request-id`, and `Host` values across both requests removed a large class of artificial diffs.
+3. The Rust per-service binaries are currently the practical QA entrypoint for parity work; the unified binary remains unsuitable for side-by-side automation until its startup path is repaired.
+
 ---
 
 ## Session: 2026-03-16 Production Quality Audit

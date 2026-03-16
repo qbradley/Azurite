@@ -60,6 +60,38 @@ Reuse an existing release build and increase Rust logging:
 SKIP_BUILD=1 RUST_LOG=debug ./rust/scripts/run-integration-tests.sh
 ```
 
+## Differential parity harness
+
+`differential-test.sh` starts the TypeScript blob/queue/table entrypoints on ports `10000/10001/10002`, starts the Rust per-service binaries on `11000/11001/11002`, sends identical authenticated REST requests to both stacks, and diffs the full responses.
+
+Run it from the repository root:
+
+```bash
+./rust/scripts/differential-test.sh
+```
+
+Helpful options:
+
+- `--keep-artifacts` — keep the temporary logs/state directory for debugging
+- `--artifacts-dir /path/to/dir` — write logs/state to a specific directory
+
+The harness currently covers these scenarios:
+
+- Blob: create/list container, upload/download block blob, get blob properties, page blob/page ranges, lease acquire/renew/release, snapshot, copy blob, metadata
+- Queue: create queue, put message, get messages
+- Table: create table, insert entity, query entities
+
+Comparison rules:
+
+- status codes must match exactly
+- response headers are compared as unordered key → ordered values maps
+- transport-noise headers (`Connection`, `Keep-Alive`, framing headers) plus `Date`, `Server`, and `x-ms-request-id` are ignored
+- XML bodies are parsed and compared structurally with dynamic fields removed
+- JSON bodies are parsed and compared semantically with dynamic fields removed
+- binary bodies are compared byte-for-byte
+
+The harness uses the per-service Rust binaries intentionally. `run-integration-tests.sh` still documents the known unified-binary startup issues.
+
 ## Current limitations / known issues
 
 - The companion TypeScript harness patch is required so `AZURITE_EXTERNAL_SERVER=1` makes the factories return no-op server objects instead of starting the TypeScript emulator.
