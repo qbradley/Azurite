@@ -186,3 +186,20 @@ When reading a shared collection and later modifying it, use atomic write lock s
 **Status:** COMPLETED — Ready for production deployment
 
 **Last Updated:** 2026-03-16T19:23:00Z
+
+## Session: 2026-03-16 Harness Normalization & Bug Discovery
+
+**Agent:** Boromir (QA Expert)  
+**Work:** Deployed normalized differential harness with 8 new test scenarios (24 total). Harness normalization eliminated 18 false-positive failures caused by dynamic fields (ETags, request IDs, timestamps). Scorecard improved from 6 pass/10 fail → **23 pass/1 fail**.
+
+**Real Bug Found:** List Blobs XML Attributes  
+- **Root Cause:** Rust serializer emits `EnumerationResults` metadata (ContainerName, ServiceEndpoint, etc.) as child XML elements
+- **Expected (TS):** Metadata rendered as XML attributes on root `<EnumerationResults>` element
+- **Impact:** Wire-protocol divergence affecting all blob enumeration responses
+- **Status:** Blocked on Aragorn TDD fix for XML serializer
+
+**Next:** Aragorn implements TDD fix for List Blobs XML attribute serialization → Boromir re-runs harness for validation
+
+---
+
+**Last Updated:** 2026-03-16T22:39:00Z

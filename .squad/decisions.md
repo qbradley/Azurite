@@ -292,3 +292,78 @@ Normalization removes HTTP framing noise (Connection, Keep-Alive, chunked vs con
 
 **Next:** Re-run harness against Aragorn's XML/copy/upsert fixes to validate improvements.
 
+
+## 2026-03-16: Boromir Differential Scorecard (D-Differential-Scorecard-Validated)
+**By:** Boromir (QA Expert)  
+**Date:** 2026-03-16T22:03:51Z  
+**Status:** COMPLETE
+
+### Summary
+Verified Rust release binaries, rebuilt x86_64 release target, re-ran differential harness, fixed Rust-only parity bugs, and revalidated port with clippy, fmt, harness, integration runner, and SDK suite.
+
+### Binary Verification
+- Verified `rust/target/x86_64-unknown-linux-gnu/release/azurite` exists
+- Rebuilt with `cargo build --release --target x86_64-unknown-linux-gnu`
+- Re-ran harness; score stayed at **5 pass / 11 fail** after Aragorn's XML declaration fix
+
+### Boromir Fixes Applied
+1. **Blob snapshot parity:** Removed Rust-only `x-ms-request-server-encrypted` response header from `createSnapshot`
+2. **NotImplemented wire parity:** Updated generated error middleware to unwrap `NotImplementedError` / `NotImplementedinSQLError` wrappers instead of downgrading to generic 500 responses
+3. **Table create payload parity:** Made create-table emit explicit JSON body so header-only response metadata no longer appears in payload
+4. **Follow-through:** Applied same NotImplemented middleware handling to queue/table generated middleware
+
+### Differential Test Scorecard
+```
+Before Fixes:           5 pass / 11 fail
+After Aragorn's Fix:    5 pass / 11 fail  
+After Boromir's Fixes:  6 pass / 10 fail
+```
+
+### Remaining Gaps (Post-Fix)
+- **ETag mismatches (7 scenarios):** Header differences on container create, block blob operations, page blob, leases, snapshot, blob metadata, table insert entity
+- **Dynamic message suffixes (1 scenario):** Copy blob error message embeds request ID and timestamp
+- **No status code gaps** after middleware fix
+
+### Analysis
+Remaining differential failures are dominated by **dynamic identity fields** (ETags, timestamps, request IDs), not deterministic Rust logic bugs. Next QA step should normalize dynamic fields in harness rather than forcing Rust to emit independently-generated values.
+
+### Validation Results
+- `cargo clippy --all-targets` ✅
+- `cargo fmt --all` ✅
+- `cargo build --release --target x86_64-unknown-linux-gnu` ✅
+- `bash scripts/run-integration-tests.sh` ✅
+- `cargo test -p azurite-integration-tests -- --test-threads=1` ✅ (33 SDK tests passing)
+
+### Recommendation
+Normalize dynamic response fields in harness before comparison. This keeps the harness aligned with parity rules: ignore only values that cannot be equal across independent servers, but do not hide genuine wire-contract differences.
+
+---
+
+## 2026-03-16: Harness Normalization & Dynamic Field Elimination (D-Harness-Normalization)
+**By:** Boromir (QA Expert)  
+**Date:** 2026-03-16T22:39:00Z  
+**Status:** COMPLETE
+
+### Decision
+Normalize dynamic response fields in differential harness before comparison, keeping true payload-shape differences visible.
+
+### Normalization Rules Adopted
+- Normalize `etag`, `x-ms-request-id`, `Date` response headers before value comparison
+- Normalize XML `<RequestId>`, `<Time>`, ETag text, and dynamic `RequestId:` / `Time:` message suffixes
+- Normalize JSON/XML server-generated timestamp and queue-ID fields where expected to vary per server instance
+- Compare `Content-Length` semantically: pass if normalized bodies match even if raw byte count differs due to dynamic content
+- **Preserve:** `List Blobs` root-metadata shape mismatches as real bugs (not normalized away)
+
+### Why
+Keeps harness aligned with parity rule: ignore only values that cannot be equal across independent servers, but do not hide genuine wire-contract differences. The remaining `List Blobs` failure is therefore actionable and should be fixed in Rust serializer.
+
+### Outcome
+After normalization pass, scorecard improved from **6 pass / 10 fail** to **23 pass / 1 fail** (8 new scenarios added, 18 fixed by normalization).
+
+### Identified Real Bug
+**List Blobs XML Attributes:** Rust emits `EnumerationResults` root metadata (`ContainerName`, `ServiceEndpoint`, etc.) as child XML elements instead of XML attributes on the root element. This is a genuine wire-protocol divergence that the harness correctly surfaces and does not normalize away.
+
+### Impact
+Established repeatable, maintainable harness validation layer. Scorecard now reflects true parity gaps (List Blobs serializer bug) rather than cosmetic differences. Harness ready for rapid iteration: fix → re-run → next fix.
+
+---
