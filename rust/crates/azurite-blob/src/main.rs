@@ -30,13 +30,15 @@ pub async fn createBlobServiceRuntime(
 }
 
 pub async fn initializeBlobServiceRuntime(
-    runtime: &BlobServiceRuntime,
+    runtime: &mut BlobServiceRuntime,
 ) -> Result<(), StorageError> {
     configLogger(
         runtime.createdServer.config.enableDebugLog,
         runtime.createdServer.config.debugLogFilePath.clone(),
     );
     setExtentMemoryLimit(&runtime.blobEnvironment, true)?;
+
+    runtime.createdServer.server.start().await?;
 
     println!(
         "Azurite Blob service is starting on {}:{}",
@@ -58,15 +60,20 @@ pub async fn initializeBlobServiceRuntime(
     Ok(())
 }
 
-pub async fn shutdownBlobServiceRuntime(_runtime: &BlobServiceRuntime) -> Result<(), StorageError> {
+pub async fn shutdownBlobServiceRuntime(
+    runtime: &mut BlobServiceRuntime,
+) -> Result<(), StorageError> {
     println!("Azurite Blob service is closing...");
     AzuriteTelemetryClient::TraceStopEvent("Blob");
+    if let Err(err) = runtime.createdServer.server.close().await {
+        eprintln!("Error closing blob server: {}", err);
+    }
     println!("Azurite Blob service successfully closed");
     Ok(())
 }
 
 pub async fn runBlobService(args: Vec<String>) -> Result<BlobServiceRuntime, StorageError> {
-    let runtime = createBlobServiceRuntime(args).await?;
-    initializeBlobServiceRuntime(&runtime).await?;
+    let mut runtime = createBlobServiceRuntime(args).await?;
+    initializeBlobServiceRuntime(&mut runtime).await?;
     Ok(runtime)
 }
