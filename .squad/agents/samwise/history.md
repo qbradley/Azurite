@@ -42,3 +42,27 @@
 - **Boromir:** Phase 2 parity tests ACTIVATED. 7 modules all passing. Old placeholders removed. Test suite clean at 36 active + 8 ignored.
 - **Metrics:** 44 total tests passing, 8 ignored, 38 porting-db records, 108 Rust source files.
 - **Ready:** Phase 4 implementation can proceed post-D-002 approval. Phase 2 integration tests ready for Phase 3 coordination.
+
+### Protocol Parity Gap Analysis Complete (2026-03-16)
+**Full report:** `.squad/decisions/inbox/samwise-protocol-parity.md`
+
+**Critical findings:**
+1. **XML Declaration Missing (P-001):** Every XML response body in the Rust port lacks `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` that the TS version (via xml2js) includes. Affects all blob and queue service responses. One-day fix: prepend declaration in `stringifyXML()`.
+2. **Cross-Account SAS Unimplemented (P-002):** `validateCopySource()` in blob_handler.rs ignores the source account parameter entirely. No SAS signature validation, no public access fallback, no archive tier check. This causes 8 test failures. 1-2 week fix.
+
+**Moderate findings:**
+3. Error body whitespace differs — TS uses pretty-printed XML (via default xml2js Builder), Rust uses compact hand-built XML.
+4. `maxresults` boundary values (≤0) unvalidated in both TS and Rust.
+5. No version-conditional handler behavior in either implementation (all 45 API versions treated identically).
+
+**Confirmed parity areas:**
+- SharedKey signature computation (string-to-sign, HMAC-SHA256, canonical resource)
+- Account SAS permission/service/resource-type serialization orders
+- Blob/Queue/Table SAS canonical name formats and version-specific signing
+- OAuth/JWT validation (claims, audiences, HTTPS enforcement)
+- RFC 1123 date formatting, ETag format, boolean serialization, null handling
+- OData annotation levels, EDM type system, batch multipart formatting
+- Error XML/JSON structure (modulo declaration and whitespace)
+- Response header names, values, and pipeline behavior
+
+**Recommended verification approach:** Proxy-based differential testing — mirror SDK requests to both TS and Rust, compare responses semantically (parsed XML/JSON, not byte-level). Priority SDKs: JS, .NET, Python, Java, Go.

@@ -8,6 +8,27 @@
 
 ## Learnings
 
+### 2026-03-17: Parity Analysis — Lessons Learned & Roadmap
+
+**Requested by:** Quetzal Bradley
+**Artifact:** `.squad/decisions/inbox/gandalf-parity-analysis.md`
+
+**Key architectural insights from the TS→Rust port:**
+
+1. **Implicit atomicity is the #1 porting hazard.** Node.js's single-threaded event loop makes read-modify-write sequences atomic within await-free spans. Rust's `Arc<RwLock<>>` breaks this atomicity. All 6 blob race conditions came from this single root cause. Every metadata store method that reads-then-writes must hold a single write lock across the entire operation.
+
+2. **Zero bugs were caught by existing TS tests.** Every bug found (34+ across 5 categories) was discovered by SDK integration tests, handler-by-handler audit, or customer reports. Passing the TS test suite provides happy-path confidence only — no assurance of parity for error paths, concurrency, wire format, or mutation side effects.
+
+3. **Serialization libraries ARE the protocol.** TS's `ms-rest-js` and `xml2js` embed Azure-specific conventions (RFC 1123 dates, xmlIsWrapped, duplicate-sibling-as-array) that aren't in the REST API spec. A faithful code translation that uses different serialization libraries produces different wire format. Defense-in-depth (e.g., `ensure_rfc1123()` safety nets at serialization boundary) is essential.
+
+4. **Table store has unfixed TOCTOU races.** `insertOrUpdateTableEntity` and `insertOrMergeTableEntity` perform check-then-act across separate lock acquisitions. Needs single-lock-scope refactor.
+
+5. **Queue store is safe.** Uses write locks consistently for all read-modify-write paths. Simpler operations (visibility updates, deletes) don't have the multi-field atomicity hazard that blob's page range merging does.
+
+6. **Differential testing is the single highest-value investment.** A dual-server harness comparing raw HTTP responses between TS and Rust would have caught Categories B (serialization, 8+ bugs) and C (semantic, 12+ bugs) automatically. Building this is the #1 priority for parity assurance.
+
+7. **Multi-SDK testing catches what single-SDK testing cannot.** The Rust SDK caught the RFC 1123 date bug immediately because it has a strict date parser. The JS SDK was lenient and never noticed. Testing with Python, .NET, Java, and Go SDKs will surface similar hidden assumptions.
+
 ### 2026-03-13: Full Codebase Analysis Complete
 
 **Architecture Discovery:**

@@ -162,3 +162,92 @@ For modules not yet translated, placeholder tests are marked `#[ignore]` instead
 **Status:** ACTIVE
 **Scope:** All Rust commits
 
+## 2026-03-16: TS→Rust Parity Analysis Complete — 34+ Bugs Identified Across 5 Categories
+**By:** Gandalf (Lead Architect)
+**Date:** 2026-03-17
+**Status:** COMPLETE
+**What:** Deep-dive analysis of Azurite TS→Rust port revealed structural completion (174 Rust files, 1031 tests passing, 49 blob handlers) but identified five systemic categories of bugs during integration testing and customer validation.
+
+**Bug Categories Found:**
+1. **Category A: Concurrency/Atomicity (6 bugs)** — TypeScript's single-threaded event loop makes read-then-modify-then-write sequences inherently atomic. Rust with Arc<RwLock> requires explicit atomicity. Examples: `uploadPages` (31% data loss), `clearRange`, `appendBlock`, `resizePageBlob`, `updateSequenceNumber`, `commitBlockList`. Fix pattern: single write lock across entire operation.
+
+2. **Category B: Serialization/Wire Format (8+ bugs)** — Divergences between ms-rest-js/xml2js (TS) and serde_json/quick_xml (Rust). Examples: RFC 1123 dates, xmlIsWrapped arrays, self-closing XML elements, field name casing, sequence body serialization. Root cause: behavioral contracts embedded in runtime libraries, not REST API spec.
+
+3. **Category C: Semantic/Business Logic (12+ bugs)** — Subtle interaction ordering and side effects. Examples: condition check ordering (412 before 404), lease preservation on overwrite, ETag/lastModified updates, snapshot lease clearing, source conditional header remapping. Found by handler-by-handler audit; zero caught by existing tests.
+
+4. **Category D: Infrastructure/Initialization (5+ bugs)** — Node.js ambient capabilities (lenient base64, process lifecycle, env var auto-initialization) require explicit Rust implementation. Examples: AccountDataStore.init() not called, auth middleware loop short-circuit, base64 decoding leniency, batch sub-request context, SIGHUP crash, getBlobType() stub.
+
+5. **Category E: Missing Feature Stubs (3+ bugs)** — Autorest-generated metadata requires runtime patching. Table MERGE verb, isXML overrides, empty specifications.
+
+**Root Cause Analysis:** Impedance mismatches between TypeScript single-threaded semantics and Rust explicit concurrency. Line-by-line translation produces mechanically correct code but fails to recognize implicit atomicity requirements in TS become explicit in Rust.
+
+**Test Coverage Gap:** Existing TS test suite is entirely sequential (zero concurrent operations). All 34+ bugs escaped detection because race conditions, serialization format details, semantic interaction ordering, and infrastructure initialization are untested in the TS suite.
+
+**Strategic Recommendation — Differential Testing Harness as #1 Priority:** Build test runner that (1) starts both TS and Rust servers, (2) replays 824 TS test requests against both, (3) captures raw HTTP responses, (4) reports differences in status/headers/body. Would have caught Categories B and C automatically. Estimated 2-3 weeks effort.
+
+**Additional Priorities:**
+- Concurrency stress tests for all metadata store methods (would catch all Category A)
+- Fix table store TOCTOU races (insertOrUpdateTableEntity, insertOrMergeTableEntity)
+- Fix 8 SAS cross-account test failures (cross-account copy validation)
+- Multi-SDK testing (Python + .NET SDKs against Rust server)
+
+**Why This Matters:** Port achieved structural completion and happy-path functionality, but correctness in Rust requires approaches beyond line-by-line translation. Every bug category maps to testing strategies that can be systematized to prevent future issues.
+
+**Documentation:** Full analysis with code examples, root cause deep-dives, and 8-phase remediation roadmap written to `decisions/inbox/gandalf-parity-analysis.md` (5800+ lines).
+
+## 2026-03-16: Azure Storage REST API Protocol Parity Gap Analysis
+**By:** Samwise (Azure Storage REST Expert)
+**Date:** 2026-03-16
+**Status:** COMPLETE
+**What:** Wire-format, authentication, error format, and protocol completeness analysis identifying divergences between TS and Rust implementations.
+
+**Critical Issues (2):**
+1. **XML Declaration Missing** — Every XML response differs at the start. xml2js Builder emits `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` by default; quick_xml does not. Impact: byte-level differential tests fail on every XML response. Fix: prepend declaration in stringifyXML() — 1 day effort, high impact.
+
+2. **Cross-Account SAS Copy Validation Unimplemented** — 8 failing tests in blob/sas.test.ts (lines 1841–2200). validateCopySource() accepts _sourceAccount but never validates SAS tokens, looks up source account keys, or checks public access fallback. Requires: multi-account key lookup, SAS signature validation, public access check, archive tier check. Fix: 1-2 weeks, only functional gap causing real failures.
+
+**Moderate Issues (5):**
+1. Error body whitespace (pretty vs compact XML)
+2. Blob error responses missing x-ms-version header (matches TS, diverges from Azure)
+3. maxresults ≤ 0 not validated
+4. No version-conditional behavior (shared with TS, design choice)
+5. Content-ID typing differs across blob/table
+
+**Minor Issues (4):**
+1. serde_json Map ordering may differ for additionalProperties
+2. Rust accepts LF, TS requires CRLF in batch operations
+3. ETag entropy source differs (nanos vs Math.random) — cosmetic
+4. Copy from external non-Azure URLs untested
+
+**Authentication Parity — CONFIRMED:**
+- SharedKey validation identical (13-line canonical format, header sorting, signature computation)
+- Account SAS serialization order confirmed (`rwdxlacuptfiy`, `btqf`, `sco`)
+- Blob/Queue/Table SAS canonical names and signing fields match
+- OAuth/Bearer token validation matches
+
+**Protocol Areas at Risk (8+):**
+- Version-specific response behavior (2009-04-14 through 2025-11-05 all produce identical responses)
+- Copy operations with complex sources
+- Pagination edge cases (maxresults=0, very large result sets, concurrent modifications)
+- Batch operation edge cases (Content-ID typing, LF vs CRLF, malformed sub-requests)
+- Conditional headers interaction (If-Match with stale ETag, multiple conditions combined)
+- Large blob operations (50k blocks, 195GB append blobs, sparse page blobs)
+- CORS preflight with complex rules
+- Service properties (logging, metrics, static website, default version)
+
+**Recommended Fixes (Priority Order):**
+1. XML Declaration — add to stringifyXML() across blob, queue, table crates (1 day, highest impact)
+2. Error Whitespace — either use jsonToXML or document deviation (1 day)
+3. Cross-Account SAS — implement validateCopySource() properly (1-2 weeks, functional)
+4. Differential Testing — proxy-based dual-server testing comparing responses semantically (eliminates false positives from formatting, catches real behavioral differences)
+
+**Recommended Testing Strategy:**
+- Proxy-based differential testing with both servers running
+- SDK compatibility matrix: @azure/storage-blob (P0), Azure.Storage.Blobs/.NET (P0), Python SDK (P1), Java SDK (P1), Go SDK (P2)
+- OpenAPI spec compliance scanning from azure-rest-api-specs
+- Protocol fuzzing (headers, XML bodies, SAS tokens, pagination tokens)
+
+**Documentation:** Full analysis with tables, authentication deep-dives, untested protocol catalog, and differential testing strategy written to `decisions/inbox/samwise-protocol-parity.md` (2500+ lines).
+
+**Key Insight:** Rust port achieves strong structural fidelity (serialization pipeline, auth machinery, handler architecture faithfully translated). Wire-format divergences are cosmetic to SDKs (which parse semantically) but matter for strict protocol compliance. The #1 fix (XML declaration) is mechanically simple and eliminates most visible difference across every XML response.
+
