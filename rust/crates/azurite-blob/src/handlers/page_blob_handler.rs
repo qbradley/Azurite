@@ -742,8 +742,7 @@ impl IPageBlobHandler for PageBlobHandler {
             request.getHeader("x-ms-range").as_deref(),
             false,
         )
-        // For getPageRanges, malformed range headers just mean no range
-        .unwrap_or(None);
+        .map_err(|_| Box::new(StorageErrorFactory::getInvalidPageRange(context_id_str)))?;
 
         let (range_start, range_end) = ranges.unwrap_or((0, blob_content_length - 1));
 

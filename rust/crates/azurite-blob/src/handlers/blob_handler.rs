@@ -672,9 +672,10 @@ impl IBlobHandler for BlobHandler {
             "lastModified",
             "lastModified",
         );
-        if let Some(lt) = res.leaseTime {
-            response.insert_field("leaseTime", GeneratedValue::Number(lt as f64));
-        }
+        response.insert_field(
+            "leaseTime",
+            GeneratedValue::Number(res.leaseTime.unwrap_or(0) as f64),
+        );
         Ok(response)
     }
 

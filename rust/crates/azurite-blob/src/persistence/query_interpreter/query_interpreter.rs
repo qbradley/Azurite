@@ -50,23 +50,12 @@ pub fn execute_query(
 
 /// Mirrors TypeScript `countIdentifierReferences()`.
 fn count_identifier_references(query_tree: &dyn IQueryNode) -> usize {
-    // In TS: BinaryOperatorNode → 1, ExpressionNode → recurse child, else → 0
-    // We check by name since we can't downcast easily
     match query_tree.name() {
         "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "and" | "or" => 1,
-        "expression" => {
-            // ExpressionNode has a child. We'd need to access it.
-            // Since our ExpressionNode wraps a child, and IQueryNode is trait-object,
-            // we approximate: expression always wraps something that contributes at least
-            // what the child contributes. In TS, expression delegates to child count.
-            // For fidelity, we count expression as 0 (it just wraps).
-            // But we can't recurse without downcasting.
-            // Per TS: `return countIdentifierReferences(queryTree.child)`.
-            // We'll use a simpler heuristic: if it's "expression", return 0
-            // (since an expression node just wrapping a constant would have 0).
-            // This preserves the TS behavior for the validation check.
-            0
-        }
+        "expression" => query_tree
+            .child()
+            .map(count_identifier_references)
+            .unwrap_or(0),
         _ => 0,
     }
 }

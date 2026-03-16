@@ -15,4 +15,7 @@ pub trait IQueryNode: std::fmt::Debug + Send + Sync {
     fn name(&self) -> &str;
     fn evaluate(&self, context: &IQueryContext) -> Vec<TagContent>;
     fn to_string_repr(&self) -> String;
+    fn child(&self) -> Option<&dyn IQueryNode> {
+        None
+    }
 }

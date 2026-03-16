@@ -853,13 +853,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         if let Some(container_doc) =
             containers.get_mut(&(account.to_string(), container.to_string()))
         {
-            if let Some(public_access) = set_acl_model.publicAccess.clone() {
-                set_string(
-                    &mut container_doc.properties,
-                    "publicAccess",
-                    Some(public_access),
-                );
-            }
+            set_string(
+                &mut container_doc.properties,
+                "publicAccess",
+                set_acl_model.publicAccess.clone(),
+            );
             container_doc.containerAcl = set_acl_model.containerAcl.clone();
             if let Some(last_modified) = set_acl_model.lastModified {
                 set_value(
@@ -1118,6 +1116,9 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
     ) -> Result<(Vec<FilterBlobModel>, Option<String>), StorageError> {
         let max_results = max_results.unwrap_or(DEFAULT_LIST_BLOBS_MAX_RESULTS as i64) as usize;
         let marker = marker.unwrap_or("");
+        if where_clause.is_none() {
+            return Ok((vec![], None));
+        }
         let filter_fn = generate_query_blob_with_tags_where_function(context, where_clause, None)?;
 
         let blobs = self.blobs_collection.read().unwrap();
@@ -1629,19 +1630,23 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let snapshot_value = get_string(&options, "snapshot");
         let snapshot = snapshot_value.as_deref().unwrap_or("");
 
+        self.checkContainerExist(context, account, container)
+            .await?;
+
         let blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
         let modified_access_conditions = get_object(&options, "modifiedAccessConditions");
         validate_write_conditions(
             context,
             modified_access_conditions.as_ref(),
-            Some(&blob_doc),
+            blob_doc.as_ref(),
         )?;
+
+        let blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let against_base_blob = snapshot.is_empty();
         let delete_snapshots = get_string(&options, "deleteSnapshots");
@@ -1867,19 +1872,23 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             );
         }
 
-        let mut blob_doc = self
-            .get_blob(account, container, blob, "")
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+        self.checkContainerExist(context, account, container)
+            .await?;
+
+        let blob_doc = self
+            .get_blob_with_lease_updated(account, container, blob, "", context, false)
+            .await?;
 
         let modified_access_conditions = get_object(&options, "modifiedAccessConditions");
         validate_write_conditions(
             context,
             modified_access_conditions.as_ref(),
-            Some(&blob_doc),
+            blob_doc.as_ref(),
         )?;
+
+        let mut blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -1915,20 +1924,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         leaseId: &str,
         options: Option<&BlobReleaseLeaseOptionalParams>,
     ) -> Result<ReleaseBlobLeaseResponse, StorageError> {
-        let mut blob_doc = self
-            .get_blob(account, container, blob, "")
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+        self.checkContainerExist(context, account, container)
+            .await?;
+
+        let blob_doc = self
+            .get_blob_with_lease_updated(account, container, blob, "", context, false)
+            .await?;
 
         let modified_access_conditions =
             options.and_then(|o| get_object(o, "modifiedAccessConditions"));
         validate_write_conditions(
             context,
             modified_access_conditions.as_ref(),
-            Some(&blob_doc),
+            blob_doc.as_ref(),
         )?;
+
+        let mut blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -1960,20 +1973,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         leaseId: &str,
         options: Option<&BlobRenewLeaseOptionalParams>,
     ) -> Result<RenewBlobLeaseResponse, StorageError> {
-        let mut blob_doc = self
-            .get_blob(account, container, blob, "")
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+        self.checkContainerExist(context, account, container)
+            .await?;
+
+        let blob_doc = self
+            .get_blob_with_lease_updated(account, container, blob, "", context, false)
+            .await?;
 
         let modified_access_conditions =
             options.and_then(|o| get_object(o, "modifiedAccessConditions"));
         validate_write_conditions(
             context,
             modified_access_conditions.as_ref(),
-            Some(&blob_doc),
+            blob_doc.as_ref(),
         )?;
+
+        let mut blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -2010,20 +2027,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         proposed_leaseId: &str,
         options: Option<&BlobChangeLeaseOptionalParams>,
     ) -> Result<ChangeBlobLeaseResponse, StorageError> {
-        let mut blob_doc = self
-            .get_blob(account, container, blob, "")
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+        self.checkContainerExist(context, account, container)
+            .await?;
+
+        let blob_doc = self
+            .get_blob_with_lease_updated(account, container, blob, "", context, false)
+            .await?;
 
         let modified_access_conditions =
             options.and_then(|o| get_object(o, "modifiedAccessConditions"));
         validate_write_conditions(
             context,
             modified_access_conditions.as_ref(),
-            Some(&blob_doc),
+            blob_doc.as_ref(),
         )?;
+
+        let mut blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -2059,20 +2080,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         break_period: Option<i64>,
         options: Option<&BlobBreakLeaseOptionalParams>,
     ) -> Result<BreakBlobLeaseResponse, StorageError> {
-        let mut blob_doc = self
-            .get_blob(account, container, blob, "")
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+        self.checkContainerExist(context, account, container)
+            .await?;
+
+        let blob_doc = self
+            .get_blob_with_lease_updated(account, container, blob, "", context, false)
+            .await?;
 
         let modified_access_conditions =
             options.and_then(|o| get_object(o, "modifiedAccessConditions"));
         validate_write_conditions(
             context,
             modified_access_conditions.as_ref(),
-            Some(&blob_doc),
+            blob_doc.as_ref(),
         )?;
+
+        let mut blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let adapter = BlobLeaseAdapter::new(&blob_doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
@@ -2095,11 +2120,16 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         Ok(BlobLeaseResponse {
             properties: blob_doc.properties,
             leaseId: blob_doc.leaseId,
-            leaseTime: blob_doc.leaseBreakTime.map(|break_time| {
-                let diff = break_time - context.startTime().unwrap_or_else(Utc::now);
-                // TS uses Math.round(); num_milliseconds()/1000 with rounding matches
-                ((diff.num_milliseconds() as f64 / 1000.0).round() as i64).max(0)
-            }),
+            leaseTime: Some(
+                blob_doc
+                    .leaseBreakTime
+                    .map(|break_time| {
+                        let diff = break_time - context.startTime().unwrap_or_else(Utc::now);
+                        // TS uses Math.round(); num_milliseconds()/1000 with rounding matches
+                        ((diff.num_milliseconds() as f64 / 1000.0).round() as i64).max(0)
+                    })
+                    .unwrap_or(0),
+            ),
         })
     }
 
@@ -2536,8 +2566,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         tier: &str,
         leaseAccessConditions: Option<&LeaseAccessConditions>,
     ) -> Result<u16, StorageError> {
+        self.checkContainerExist(context, account, container)
+            .await?;
+
         let mut doc = self
-            .get_blob_with_lease_updated(account, container, blob, "", context, false)
+            .get_blob_with_lease_updated(account, container, blob, "", context, true)
             .await?
             .ok_or_else(|| {
                 StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
@@ -2565,10 +2598,8 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         };
 
         if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_BLOCK_BLOB) {
-            return Err(invalid_header_value(
-                context.contextId().as_deref(),
-                "x-ms-access-tier",
-                tier,
+            return Err(StorageErrorFactory::getAccessTierNotSupportedForBlobType(
+                context.contextId().as_deref().unwrap_or(""),
             ));
         }
 
@@ -2595,7 +2626,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         let adapter = BlobLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let mut syncer = BlobLeaseSyncer::new(&mut doc);
+        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
         let _ = syncer.sync(lease_state.lease());
 
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -2625,8 +2656,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // NOTE: TS ignores modifiedAccessConditions parameter (fidelity flag from line 3419)
         let snapshot = snapshot.unwrap_or("");
 
+        self.checkContainerExist(context, account, container)
+            .await?;
+
         let mut doc = self
-            .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
+            .get_blob_with_lease_updated(account, container, blob, snapshot, context, true)
             .await?
             .ok_or_else(|| {
                 StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
@@ -2640,7 +2674,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // Sync lease state
         let adapter = BlobLeaseAdapter::new(&doc);
         let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let mut syncer = BlobLeaseSyncer::new(&mut doc);
+        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
         let _ = syncer.sync(lease_state.lease());
 
         // Update blob tags
@@ -2673,8 +2707,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // TS: lines 3464-3503
         let snapshot = snapshot.unwrap_or("");
 
+        self.checkContainerExist(context, account, container)
+            .await?;
+
         let doc = self
-            .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
+            .get_blob_with_lease_updated(account, container, blob, snapshot, context, true)
             .await?;
 
         validate_read_conditions(context, modifiedAccessConditions, doc.as_ref(), Some(false))?;
@@ -2954,32 +2991,16 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
         let _ = syncer.sync(lease_state.lease());
 
-        // Append block
-        if doc.committedBlocksInOrder.is_none() {
-            doc.committedBlocksInOrder = Some(Vec::new());
-        }
+        // Prepare block for insertion
         let block_persistency = PersistencyBlockModel {
             name: block.name.clone(),
             size: block.size,
             persistency: block.persistency.clone(),
         };
-        doc.committedBlocksInOrder
-            .as_mut()
-            .unwrap()
-            .push(block_persistency);
-
-        set_string(&mut doc.properties, "etag", Some(new_etag()));
-        set_datetime(&mut doc.properties, "lastModified", context.startTime());
         let block_size = block.size.unwrap_or(0);
-        let next_content_length =
-            get_i64(&doc.properties, "contentLength").unwrap_or(0) + block_size;
-        set_i64(
-            &mut doc.properties,
-            "contentLength",
-            Some(next_content_length),
-        );
 
-        // Update collection
+        // Atomically append block under write lock to prevent concurrent
+        // appendBlock calls from overwriting each other's blocks.
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
             block.accountName.clone(),
@@ -2987,10 +3008,43 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             block.blobName.clone(),
             "".to_string(),
         );
-        blobs.insert(key, doc.clone());
+        let current_doc = blobs.get_mut(&key).ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
+
+        if current_doc.committedBlocksInOrder.is_none() {
+            current_doc.committedBlocksInOrder = Some(Vec::new());
+        }
+        current_doc
+            .committedBlocksInOrder
+            .as_mut()
+            .unwrap()
+            .push(block_persistency);
+
+        set_string(&mut current_doc.properties, "etag", Some(new_etag()));
+        set_datetime(
+            &mut current_doc.properties,
+            "lastModified",
+            context.startTime(),
+        );
+        let next_content_length =
+            get_i64(&current_doc.properties, "contentLength").unwrap_or(0) + block_size;
+        set_i64(
+            &mut current_doc.properties,
+            "contentLength",
+            Some(next_content_length),
+        );
+
+        // Lease sync on current doc
+        let adapter = BlobLeaseAdapter::new(current_doc);
+        let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+        let mut syncer = BlobWriteLeaseSyncer::new(current_doc);
+        let _ = syncer.sync(lease_state.lease());
+
+        let result = current_doc.properties.clone();
         drop(blobs);
 
-        Ok(doc.properties)
+        Ok(result)
     }
 
     async fn commitBlockList(
@@ -3532,7 +3586,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
 
-        let mut doc = doc.ok_or_else(|| {
+        let doc = doc.ok_or_else(|| {
             StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
         })?;
 
@@ -3547,11 +3601,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let lease_adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&lease_adapter, context)?;
 
-        if doc.pageRangesInOrder.is_none() {
-            doc.pageRangesInOrder = Some(Vec::new());
+        // Atomically resize under write lock to prevent concurrent operations
+        // from losing page range updates.
+        let mut blobs = self.blobs_collection.write().unwrap();
+        let key = (
+            account.to_string(),
+            container.to_string(),
+            blob.to_string(),
+            "".to_string(),
+        );
+        let current_doc = blobs.get_mut(&key).ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
+
+        if current_doc.pageRangesInOrder.is_none() {
+            current_doc.pageRangesInOrder = Some(Vec::new());
         }
 
-        if get_i64(&doc.properties, "contentLength").unwrap_or(0) > blob_content_length {
+        if get_i64(&current_doc.properties, "contentLength").unwrap_or(0) > blob_content_length {
             let mut range = PageRange::default();
             range.insert(
                 "start".to_string(),
@@ -3560,37 +3627,34 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             range.insert(
                 "end".to_string(),
                 GeneratedValue::Number(
-                    (get_i64(&doc.properties, "contentLength").unwrap_or(0) - 1) as f64,
+                    (get_i64(&current_doc.properties, "contentLength").unwrap_or(0) - 1) as f64,
                 ),
             );
             self.page_blob_ranges_manager
-                .clear_range(doc.pageRangesInOrder.as_mut().unwrap(), range);
+                .clear_range(current_doc.pageRangesInOrder.as_mut().unwrap(), range);
         }
 
         set_i64(
-            &mut doc.properties,
+            &mut current_doc.properties,
             "contentLength",
             Some(blob_content_length),
         );
-        set_datetime(&mut doc.properties, "lastModified", context.startTime());
-        set_string(&mut doc.properties, "etag", Some(new_etag()));
+        set_datetime(
+            &mut current_doc.properties,
+            "lastModified",
+            context.startTime(),
+        );
+        set_string(&mut current_doc.properties, "etag", Some(new_etag()));
 
-        let lease_adapter = BlobLeaseAdapter::new(&doc);
-        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
-        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
+        let adapter = BlobLeaseAdapter::new(current_doc);
+        let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+        let mut syncer = BlobWriteLeaseSyncer::new(current_doc);
         let _ = syncer.sync(lease_state.lease());
 
-        let mut blobs = self.blobs_collection.write().unwrap();
-        let key = (
-            account.to_string(),
-            container.to_string(),
-            blob.to_string(),
-            "".to_string(),
-        );
-        blobs.insert(key, doc.clone());
+        let result = current_doc.properties.clone();
         drop(blobs);
 
-        Ok(doc.properties)
+        Ok(result)
     }
 
     async fn updateSequenceNumber(
@@ -3610,7 +3674,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         validate_write_conditions(context, modifiedAccessConditions, doc.as_ref())?;
 
-        let mut doc = doc.ok_or_else(|| {
+        let doc = doc.ok_or_else(|| {
             StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
         })?;
 
@@ -3625,62 +3689,39 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         let lease_adapter = BlobLeaseAdapter::new(&doc);
         validator.validate(&lease_adapter, context)?;
 
-        let current_sequence_number = get_i64(&doc.properties, "blobSequenceNumber").unwrap_or(0);
-        let next_sequence_number = match sequenceNumberAction.to_lowercase().as_str() {
-            "max" => current_sequence_number.max(blobSequenceNumber.ok_or_else(|| {
-                StorageErrorFactory::get_invalid_operation(
-                    context.contextId().as_deref(),
-                    Some(
-                        "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to max.",
-                    ),
-                )
-            })?),
+        // Validate action + blobSequenceNumber parameter combination early
+        // (before taking the write lock)
+        match sequenceNumberAction.to_lowercase().as_str() {
+            "max" | "update" => {
+                if blobSequenceNumber.is_none() {
+                    let msg = format!(
+                        "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to {}.",
+                        sequenceNumberAction
+                    );
+                    return Err(StorageErrorFactory::get_invalid_operation(
+                        context.contextId().as_deref(),
+                        Some(&msg),
+                    ));
+                }
+            }
             "increment" => {
                 if blobSequenceNumber.is_some() {
                     return Err(StorageErrorFactory::get_invalid_operation(
                         context.contextId().as_deref(),
-                        Some(
-                            "x-ms-blob-sequence-number cannot be provided when x-ms-sequence-number-action is set to increment.",
-                        ),
+                        Some("x-ms-blob-sequence-number cannot be provided when x-ms-sequence-number-action is set to increment."),
                     ));
                 }
-                current_sequence_number + 1
             }
-            "update" => blobSequenceNumber.ok_or_else(|| {
-                StorageErrorFactory::get_invalid_operation(
-                    context.contextId().as_deref(),
-                    Some(
-                        "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to update.",
-                    ),
-                )
-            })?,
             _ => {
                 return Err(StorageErrorFactory::get_invalid_operation(
                     context.contextId().as_deref(),
                     Some("Unsupported x-ms-sequence-number-action value."),
                 ))
             }
-        };
+        }
 
-        set_i64(
-            &mut doc.properties,
-            "blobSequenceNumber",
-            Some(next_sequence_number),
-        );
-        set_string(&mut doc.properties, "etag", Some(new_etag()));
-        set_value(
-            &mut doc.properties,
-            "lastModified",
-            context
-                .startTime()
-                .map(|value| GeneratedValue::String(formatRfc1123(value))),
-        );
-
-        let lease_adapter = BlobLeaseAdapter::new(&doc);
-        let lease_state = LeaseFactory::create_lease_state(&lease_adapter, context)?;
-        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        let _ = syncer.sync(lease_state.lease());
-
+        // Atomically update sequence number under write lock to prevent
+        // concurrent increment/max from reading stale values.
         let mut blobs = self.blobs_collection.write().unwrap();
         let key = (
             account.to_string(),
@@ -3688,10 +3729,42 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             blob.to_string(),
             "".to_string(),
         );
-        blobs.insert(key, doc.clone());
+        let current_doc = blobs.get_mut(&key).ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
+
+        let current_sequence_number =
+            get_i64(&current_doc.properties, "blobSequenceNumber").unwrap_or(0);
+        let next_sequence_number = match sequenceNumberAction.to_lowercase().as_str() {
+            "max" => current_sequence_number.max(blobSequenceNumber.unwrap()),
+            "increment" => current_sequence_number + 1,
+            "update" => blobSequenceNumber.unwrap(),
+            _ => unreachable!(), // validated above
+        };
+
+        set_i64(
+            &mut current_doc.properties,
+            "blobSequenceNumber",
+            Some(next_sequence_number),
+        );
+        set_string(&mut current_doc.properties, "etag", Some(new_etag()));
+        set_value(
+            &mut current_doc.properties,
+            "lastModified",
+            context
+                .startTime()
+                .map(|value| GeneratedValue::String(formatRfc1123(value))),
+        );
+
+        let adapter = BlobLeaseAdapter::new(current_doc);
+        let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+        let mut syncer = BlobWriteLeaseSyncer::new(current_doc);
+        let _ = syncer.sync(lease_state.lease());
+
+        let result = current_doc.properties.clone();
         drop(blobs);
 
-        Ok(doc.properties)
+        Ok(result)
     }
 }
 

@@ -25,4 +25,8 @@ impl IQueryNode for ExpressionNode {
     fn to_string_repr(&self) -> String {
         format!("({})", self.child.to_string_repr())
     }
+
+    fn child(&self) -> Option<&dyn IQueryNode> {
+        Some(self.child.as_ref())
+    }
 }

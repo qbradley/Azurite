@@ -419,10 +419,6 @@ impl IServiceHandler for ServiceHandler {
                 None,
             )) as Box<dyn std::error::Error + Send + Sync>
         })?;
-        let request_path = context
-            .request()
-            .map(|request| request.getPath())
-            .unwrap_or_default();
         let container_handler = ContainerHandler::new(
             Arc::clone(&self.accountDataStore),
             self.oauth.clone(),
@@ -441,7 +437,7 @@ impl IServiceHandler for ServiceHandler {
             .submitBatch(
                 &body.read_to_vec(),
                 &boundary,
-                &request_path,
+                "",
                 &batch_request,
                 context.contextId().as_deref().unwrap_or_default(),
             )
