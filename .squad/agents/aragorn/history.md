@@ -161,3 +161,25 @@ Ready for:
 - **L-Unified-Binary-Startup-Gaps:** The current unified `azurite` binary rejects queue/table CLI flags at startup and still panics in queue startup even when launched with blob-only flags. Integration tooling should fail fast with captured startup logs rather than silently falling back to different binaries or ports.
 - **L-Collection-Race-Pattern:** When a method reads a shared collection (under read lock), performs work, then modifies the same collection (under write lock), there's a race window where concurrent operations can interleave. Fix: use a single write lock that atomically reads AND modifies the collection, storing needed data locally before dropping the lock. Applied to commitBlockList (blocks_collection), following pattern from uploadPages, appendBlock, resizePageBlob, updateSequenceNumber.
 - **L-HashMap-Ordering:** HashMap iteration order is non-deterministic in Rust. When porting from TS where Loki/Node.js preserves insertion order, sort results by a stable key (e.g., block name) after collection to ensure deterministic API responses. Applied to getBlockList uncommitted blocks.
+
+---
+
+## Session: 2026-03-16 Race Fix & Production Validation
+
+**Commits:** f73289de (race fix), 8d89bd7f (docs)
+
+**Work Completed:**
+1. Fixed commitBlockList race condition — atomic read-and-clear under single write lock
+2. Fixed getBlockList ordering — deterministic sort of uncommitted blocks by name
+3. Documented reusable race condition pattern for future collection-based operations
+4. All 1031 tests passing (zero regressions)
+
+**Pattern Added to D-005:**
+When reading a shared collection and later modifying it, use atomic write lock scope:
+- Read data within write lock
+- Modify collection in same scope
+- Store data locally before dropping lock
+
+**Status:** COMPLETED — Ready for production deployment
+
+**Last Updated:** 2026-03-16T19:23:00Z
