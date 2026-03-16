@@ -23,6 +23,7 @@ use crate::utils::constants::{
 use super::base_handler::{
     get_i32, get_string, get_string_array, json_value, string_value, BaseHandler,
 };
+use azurite_common::utils::utils::formatRfc1123;
 
 const LIST_QUEUES_MAX_RESULTS_DEFAULT: i32 = 5000;
 
@@ -197,7 +198,7 @@ impl IServiceHandler for ServiceHandler {
         geo_replication.insert(String::from("status"), string_value("live"));
         geo_replication.insert(
             String::from("lastSyncTime"),
-            json_value(BaseHandler::start_time(&context)),
+            json_value(formatRfc1123(BaseHandler::start_time(&context))),
         );
 
         let mut response = GeneratedResponse::new(200);

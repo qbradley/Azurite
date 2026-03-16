@@ -11,7 +11,7 @@ use azurite_common::i_data_store::IDataStore;
 use azurite_common::i_gc_extent_provider::IGCExtentProvider;
 use azurite_common::storage_error::StorageError as CommonStorageError;
 use azurite_common::utils::utils::{
-    convertDateTimeStringMsTo7Digital as convert_date_time_string_ms_to_7_digital,
+    convertDateTimeStringMsTo7Digital as convert_date_time_string_ms_to_7_digital, formatRfc1123,
     newEtag as new_etag,
 };
 
@@ -151,7 +151,7 @@ fn set_datetime(map: &mut GeneratedObject, key: &str, value: Option<DateTime<Utc
     set_value(
         map,
         key,
-        value.map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+        value.map(|value| GeneratedValue::String(formatRfc1123(value))),
     );
 }
 
@@ -765,9 +765,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             set_value(
                 &mut container_doc.properties,
                 "lastModified",
-                Some(GeneratedValue::from(
-                    serde_json::to_value(lastModified).unwrap(),
-                )),
+                Some(GeneratedValue::String(formatRfc1123(lastModified))),
             );
             set_string(
                 &mut container_doc.properties,
@@ -847,9 +845,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 set_value(
                     &mut container_doc.properties,
                     "lastModified",
-                    Some(GeneratedValue::from(
-                        serde_json::to_value(last_modified).unwrap(),
-                    )),
+                    Some(GeneratedValue::String(formatRfc1123(last_modified))),
                 );
             }
             if let Some(etag) = set_acl_model.etag.clone() {
@@ -2444,7 +2440,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             "accessTierChangeTime",
             context
                 .startTime()
-                .map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+                .map(|value| GeneratedValue::String(formatRfc1123(value))),
         );
 
         let adapter = BlobLeaseAdapter::new(&doc);
@@ -2585,7 +2581,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             "lastModified",
             context
                 .startTime()
-                .map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+                .map(|value| GeneratedValue::String(formatRfc1123(value))),
         );
         set_string(&mut doc.properties, "etag", Some(new_etag()));
 
@@ -3500,7 +3496,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             "lastModified",
             context
                 .startTime()
-                .map(|value| GeneratedValue::from(serde_json::to_value(value).unwrap())),
+                .map(|value| GeneratedValue::String(formatRfc1123(value))),
         );
 
         let lease_adapter = BlobLeaseAdapter::new(&doc);
