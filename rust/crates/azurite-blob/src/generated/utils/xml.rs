@@ -1,12 +1,20 @@
+const XML_DECLARATION: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#;
+
+fn with_xml_declaration(body: String) -> String {
+    format!("{XML_DECLARATION}{body}")
+}
+
 pub fn stringifyXML(
     obj: &serde_json::Value,
     rootName: Option<&str>,
 ) -> Result<String, quick_xml::se::SeError> {
-    if let Some(rootName) = rootName {
+    let xml = if let Some(rootName) = rootName {
         quick_xml::se::to_string_with_root(rootName, obj)
     } else {
         quick_xml::se::to_string(obj)
-    }
+    }?;
+
+    Ok(with_xml_declaration(xml))
 }
 
 /// Parse XML string to serde_json::Value, handling duplicate sibling elements
@@ -102,5 +110,47 @@ pub fn parseXML(
 }
 
 pub fn jsonToXML(json: &serde_json::Value) -> Result<String, quick_xml::se::SeError> {
-    quick_xml::se::to_string(json)
+    quick_xml::se::to_string(json).map(with_xml_declaration)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_multiple_signed_identifiers() {
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?><SignedIdentifiers><SignedIdentifier><Id>policy1</Id><AccessPolicy><Start>2020-01-01T00:00:00Z</Start><Expiry>2025-01-01T00:00:00Z</Expiry><Permission>raup</Permission></AccessPolicy></SignedIdentifier><SignedIdentifier><Id>policy2</Id><AccessPolicy><Start>2020-01-01T00:00:00Z</Start><Expiry>2025-01-01T00:00:00Z</Expiry><Permission>raup</Permission></AccessPolicy></SignedIdentifier><SignedIdentifier><Id>policy3</Id><AccessPolicy><Start>2020-01-01T00:00:00Z</Start><Expiry>2025-01-01T00:00:00Z</Expiry><Permission>raup</Permission></AccessPolicy></SignedIdentifier></SignedIdentifiers>"#;
+
+        let parsed = parseXML(xml, false).unwrap();
+        let si = parsed.get("SignedIdentifier").unwrap();
+        assert!(si.is_array(), "Expected array, got {:?}", si);
+        assert_eq!(si.as_array().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_parse_single_element_stays_object() {
+        let xml = r#"<Root><Item>hello</Item></Root>"#;
+        let parsed = parseXML(xml, false).unwrap();
+        let item = parsed.get("Item").unwrap();
+        assert!(item.is_string());
+        assert_eq!(item.as_str().unwrap(), "hello");
+    }
+
+    #[test]
+    fn stringify_xml_includes_xml2js_declaration() {
+        let xml = stringifyXML(&serde_json::json!({ "Item": "hello" }), Some("Root")).unwrap();
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Root><Item>hello</Item></Root>"#
+        );
+    }
+
+    #[test]
+    fn json_to_xml_includes_xml2js_declaration() {
+        let xml = jsonToXML(&serde_json::json!({ "Root": { "Item": "hello" } })).unwrap();
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Root><Item>hello</Item></Root>"#
+        );
+    }
 }

@@ -1604,16 +1604,12 @@ impl BlobHandler {
             )));
         }
 
-        // Build metadata URL (BlobHandler.ts:721-724)
-        let mut metadata_url = url.clone();
-        metadata_url
-            .query_pairs_mut()
-            .append_pair("comp", "metadata");
+        let metadata_url = build_copy_source_metadata_url(copySource);
 
         // Issue GET request and validate (BlobHandler.ts:725-775)
         let client = reqwest::Client::new();
         let validation_response = client
-            .get(metadata_url.as_str())
+            .get(&metadata_url)
             .send()
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
@@ -1662,6 +1658,20 @@ impl BlobHandler {
 }
 
 // ─── Local helper functions ───────────────────────────────────────────────────
+
+fn build_copy_source_metadata_url(copy_source: &str) -> String {
+    let Some((base, query)) = copy_source.split_once('?') else {
+        return format!("{copy_source}?comp=metadata");
+    };
+
+    let mut query_parts = query
+        .split('&')
+        .filter(|part| !part.is_empty() && !part.starts_with("comp="))
+        .collect::<Vec<_>>();
+    query_parts.push("comp=metadata");
+
+    format!("{base}?{}", query_parts.join("&"))
+}
 
 /// Parse `new URL(copySource)`, throwing `InvalidHeaderValue` for `x-ms-copy-source` on failure.
 /// Mirrors BlobHandler.ts:NewUriFromCopySource (lines ~1336-1348).

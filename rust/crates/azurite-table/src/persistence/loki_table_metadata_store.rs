@@ -827,30 +827,47 @@ impl ITableMetadataStore for LokiTableMetadataStore {
         ifMatch: Option<&str>,
         batchID: Option<&str>,
     ) -> Result<Entity, StorageError> {
-        if ifMatch.is_none() {
-            if self
-                .queryTableEntitiesWithPartitionAndRowKey(
-                    context,
-                    table,
-                    account,
-                    &entity.PartitionKey,
-                    &entity.RowKey,
-                    batchID,
-                )
-                .await?
-                .is_some()
-            {
-                return self
-                    .updateTableEntity(context, table, account, entity, ifMatch, batchID)
-                    .await;
-            }
+        if ifMatch.is_some() {
             return self
-                .insertTableEntity(context, table, account, entity, batchID)
+                .updateTableEntity(context, table, account, entity, ifMatch, batchID)
                 .await;
         }
 
-        self.updateTableEntity(context, table, account, entity, ifMatch, batchID)
-            .await
+        let collection_key = Self::table_collection_key(account, table);
+        let key = Self::entity_key(&entity.PartitionKey, &entity.RowKey);
+        let replacement = self.normalize_entity_for_storage(context, &entity);
+
+        {
+            let mut state = self.db.lock().unwrap();
+            let existing = self
+                .require_entity_collection(&state, account, table, context)?
+                .get(&key)
+                .cloned();
+
+            if let Some(existing) = existing {
+                if let Some(transaction) =
+                    Self::ensure_transaction(&mut state, batchID, &collection_key)
+                {
+                    Self::record_existing_entity(transaction, &key, &existing);
+                }
+                let collection =
+                    self.require_entity_collection_mut(&mut state, account, table, context)?;
+                let current = collection
+                    .get_mut(&key)
+                    .ok_or_else(|| StorageErrorFactory::getEntityNotFound(context))?;
+                *current = replacement.clone();
+            } else {
+                if let Some(transaction) =
+                    Self::ensure_transaction(&mut state, batchID, &collection_key)
+                {
+                    Self::record_inserted_entity(transaction, &key);
+                }
+                self.require_entity_collection_mut(&mut state, account, table, context)?
+                    .insert(key, replacement.clone());
+            }
+        }
+        self.save_if_needed(batchID).await?;
+        Ok(replacement)
     }
 
     async fn insertOrMergeTableEntity(
@@ -862,30 +879,77 @@ impl ITableMetadataStore for LokiTableMetadataStore {
         ifMatch: Option<&str>,
         batchID: Option<&str>,
     ) -> Result<Entity, StorageError> {
-        if ifMatch.is_none() {
-            if self
-                .queryTableEntitiesWithPartitionAndRowKey(
-                    context,
-                    table,
-                    account,
-                    &entity.PartitionKey,
-                    &entity.RowKey,
-                    batchID,
-                )
-                .await?
-                .is_some()
-            {
-                return self
-                    .mergeTableEntity(context, table, account, entity, ifMatch, batchID)
-                    .await;
-            }
+        if ifMatch.is_some() {
             return self
-                .insertTableEntity(context, table, account, entity, batchID)
+                .mergeTableEntity(context, table, account, entity, ifMatch, batchID)
                 .await;
         }
 
-        self.mergeTableEntity(context, table, account, entity, ifMatch, batchID)
-            .await
+        let collection_key = Self::table_collection_key(account, table);
+        let key = Self::entity_key(&entity.PartitionKey, &entity.RowKey);
+        let inserted = self.normalize_entity_for_storage(context, &entity);
+
+        let merged = {
+            let mut state = self.db.lock().unwrap();
+            let existing = self
+                .require_entity_collection(&state, account, table, context)?
+                .get(&key)
+                .cloned();
+
+            if let Some(existing) = existing {
+                if let Some(transaction) =
+                    Self::ensure_transaction(&mut state, batchID, &collection_key)
+                {
+                    Self::record_existing_entity(transaction, &key, &existing);
+                }
+
+                let collection =
+                    self.require_entity_collection_mut(&mut state, account, table, context)?;
+                let current = collection
+                    .get_mut(&key)
+                    .ok_or_else(|| StorageErrorFactory::getEntityNotFound(context))?;
+
+                current.PartitionKey = entity.PartitionKey.clone();
+                current.RowKey = entity.RowKey.clone();
+                if !entity.eTag.is_empty() {
+                    current.eTag = entity.eTag.clone();
+                }
+                if !entity.lastModifiedTime.is_empty() {
+                    current.lastModifiedTime = entity.lastModifiedTime.clone();
+                }
+
+                for (property, value) in &entity.properties {
+                    if property.ends_with(ODATA_TYPE) {
+                        continue;
+                    }
+                    current.properties.insert(property.clone(), value.clone());
+                    let metadata_key = format!("{property}{ODATA_TYPE}");
+                    match entity.properties.get(&metadata_key) {
+                        Some(metadata) => {
+                            current.properties.insert(metadata_key, metadata.clone());
+                        }
+                        None => {
+                            current.properties.remove(&metadata_key);
+                        }
+                    }
+                }
+
+                let normalized = self.normalize_entity_for_storage(context, current);
+                *current = normalized.clone();
+                normalized
+            } else {
+                if let Some(transaction) =
+                    Self::ensure_transaction(&mut state, batchID, &collection_key)
+                {
+                    Self::record_inserted_entity(transaction, &key);
+                }
+                self.require_entity_collection_mut(&mut state, account, table, context)?
+                    .insert(key, inserted.clone());
+                inserted.clone()
+            }
+        };
+        self.save_if_needed(batchID).await?;
+        Ok(merged)
     }
 
     async fn deleteTableEntity(

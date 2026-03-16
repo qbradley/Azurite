@@ -1,12 +1,20 @@
+const XML_DECLARATION: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#;
+
+fn with_xml_declaration(body: String) -> String {
+    format!("{XML_DECLARATION}{body}")
+}
+
 pub fn stringifyXML(
     obj: &serde_json::Value,
     rootName: Option<&str>,
 ) -> Result<String, quick_xml::se::SeError> {
-    if let Some(rootName) = rootName {
+    let xml = if let Some(rootName) = rootName {
         quick_xml::se::to_string_with_root(rootName, obj)
     } else {
         quick_xml::se::to_string(obj)
-    }
+    }?;
+
+    Ok(with_xml_declaration(xml))
 }
 
 /// Parse XML string to serde_json::Value, handling duplicate sibling elements
@@ -101,5 +109,5 @@ pub fn parseXML(
 }
 
 pub fn jsonToXML(json: &serde_json::Value) -> Result<String, quick_xml::se::SeError> {
-    quick_xml::se::to_string(json)
+    quick_xml::se::to_string(json).map(with_xml_declaration)
 }

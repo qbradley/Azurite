@@ -161,6 +161,9 @@ Ready for:
 - **L-Unified-Binary-Startup-Gaps:** The current unified `azurite` binary rejects queue/table CLI flags at startup and still panics in queue startup even when launched with blob-only flags. Integration tooling should fail fast with captured startup logs rather than silently falling back to different binaries or ports.
 - **L-Collection-Race-Pattern:** When a method reads a shared collection (under read lock), performs work, then modifies the same collection (under write lock), there's a race window where concurrent operations can interleave. Fix: use a single write lock that atomically reads AND modifies the collection, storing needed data locally before dropping the lock. Applied to commitBlockList (blocks_collection), following pattern from uploadPages, appendBlock, resizePageBlob, updateSequenceNumber.
 - **L-HashMap-Ordering:** HashMap iteration order is non-deterministic in Rust. When porting from TS where Loki/Node.js preserves insertion order, sort results by a stable key (e.g., block name) after collection to ensure deterministic API responses. Applied to getBlockList uncommitted blocks.
+- **L-XML2JS-Declaration-Parity:** xml2js.Builder emits `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` by default, so Rust XML serializers must prefix that declaration for blob, queue, and table responses instead of relying on quick_xml defaults.
+- **L-Copy-Source-Validation-Raw-Query:** Cross-account copy-source validation should preserve the raw SAS query string when appending `comp=metadata`; rebuilding the URL can normalize or overwrite source query details that TS keeps intact during validation.
+- **L-Table-Upsert-Race:** Table upsert paths (`insertOrUpdate` and `insertOrMerge`) need the same single-lock atomic read/modify pattern as blob races. Query-then-write helpers introduce TOCTOU windows even when the eventual mutation is protected by a mutex.
 
 ---
 
