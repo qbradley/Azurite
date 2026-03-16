@@ -259,3 +259,18 @@ Created comprehensive quality report at `.squad/decisions/inbox/boromir-quality-
 1. Wrapper error types that deref to `StorageError` still bypass Rust's downcast-based middleware unless they are explicitly handled; otherwise the wire contract silently degrades from a structured Azurite XML error to a blank 500.
 2. `GeneratedResponse` falls back to serializing `fields` as the JSON body when `body` is unset, so header metadata must not be left in `fields` for body-bearing table responses.
 3. Exact differential parity for Azurite ETags is currently blocked by dynamic generation on both stacks (`newEtag()` randomness for blob/container paths and request-local high-precision timestamps for table entities). That is a harness-visible gap, but not one I could safely eliminate in Rust alone without changing the contract basis itself.
+
+### 2026-03-16: Differential Harness Normalization for Dynamic Fields
+
+**Context:** Normalized the side-by-side TS vs Rust REST harness so dynamic response values no longer drown out genuine parity regressions, and expanded the scenario matrix across blob, queue, and table flows.
+
+**Harness Changes:**
+1. Normalized response headers for dynamic IDs/timestamps/ETags while still requiring both stacks to expose the same meaningful headers.
+2. Normalized XML bodies for `<RequestId>`, `<Time>`, ETags, and copy-blob error-message suffixes; normalized JSON dynamic fields such as `etag`, `Timestamp`, and queue-generated identifiers.
+3. Added scenario coverage for delete blob, list blobs, append blob, snapshot metadata validation, delete message, delete queue, get entity, and delete entity.
+4. Treated literal `Content-Length` as meaningful only when the normalized body still differs, avoiding false negatives from dynamic-body byte count drift while preserving true payload mismatches.
+
+**Results:**
+- Differential harness improved from **6 pass / 10 fail** to **23 pass / 1 fail**.
+- The lone remaining failure is a **real blob parity bug**: Rust serializes `List Blobs` root metadata (`ContainerName`, and similarly `ServiceEndpoint`) as child elements instead of the TS/XML-attribute wire shape.
+- Requested validation commands still completed successfully overall: release build passed, harness ran, `scripts/run-integration-tests.sh` exited 0, and `cargo test -p azurite-integration-tests -- --test-threads=1` passed.

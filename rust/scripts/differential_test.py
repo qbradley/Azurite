@@ -9,6 +9,7 @@ import http.client
 import json
 import os
 import pathlib
+import re
 import shutil
 import socket
 import subprocess
@@ -37,38 +38,46 @@ BLOB_PORTS = {"ts": 10000, "rust": 11000}
 QUEUE_PORTS = {"ts": 10001, "rust": 11001}
 TABLE_PORTS = {"ts": 10002, "rust": 11002}
 
-IGNORED_HEADER_NAMES = {
+TRANSPORT_IGNORED_HEADER_NAMES = {
     "connection",
-    "content-length",
-    "date",
     "keep-alive",
     "server",
     "transfer-encoding",
-    "x-ms-request-id",
-    "x-ms-version-id",
-    "x-ms-snapshot",
-    "x-ms-copy-id",
 }
 
-DYNAMIC_FIELD_NAMES = {
-    "clientrequestid",
-    "date",
-    "etag",
-    "requestid",
-    "request-id",
-    "lastmodified",
-    "last-modified",
-    "lastmodifiedtime",
-    "timestamp",
-    "messageid",
-    "popreceipt",
-    "insertiontime",
-    "expirationtime",
-    "timenextvisible",
-    "nextvisibletime",
-    "dequeuecount",
-    "odata.etag",
+DYNAMIC_HEADER_PLACEHOLDERS = {
+    "date": "DYNAMIC_DATE",
+    "etag": "DYNAMIC_ETAG",
+    "x-ms-copy-id": "DYNAMIC_COPY_ID",
+    "x-ms-request-id": "DYNAMIC_REQUEST_ID",
+    "x-ms-snapshot": "DYNAMIC_SNAPSHOT",
+    "x-ms-version-id": "DYNAMIC_VERSION_ID",
 }
+
+DYNAMIC_FIELD_PLACEHOLDERS = {
+    "clientrequestid": "DYNAMIC_REQUEST_ID",
+    "date": "DYNAMIC_DATE",
+    "etag": "DYNAMIC_ETAG",
+    "expirationtime": "DYNAMIC_TIMESTAMP",
+    "insertiontime": "DYNAMIC_TIMESTAMP",
+    "lastmodified": "DYNAMIC_TIMESTAMP",
+    "lastmodifiedtime": "DYNAMIC_TIMESTAMP",
+    "messageid": "DYNAMIC_MESSAGE_ID",
+    "nextvisibletime": "DYNAMIC_TIMESTAMP",
+    "odata.etag": "DYNAMIC_ETAG",
+    "popreceipt": "DYNAMIC_POP_RECEIPT",
+    "requestid": "DYNAMIC_REQUEST_ID",
+    "serviceendpoint": "DYNAMIC_ENDPOINT",
+    "time": "DYNAMIC_TIMESTAMP",
+    "timestamp": "DYNAMIC_TIMESTAMP",
+    "timenextvisible": "DYNAMIC_TIMESTAMP",
+}
+
+REQUEST_ID_MESSAGE_RE = re.compile(r"RequestId:\s*[^<\r\n]+")
+TIME_MESSAGE_RE = re.compile(r"Time:\s*[^<\r\n]+")
+HEX_ETAG_RE = re.compile(r"0x[0-9A-Fa-f]+")
+QUOTED_HEX_ETAG_RE = re.compile(r'"0x[0-9A-Fa-f]+"')
+WEAK_ETAG_RE = re.compile(r'W/"[^"]+"')
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 RUST_ROOT = REPO_ROOT / "rust"
@@ -424,21 +433,29 @@ class DifferentialHarness:
             ("Create snapshot", self.scenario_create_snapshot),
             ("Copy blob", self.scenario_copy_blob),
             ("Set/get blob metadata", self.scenario_blob_metadata),
+            ("Append blob operations", self.scenario_append_blob_operations),
+            ("Blob snapshots with metadata", self.scenario_snapshot_metadata),
+            ("List blobs", self.scenario_list_blobs),
+            ("Delete blob", self.scenario_delete_blob),
             ("Create queue", self.scenario_create_queue),
             ("Put message", self.scenario_put_message),
             ("Get messages", self.scenario_get_messages),
+            ("Delete message", self.scenario_delete_message),
+            ("Delete queue", self.scenario_delete_queue),
             ("Create table", self.scenario_create_table),
             ("Insert entity", self.scenario_insert_entity),
+            ("Get entity", self.scenario_get_entity),
             ("Query entities", self.scenario_query_entities),
+            ("Delete entity", self.scenario_delete_entity),
         ]
         results = []
-        for _name, fn in scenarios:
+        for name, fn in scenarios:
             try:
                 results.append(fn())
             except Exception as exc:
                 results.append(
                     ScenarioResult(
-                        name=_name,
+                        name=name,
                         ok=False,
                         summary=str(exc),
                         details=[f"Harness error while running scenario: {exc}"],
@@ -446,13 +463,29 @@ class DifferentialHarness:
                 )
         return results
 
-    def execute_and_compare(self, spec: RequestSpec) -> ComparisonOutcome:
+    def perform_variant_requests(
+        self, ts_spec: RequestSpec, rust_spec: RequestSpec
+    ) -> tuple[HttpResponseData, HttpResponseData]:
         self.request_counter += 1
         request_id = f"diff-{self.request_counter:04d}"
         date_string = format_rfc1123(dt.datetime.now(dt.timezone.utc))
-        ts_response = self._perform_request("ts", spec, date_string, request_id)
-        rust_response = self._perform_request("rust", spec, date_string, request_id)
+        ts_response = self._perform_request("ts", ts_spec, date_string, request_id)
+        rust_response = self._perform_request("rust", rust_spec, date_string, request_id)
+        return ts_response, rust_response
+
+    def execute_and_compare(self, spec: RequestSpec) -> ComparisonOutcome:
+        ts_response, rust_response = self.perform_variant_requests(spec, spec)
         return compare_responses(ts_response, rust_response, spec)
+
+    def execute_variant_compare(
+        self,
+        ts_spec: RequestSpec,
+        rust_spec: RequestSpec,
+        comparison_spec: Optional[RequestSpec] = None,
+    ) -> tuple[ComparisonOutcome, HttpResponseData, HttpResponseData]:
+        ts_response, rust_response = self.perform_variant_requests(ts_spec, rust_spec)
+        outcome = compare_responses(ts_response, rust_response, comparison_spec or ts_spec)
+        return outcome, ts_response, rust_response
 
     def _perform_request(
         self, variant: str, spec: RequestSpec, date_string: str, request_id: str
@@ -521,7 +554,7 @@ class DifferentialHarness:
             path=f"/{ACCOUNT_NAME}",
             query=[("comp", "list")],
             headers=[("Accept", "application/xml")],
-            ignore_body_fields={"enumerationresults", "serviceendpoint"},
+            ignore_body_fields={"serviceendpoint"},
         )
         return outcome_to_scenario("List containers", self.execute_and_compare(spec))
 
@@ -690,6 +723,131 @@ class DifferentialHarness:
         )
         return outcome_to_scenario("Set/get blob metadata", self.execute_and_compare(get_spec))
 
+    def scenario_append_blob_operations(self) -> ScenarioResult:
+        blob_name = "append-blob.txt"
+        create_spec = RequestSpec(
+            method="PUT",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+            headers=[("x-ms-blob-type", "AppendBlob")],
+        )
+        create_outcome = self.execute_and_compare(create_spec)
+        if not create_outcome.ok:
+            return outcome_to_scenario("Append blob operations", create_outcome)
+        append_spec = RequestSpec(
+            method="PUT",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+            query=[("comp", "appendblock")],
+            body=b"append-line-1\nappend-line-2\n",
+            headers=[("Content-Type", "text/plain")],
+        )
+        append_outcome = self.execute_and_compare(append_spec)
+        if not append_outcome.ok:
+            return outcome_to_scenario("Append blob operations", append_outcome)
+        download_spec = RequestSpec(
+            method="GET",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+            expect="binary",
+        )
+        return outcome_to_scenario("Append blob operations", self.execute_and_compare(download_spec))
+
+    def scenario_snapshot_metadata(self) -> ScenarioResult:
+        blob_name = "snapshot-metadata.txt"
+        seed_spec = RequestSpec(
+            method="PUT",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+            body=b"snapshot source",
+            headers=[
+                ("x-ms-blob-type", "BlockBlob"),
+                ("Content-Type", "text/plain"),
+            ],
+        )
+        seed_outcome = self.execute_and_compare(seed_spec)
+        if not seed_outcome.ok:
+            return outcome_to_scenario("Blob snapshots with metadata", seed_outcome)
+        snapshot_spec = RequestSpec(
+            method="PUT",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+            query=[("comp", "snapshot")],
+            headers=[
+                ("x-ms-meta-purpose", "snapshot"),
+                ("x-ms-meta-owner", "boromir"),
+            ],
+        )
+        snapshot_outcome, ts_response, rust_response = self.execute_variant_compare(snapshot_spec, snapshot_spec)
+        if not snapshot_outcome.ok:
+            return outcome_to_scenario("Blob snapshots with metadata", snapshot_outcome)
+        ts_snapshot = first_header_value(ordered_header_map(ts_response.headers), "x-ms-snapshot")
+        rust_snapshot = first_header_value(ordered_header_map(rust_response.headers), "x-ms-snapshot")
+        if not ts_snapshot or not rust_snapshot:
+            return ScenarioResult(
+                name="Blob snapshots with metadata",
+                ok=False,
+                summary="Snapshot identifier missing from create response",
+                details=[
+                    f"TS x-ms-snapshot={ts_snapshot or '<missing>'}",
+                    f"Rust x-ms-snapshot={rust_snapshot or '<missing>'}",
+                ],
+            )
+        comparison_spec = RequestSpec(
+            method="HEAD",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+        )
+        head_outcome, _ts_head, _rust_head = self.execute_variant_compare(
+            RequestSpec(
+                method="HEAD",
+                service="blob",
+                path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+                query=[("snapshot", ts_snapshot)],
+            ),
+            RequestSpec(
+                method="HEAD",
+                service="blob",
+                path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+                query=[("snapshot", rust_snapshot)],
+            ),
+            comparison_spec,
+        )
+        return outcome_to_scenario("Blob snapshots with metadata", head_outcome)
+
+    def scenario_list_blobs(self) -> ScenarioResult:
+        spec = RequestSpec(
+            method="GET",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}",
+            query=[("restype", "container"), ("comp", "list"), ("include", "metadata")],
+            headers=[("Accept", "application/xml")],
+            ignore_body_fields={"serviceendpoint"},
+        )
+        return outcome_to_scenario("List blobs", self.execute_and_compare(spec))
+
+    def scenario_delete_blob(self) -> ScenarioResult:
+        blob_name = "delete-me.txt"
+        seed_spec = RequestSpec(
+            method="PUT",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+            body=b"delete target",
+            headers=[
+                ("x-ms-blob-type", "BlockBlob"),
+                ("Content-Type", "text/plain"),
+            ],
+        )
+        seed_outcome = self.execute_and_compare(seed_spec)
+        if not seed_outcome.ok:
+            return outcome_to_scenario("Delete blob", seed_outcome)
+        delete_spec = RequestSpec(
+            method="DELETE",
+            service="blob",
+            path=f"/{ACCOUNT_NAME}/{self.container_name}/{blob_name}",
+        )
+        return outcome_to_scenario("Delete blob", self.execute_and_compare(delete_spec))
+
     def scenario_create_queue(self) -> ScenarioResult:
         spec = RequestSpec(
             method="PUT",
@@ -700,7 +858,7 @@ class DifferentialHarness:
 
     def scenario_put_message(self) -> ScenarioResult:
         body = (
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            '<?xml version="1.0" encoding="utf-8"?>'
             "<QueueMessage><MessageText>hello queue</MessageText></QueueMessage>"
         ).encode("utf-8")
         spec = RequestSpec(
@@ -709,13 +867,6 @@ class DifferentialHarness:
             path=f"/{ACCOUNT_NAME}/{self.queue_name}/messages",
             body=body,
             headers=[("Content-Type", "application/xml")],
-            ignore_body_fields={
-                "messageid",
-                "insertiontime",
-                "expirationtime",
-                "popreceipt",
-                "timenextvisible",
-            },
         )
         return outcome_to_scenario("Put message", self.execute_and_compare(spec))
 
@@ -726,16 +877,74 @@ class DifferentialHarness:
             path=f"/{ACCOUNT_NAME}/{self.queue_name}/messages",
             query=[("numofmessages", "1")],
             headers=[("Accept", "application/xml")],
-            ignore_body_fields={
-                "messageid",
-                "insertiontime",
-                "expirationtime",
-                "popreceipt",
-                "timenextvisible",
-                "dequeuecount",
-            },
         )
         return outcome_to_scenario("Get messages", self.execute_and_compare(spec))
+
+    def scenario_delete_message(self) -> ScenarioResult:
+        body = (
+            '<?xml version="1.0" encoding="utf-8"?>'
+            "<QueueMessage><MessageText>delete me</MessageText></QueueMessage>"
+        ).encode("utf-8")
+        put_spec = RequestSpec(
+            method="POST",
+            service="queue",
+            path=f"/{ACCOUNT_NAME}/{self.queue_name}/messages",
+            body=body,
+            headers=[("Content-Type", "application/xml")],
+        )
+        put_outcome, ts_response, rust_response = self.execute_variant_compare(put_spec, put_spec)
+        if not put_outcome.ok:
+            return outcome_to_scenario("Delete message", put_outcome)
+        ts_message_id = extract_xml_text(ts_response.body, "MessageId")
+        rust_message_id = extract_xml_text(rust_response.body, "MessageId")
+        ts_pop_receipt = extract_xml_text(ts_response.body, "PopReceipt")
+        rust_pop_receipt = extract_xml_text(rust_response.body, "PopReceipt")
+        if not all([ts_message_id, rust_message_id, ts_pop_receipt, rust_pop_receipt]):
+            return ScenarioResult(
+                name="Delete message",
+                ok=False,
+                summary="Queue delete identifiers missing from send response",
+                details=[
+                    f"TS MessageId={ts_message_id or '<missing>'} PopReceipt={ts_pop_receipt or '<missing>'}",
+                    f"Rust MessageId={rust_message_id or '<missing>'} PopReceipt={rust_pop_receipt or '<missing>'}",
+                ],
+            )
+        comparison_spec = RequestSpec(
+            method="DELETE",
+            service="queue",
+            path=f"/{ACCOUNT_NAME}/{self.queue_name}/messages/message-id",
+            query=[("popreceipt", "DYNAMIC")],
+        )
+        delete_outcome, _ts_delete, _rust_delete = self.execute_variant_compare(
+            RequestSpec(
+                method="DELETE",
+                service="queue",
+                path=(
+                    f"/{ACCOUNT_NAME}/{self.queue_name}/messages/"
+                    f"{urllib.parse.quote(ts_message_id, safe='')}"
+                ),
+                query=[("popreceipt", ts_pop_receipt)],
+            ),
+            RequestSpec(
+                method="DELETE",
+                service="queue",
+                path=(
+                    f"/{ACCOUNT_NAME}/{self.queue_name}/messages/"
+                    f"{urllib.parse.quote(rust_message_id, safe='')}"
+                ),
+                query=[("popreceipt", rust_pop_receipt)],
+            ),
+            comparison_spec,
+        )
+        return outcome_to_scenario("Delete message", delete_outcome)
+
+    def scenario_delete_queue(self) -> ScenarioResult:
+        spec = RequestSpec(
+            method="DELETE",
+            service="queue",
+            path=f"/{ACCOUNT_NAME}/{self.queue_name}",
+        )
+        return outcome_to_scenario("Delete queue", self.execute_and_compare(spec))
 
     def scenario_create_table(self) -> ScenarioResult:
         body = json.dumps({"TableName": self.table_name}, separators=(",", ":")).encode("utf-8")
@@ -748,7 +957,6 @@ class DifferentialHarness:
                 ("Accept", "application/json;odata=nometadata"),
                 ("Content-Type", "application/json"),
             ],
-            ignore_body_fields={"odata.etag"},
         )
         return outcome_to_scenario("Create table", self.execute_and_compare(spec))
 
@@ -769,9 +977,19 @@ class DifferentialHarness:
                 ("Accept", "application/json;odata=nometadata"),
                 ("Content-Type", "application/json"),
             ],
-            ignore_body_fields={"odata.etag", "timestamp"},
+            ignore_body_fields={"lastModifiedTime"},
         )
         return outcome_to_scenario("Insert entity", self.execute_and_compare(spec))
+
+    def scenario_get_entity(self) -> ScenarioResult:
+        spec = RequestSpec(
+            method="GET",
+            service="table",
+            path=f"/{ACCOUNT_NAME}/{self.table_name}(PartitionKey='pk',RowKey='rk')",
+            headers=[("Accept", "application/json;odata=nometadata")],
+            ignore_body_fields={"lastModifiedTime"},
+        )
+        return outcome_to_scenario("Get entity", self.execute_and_compare(spec))
 
     def scenario_query_entities(self) -> ScenarioResult:
         spec = RequestSpec(
@@ -780,10 +998,18 @@ class DifferentialHarness:
             path=f"/{ACCOUNT_NAME}/{self.table_name}()",
             query=[("$filter", "PartitionKey eq 'pk'")],
             headers=[("Accept", "application/json;odata=nometadata")],
-            ignore_body_fields={"odata.etag", "timestamp"},
+            ignore_body_fields={"lastModifiedTime"},
         )
         return outcome_to_scenario("Query entities", self.execute_and_compare(spec))
 
+    def scenario_delete_entity(self) -> ScenarioResult:
+        spec = RequestSpec(
+            method="DELETE",
+            service="table",
+            path=f"/{ACCOUNT_NAME}/{self.table_name}(PartitionKey='pk',RowKey='rk')",
+            headers=[("If-Match", "*")],
+        )
+        return outcome_to_scenario("Delete entity", self.execute_and_compare(spec))
 
 def outcome_to_scenario(name: str, outcome: ComparisonOutcome) -> ScenarioResult:
     return ScenarioResult(name=name, ok=outcome.ok, summary=outcome.summary, details=outcome.details)
@@ -864,7 +1090,7 @@ def content_length_for_signature(
 def ordered_header_map(headers: list[tuple[str, str]]) -> dict[str, list[str]]:
     result: dict[str, list[str]] = {}
     for name, value in headers:
-        result.setdefault(name.lower(), []).append(normalize_header_value(value))
+        result.setdefault(name.lower(), []).append(normalize_header_whitespace(value))
     return result
 
 
@@ -893,8 +1119,13 @@ def canonicalized_resource(path: str, query: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
-def normalize_header_value(value: str) -> str:
+def normalize_header_whitespace(value: str) -> str:
     return " ".join(value.strip().split())
+
+
+def normalize_header_value(name: str, value: str) -> str:
+    normalized = normalize_header_whitespace(value)
+    return DYNAMIC_HEADER_PLACEHOLDERS.get(name.lower(), normalized)
 
 
 def compare_responses(
@@ -907,11 +1138,13 @@ def compare_responses(
         details.append(
             f"Status: {ts_response.status} vs {rust_response.status}"
         )
-    header_result = compare_headers(ts_response.headers, rust_response.headers)
+    body_result = compare_body(ts_response.body, rust_response.body, ts_response.headers, rust_response.headers, spec)
+    header_result = compare_headers(ts_response, rust_response)
+    if not body_result:
+        header_result = [line for line in header_result if not line.strip().startswith("content-length:")]
     if header_result:
         details.append("Headers differ:")
         details.extend(header_result)
-    body_result = compare_body(ts_response.body, rust_response.body, ts_response.headers, rust_response.headers, spec)
     if body_result:
         details.append(body_result[0])
         details.extend(body_result[1:])
@@ -922,27 +1155,38 @@ def compare_responses(
 
 
 def compare_headers(
-    ts_headers: list[tuple[str, str]], rust_headers: list[tuple[str, str]]
+    ts_response: HttpResponseData, rust_response: HttpResponseData
 ) -> list[str]:
-    ts_map = header_set(ts_headers)
-    rust_map = header_set(rust_headers)
+    ts_map = header_set(ts_response.headers, len(ts_response.body))
+    rust_map = header_set(rust_response.headers, len(rust_response.body))
     lines: list[str] = []
-    all_keys = sorted(set(ts_map) | set(rust_map))
-    for key in all_keys:
-        if ts_map.get(key) != rust_map.get(key):
+    ts_keys = set(ts_map)
+    rust_keys = set(rust_map)
+    if ts_keys != rust_keys:
+        if ts_keys - rust_keys:
+            lines.append(f"  Rust missing headers: {sorted(ts_keys - rust_keys)}")
+        if rust_keys - ts_keys:
+            lines.append(f"  TS missing headers: {sorted(rust_keys - ts_keys)}")
+    for key in sorted(ts_keys & rust_keys):
+        if ts_map[key] != rust_map[key]:
             lines.append(
                 f"  {key}: TS={ts_map.get(key, [])} Rust={rust_map.get(key, [])}"
             )
     return lines
 
 
-def header_set(headers: list[tuple[str, str]]) -> dict[str, list[str]]:
+def header_set(headers: list[tuple[str, str]], body_length: int = 0) -> dict[str, list[str]]:
     result: dict[str, list[str]] = {}
+    saw_chunked = False
     for name, value in headers:
         lower = name.lower()
-        if lower in IGNORED_HEADER_NAMES:
+        if lower == "transfer-encoding" and "chunked" in value.lower():
+            saw_chunked = True
+        if lower in TRANSPORT_IGNORED_HEADER_NAMES:
             continue
-        result.setdefault(lower, []).append(normalize_header_value(value))
+        result.setdefault(lower, []).append(normalize_header_value(lower, value))
+    if "content-length" not in result and saw_chunked:
+        result["content-length"] = [str(body_length)]
     return result
 
 
@@ -956,7 +1200,7 @@ def compare_body(
     if not ts_body and not rust_body:
         return []
     body_kind = determine_body_kind(ts_body, rust_body, ts_headers, rust_headers, spec.expect)
-    ignored_fields = {normalize_field_name(name) for name in DYNAMIC_FIELD_NAMES | spec.ignore_body_fields}
+    ignored_fields = {normalize_field_name(name) for name in spec.ignore_body_fields}
     if body_kind == "json":
         try:
             ts_normalized = normalize_json(json.loads(ts_body.decode("utf-8")), ignored_fields)
@@ -1011,29 +1255,37 @@ def determine_body_kind(
     return "binary"
 
 
-def normalize_json(value: object, ignored_fields: set[str]) -> object:
+def normalize_json(value: object, ignored_fields: set[str], field_name: Optional[str] = None) -> object:
+    normalized_field_name = normalize_field_name(field_name or "")
+    placeholder = DYNAMIC_FIELD_PLACEHOLDERS.get(normalized_field_name)
+    if placeholder is not None:
+        return placeholder
     if isinstance(value, dict):
         normalized = {}
         for key, child in value.items():
-            normalized_key = normalize_field_name(key)
-            if normalized_key in ignored_fields:
+            child_field_name = normalize_field_name(key)
+            if child_field_name in ignored_fields:
                 continue
-            normalized[key] = normalize_json(child, ignored_fields)
+            normalized[key] = normalize_json(child, ignored_fields, child_field_name)
         return normalized
     if isinstance(value, list):
-        return [normalize_json(item, ignored_fields) for item in value]
+        return [normalize_json(item, ignored_fields, field_name) for item in value]
+    if isinstance(value, str):
+        return normalize_dynamic_text(normalized_field_name, value)
     return value
 
 
 def normalize_xml(element: ET.Element, ignored_fields: set[str]) -> tuple[str, tuple[tuple[str, str], ...], Optional[str], list[object]]:
     name = normalize_xml_name(element.tag)
+    normalized_name = normalize_field_name(name)
     attributes = []
     for attr_name, attr_value in sorted(element.attrib.items()):
         normalized_attr_name = normalize_field_name(attr_name)
         if normalized_attr_name in ignored_fields:
             continue
-        attributes.append((normalize_xml_name(attr_name), attr_value.strip()))
-    text = (element.text or "").strip() or None
+        attributes.append((normalize_xml_name(attr_name), normalize_dynamic_text(normalized_attr_name, attr_value.strip())))
+    raw_text = (element.text or "").strip()
+    text = normalize_dynamic_text(normalized_name, raw_text) if raw_text else None
     children = []
     for child in list(element):
         child_name = normalize_xml_name(child.tag)
@@ -1054,6 +1306,34 @@ def normalize_field_name(name: str) -> str:
     return "".join(ch for ch in normalize_xml_name(name).lower() if ch.isalnum() or ch == ".")
 
 
+def normalize_dynamic_text(field_name: str, value: str) -> str:
+    placeholder = DYNAMIC_FIELD_PLACEHOLDERS.get(field_name)
+    if placeholder is not None:
+        return placeholder
+    normalized = value.strip()
+    normalized = REQUEST_ID_MESSAGE_RE.sub("RequestId: DYNAMIC", normalized)
+    normalized = TIME_MESSAGE_RE.sub("Time: DYNAMIC", normalized)
+    if field_name.endswith("etag") or looks_like_etag(normalized):
+        return "DYNAMIC_ETAG"
+    return normalized
+
+
+def looks_like_etag(value: str) -> bool:
+    return bool(
+        HEX_ETAG_RE.fullmatch(value)
+        or QUOTED_HEX_ETAG_RE.fullmatch(value)
+        or WEAK_ETAG_RE.fullmatch(value)
+    )
+
+
+def extract_xml_text(body: bytes, tag_name: str) -> str:
+    normalized_tag = normalize_field_name(tag_name)
+    root = ET.fromstring(body)
+    for element in root.iter():
+        if normalize_field_name(element.tag) == normalized_tag:
+            return (element.text or "").strip()
+    return ""
+
 def render_diff(left: object, right: object) -> list[str]:
     left_dump = json.dumps(left, indent=2, sort_keys=True, ensure_ascii=False).splitlines()
     right_dump = json.dumps(right, indent=2, sort_keys=True, ensure_ascii=False).splitlines()
@@ -1068,7 +1348,7 @@ def build_pass_summary(
     rust_response: HttpResponseData,
     spec: RequestSpec,
 ) -> str:
-    header_count = len(header_set(ts_response.headers))
+    header_count = len(header_set(ts_response.headers, len(ts_response.body)))
     body_kind = determine_body_kind(ts_response.body, rust_response.body, ts_response.headers, rust_response.headers, spec.expect)
     if not ts_response.body and not rust_response.body:
         body_summary = "empty=empty"
