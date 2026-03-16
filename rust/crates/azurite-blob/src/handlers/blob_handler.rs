@@ -749,7 +749,6 @@ impl IBlobHandler for BlobHandler {
             "lastModified",
         );
         response.insert_field("snapshot", string_value(&res.snapshot));
-        response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));
         Ok(response)
     }
 

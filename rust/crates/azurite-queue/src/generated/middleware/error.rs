@@ -1,4 +1,4 @@
-use crate::errors::StorageError;
+use crate::errors::{NotImplementedError, StorageError};
 use crate::generated::artifacts::models::GeneratedValue;
 use crate::generated::context::Context;
 use crate::generated::errors::middleware_error::MiddlewareError;
@@ -41,6 +41,23 @@ pub fn error_middleware<RQ: IRequest, RS: IResponse, L: ILogger + ?Sized>(
     if let Some(err) = err.downcast_ref::<StorageError>() {
         logger.error(
             "ErrorMiddleware: Received a StorageError, fill error information to HTTP response",
+            context.contextId().as_deref(),
+        );
+        write_error_response(
+            req,
+            res,
+            err.statusCode,
+            err.statusMessage.as_deref(),
+            err.headers.as_ref(),
+            err.contentType.as_deref(),
+            err.body.as_ref(),
+        )?;
+        return Ok(());
+    }
+
+    if let Some(err) = err.downcast_ref::<NotImplementedError>() {
+        logger.error(
+            "ErrorMiddleware: Received a NotImplementedError, fill error information to HTTP response",
             context.contextId().as_deref(),
         );
         write_error_response(

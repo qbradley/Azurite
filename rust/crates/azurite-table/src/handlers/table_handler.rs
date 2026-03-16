@@ -491,9 +491,9 @@ impl ITableHandler for TableHandler {
         let mut response = GeneratedResponse::new(201);
         self.base
             .add_response_metadata(&mut response, &options, &context, true);
-        response
-            .fields
-            .extend(self.table_response_value(&account, &table_name, &accept, &context));
+        response.body = Some(GeneratedBody::Value(GeneratedValue::Object(
+            self.table_response_value(&account, &table_name, &accept, &context),
+        )));
         self.base.update_response_prefer(&mut response, &context);
         self.base
             .set_response_content_type(&mut response, Some(&accept));

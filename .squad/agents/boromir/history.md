@@ -232,3 +232,30 @@ Created comprehensive quality report at `.squad/decisions/inbox/boromir-quality-
 **Status:** COMPLETED — Ready for final deployment
 
 **Last Updated:** 2026-03-16T19:23:00Z
+
+### 2026-03-16: Differential Harness Re-run — Deterministic Gaps Reduced
+
+**Context:** Re-ran `rust/scripts/differential_test.py` after verifying Aragorn's referenced release binaries and rebuilding `cargo build --release --target x86_64-unknown-linux-gnu`. The per-service harness still started from **5 pass / 11 fail**, so Aragorn's XML declaration change did not alter the current failing scenario set (the XML-sensitive scenarios were already passing in this harness run profile).
+
+**Rust Fixes Applied:**
+1. Removed the Rust-only `x-ms-request-server-encrypted` header from blob snapshot responses so `createSnapshot` now matches the TS wire shape.
+2. Fixed generated error middleware to unwrap `NotImplementedError` / `NotImplementedinSQLError` wrappers instead of collapsing them to generic HTTP 500s. This restored the TS-style `501 APINotImplemented` XML response for unimplemented `putBlobFromUrl` paths.
+3. Changed table create responses to serialize an explicit JSON body so header-only fields (`version`, `preferenceApplied`) no longer leak into the payload.
+
+**Observed Results:**
+- Harness improved to **6 pass / 10 fail**.
+- `Create table` now passes completely.
+- `Copy blob` now matches on status code and headers; only the dynamic `RequestId` / `Time` text embedded inside the XML error `<Message>` still differs.
+- The remaining failures are all dynamic ETag mismatches (container/blob/table entity flows) plus that dynamic copy-blob error message suffix.
+
+**Validation:**
+- `cargo clippy --all-targets` ✅
+- `cargo fmt --all` ✅
+- `cargo build --release --target x86_64-unknown-linux-gnu` ✅
+- `bash scripts/run-integration-tests.sh` ✅
+- `cargo test -p azurite-integration-tests -- --test-threads=1` ✅
+
+**Key Learnings:**
+1. Wrapper error types that deref to `StorageError` still bypass Rust's downcast-based middleware unless they are explicitly handled; otherwise the wire contract silently degrades from a structured Azurite XML error to a blank 500.
+2. `GeneratedResponse` falls back to serializing `fields` as the JSON body when `body` is unset, so header metadata must not be left in `fields` for body-bearing table responses.
+3. Exact differential parity for Azurite ETags is currently blocked by dynamic generation on both stacks (`newEtag()` randomness for blob/container paths and request-local high-precision timestamps for table entities). That is a harness-visible gap, but not one I could safely eliminate in Rust alone without changing the contract basis itself.
