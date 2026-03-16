@@ -3098,9 +3098,11 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             validator.validate(&adapter, context)?;
         }
 
+        // Atomically read and clear blocks for this blob under write lock to prevent
+        // concurrent stageBlock calls from adding blocks that get deleted without being seen.
         let persisted_blocks: Vec<BlockModel> = {
-            let blocks = self.blocks_collection.read().unwrap();
-            let items = blocks
+            let mut blocks = self.blocks_collection.write().unwrap();
+            let items: Vec<BlockModel> = blocks
                 .iter()
                 .filter(|((acc, cont, block_blob, _), _)| {
                     acc == &blob.accountName
@@ -3109,6 +3111,12 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 })
                 .map(|(_, block_doc)| block_doc.clone())
                 .collect();
+            // Clear blocks for this blob within same lock scope
+            blocks.retain(|(acc, cont, block_blob, _), _| {
+                !(acc == &blob.accountName
+                    && cont == &blob.containerName
+                    && block_blob == &blob_name)
+            });
             drop(blocks);
             items
         };
@@ -3258,12 +3266,6 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         }
         drop(blobs);
 
-        let mut blocks = self.blocks_collection.write().unwrap();
-        blocks.retain(|(acc, cont, block_blob, _), _| {
-            !(acc == &blob.accountName && cont == &blob.containerName && block_blob == &blob_name)
-        });
-        drop(blocks);
-
         Ok(())
     }
 
@@ -3329,6 +3331,24 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 }
             }
             drop(blocks);
+            // Sort by block name for deterministic ordering (HashMap iteration is non-deterministic)
+            uncommitted_blocks.sort_by(|a, b| {
+                let name_a = a
+                    .get("name")
+                    .and_then(|v| match v {
+                        GeneratedValue::String(s) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .unwrap_or("");
+                let name_b = b
+                    .get("name")
+                    .and_then(|v| match v {
+                        GeneratedValue::String(s) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .unwrap_or("");
+                name_a.cmp(name_b)
+            });
         }
 
         Ok(
