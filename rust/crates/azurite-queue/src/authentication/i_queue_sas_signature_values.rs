@@ -131,7 +131,7 @@ mod tests {
         let (_, string_to_sign) = generateQueueSASSignature(&values, "devstoreaccount1", b"key");
         assert_eq!(
             string_to_sign,
-            "raup\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/queueservices/devstoreaccount1/queue\n\n10.0.0.1-10.0.0.9\n\n2020-08-04"
+            "raup\n2020-04-16T13:31:48Z\n2099-04-16T13:31:48Z\n/queue/devstoreaccount1/queue\n\n10.0.0.1-10.0.0.9\n\n2020-08-04"
         );
     }
 }
