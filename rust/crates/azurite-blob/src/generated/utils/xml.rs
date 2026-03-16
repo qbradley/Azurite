@@ -153,4 +153,22 @@ mod tests {
             r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Root><Item>hello</Item></Root>"#
         );
     }
+
+    #[test]
+    fn stringify_xml_serializes_at_prefixed_keys_as_attributes() {
+        let xml = stringifyXML(
+            &serde_json::json!({
+                "@ServiceEndpoint": "http://127.0.0.1/devstoreaccount1",
+                "@ContainerName": "mycontainer",
+                "Blobs": { "Blob": [] }
+            }),
+            Some("EnumerationResults"),
+        )
+        .unwrap();
+
+        assert!(xml.contains("<EnumerationResults"));
+        assert!(xml.contains("ServiceEndpoint=\"http://127.0.0.1/devstoreaccount1\""));
+        assert!(xml.contains("ContainerName=\"mycontainer\""));
+        assert!(xml.contains("<Blobs/>") || xml.contains("<Blobs></Blobs>"));
+    }
 }

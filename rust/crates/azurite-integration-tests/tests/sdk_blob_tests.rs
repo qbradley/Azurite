@@ -464,6 +464,74 @@ async fn test_list_blobs() {
 }
 
 #[tokio::test]
+async fn list_blobs_xml_attributes() {
+    ensure_server();
+    let name = unique_container_name();
+    let cc = container_client(&name);
+    cc.create()
+        .public_access(PublicAccess::Container)
+        .into_future()
+        .await
+        .expect("create public container");
+
+    cc.blob_client("xml-attr-test.txt")
+        .put_block_blob(b"xml attrs".to_vec())
+        .into_future()
+        .await
+        .expect("upload");
+
+    let url = format!(
+        "http://127.0.0.1:{}/devstoreaccount1/{}?restype=container&comp=list",
+        BLOB_PORT, name
+    );
+    let response = reqwest::Client::new()
+        .get(&url)
+        .header("x-ms-version", "2024-08-04")
+        .send()
+        .await
+        .expect("list blobs request");
+    assert_eq!(response.status().as_u16(), 200, "list blobs should succeed");
+
+    let body = response.text().await.expect("list blobs body");
+    let root_start = body
+        .find("<EnumerationResults")
+        .expect("EnumerationResults start tag");
+    let root_end = body[root_start..]
+        .find('>')
+        .map(|offset| root_start + offset)
+        .expect("EnumerationResults tag end");
+    let root_tag = &body[root_start..=root_end];
+
+    assert!(
+        root_tag.contains("<EnumerationResults"),
+        "EnumerationResults root tag missing: {}",
+        body
+    );
+    assert!(
+        root_tag.contains("ServiceEndpoint=\""),
+        "ServiceEndpoint should be an EnumerationResults attribute: {}",
+        body
+    );
+    assert!(
+        root_tag.contains(&format!("ContainerName=\"{}\"", name)),
+        "ContainerName should be an EnumerationResults attribute: {}",
+        body
+    );
+    assert!(
+        !body.contains("<ServiceEndpoint>"),
+        "ServiceEndpoint should not be serialized as a child element: {}",
+        body
+    );
+    assert!(
+        !body.contains("<ContainerName>"),
+        "ContainerName should not be serialized as a child element: {}",
+        body
+    );
+
+    let _ = cc.delete().into_future().await;
+}
+
+#[tokio::test]
 async fn test_blob_snapshot() {
     ensure_server();
     let (cc, _name) = create_test_container().await;

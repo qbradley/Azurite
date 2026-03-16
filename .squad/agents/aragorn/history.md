@@ -164,6 +164,7 @@ Ready for:
 - **L-XML2JS-Declaration-Parity:** xml2js.Builder emits `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` by default, so Rust XML serializers must prefix that declaration for blob, queue, and table responses instead of relying on quick_xml defaults.
 - **L-Copy-Source-Validation-Raw-Query:** Cross-account copy-source validation should preserve the raw SAS query string when appending `comp=metadata`; rebuilding the URL can normalize or overwrite source query details that TS keeps intact during validation.
 - **L-Table-Upsert-Race:** Table upsert paths (`insertOrUpdate` and `insertOrMerge`) need the same single-lock atomic read/modify pattern as blob races. Query-then-write helpers introduce TOCTOU windows even when the eventual mutation is protected by a mutex.
+- **L-XML-Attribute-Metadata-Dual-Sources:** Blob XML response serialization reads mapper shape from both `mappers.generated.json` and `specifications.generated.json`. When porting `xmlIsAttribute` behavior from TypeScript, patch both metadata snapshots or the release server can still emit child elements even if unit-level mapper lookups look correct.
 
 ---
 

@@ -309,7 +309,11 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                             let mapped_array = map_sequence_elements(value, property_mapper);
                             result.insert(element_name, mapped_array);
                         } else {
-                            let mapped_key = mapped_name(property_mapper).unwrap_or(key).to_owned();
+                            let mapped_key = if property_mapper.xmlIsAttribute {
+                                format!("@{}", mapped_name(property_mapper).unwrap_or(key))
+                            } else {
+                                mapped_name(property_mapper).unwrap_or(key).to_owned()
+                            };
                             let mapped_value = apply_model_mapping(value, property_mapper);
                             result.insert(mapped_key, mapped_value);
                         }
@@ -516,6 +520,39 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[test]
+    fn apply_model_mapping_uses_xml_attributes_for_list_enumeration_results() {
+        let mapper = get_mapper("ListBlobsFlatSegmentResponse").unwrap();
+        let value = json!({
+            "serviceEndpoint": "http://127.0.0.1/devstoreaccount1",
+            "containerName": "mycontainer",
+            "segment": {
+                "blobItems": []
+            },
+            "prefix": "",
+            "marker": "",
+            "maxResults": 5000,
+            "nextMarker": ""
+        });
+
+        let mapped = apply_model_mapping(&value, mapper);
+
+        assert_eq!(
+            mapped
+                .get("@ServiceEndpoint")
+                .and_then(|value| value.as_str()),
+            Some("http://127.0.0.1/devstoreaccount1")
+        );
+        assert_eq!(
+            mapped
+                .get("@ContainerName")
+                .and_then(|value| value.as_str()),
+            Some("mycontainer")
+        );
+        assert!(mapped.get("ServiceEndpoint").is_none());
+        assert!(mapped.get("ContainerName").is_none());
     }
 
     #[test]

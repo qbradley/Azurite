@@ -1105,7 +1105,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         }
       },
       "additionalProperties": {
@@ -1541,7 +1542,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "containerName": {
           "__name": null,
@@ -1559,7 +1561,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "prefix": {
           "__name": null,
@@ -1812,7 +1815,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "containerName": {
           "__name": null,
@@ -1830,7 +1834,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "prefix": {
           "__name": null,
@@ -1975,7 +1980,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "content": {
           "__name": null,
@@ -2983,7 +2989,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "prefix": {
           "__name": null,
@@ -3346,7 +3353,8 @@
             "element": null,
             "value": null,
             "modelProperties": {}
-          }
+          },
+          "xmlIsAttribute": true
         },
         "where": {
           "__name": null,

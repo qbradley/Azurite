@@ -38,6 +38,8 @@ pub struct Mapper {
     #[serde(default)]
     pub xmlElementName: Option<String>,
     #[serde(default)]
+    pub xmlIsAttribute: bool,
+    #[serde(default)]
     pub xmlIsWrapped: bool,
     #[serde(default)]
     pub headerCollectionPrefix: Option<String>,
