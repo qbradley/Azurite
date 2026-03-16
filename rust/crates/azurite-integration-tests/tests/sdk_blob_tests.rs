@@ -721,14 +721,14 @@ async fn test_lease_preserved_across_put_block_blob() {
 
     // Step 3: Overwrite blob with lease_id — should succeed
     blob.put_block_blob(b"second content".to_vec())
-        .lease_id(lease_id.clone())
+        .lease_id(lease_id)
         .into_future()
         .await
         .expect("first overwrite with lease");
 
     // Step 4: Overwrite again with same lease_id — this was failing
     blob.put_block_blob(b"third content".to_vec())
-        .lease_id(lease_id.clone())
+        .lease_id(lease_id)
         .into_future()
         .await
         .expect("second overwrite with lease - lease must be preserved");
@@ -736,7 +736,7 @@ async fn test_lease_preserved_across_put_block_blob() {
     // Step 5: Verify the content is correct
     let response = blob
         .get_properties()
-        .lease_id(lease_id.clone())
+        .lease_id(lease_id)
         .into_future()
         .await
         .expect("get properties");

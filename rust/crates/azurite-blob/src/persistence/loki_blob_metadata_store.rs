@@ -1472,17 +1472,20 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         let blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, true)
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
+        // TS validates read conditions before checking blob existence,
+        // so conditional header errors (412) take precedence over 404.
         validate_read_conditions(
             context,
             modifiedAccessConditions,
-            Some(&blob_doc),
+            blob_doc.as_ref(),
             Some(false),
         )?;
+
+        let blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&blob_doc);
@@ -1505,17 +1508,20 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         let blob_doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, true)
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
+        // TS validates read conditions before checking blob existence,
+        // so conditional header errors (412) take precedence over 404.
         validate_read_conditions(
             context,
             modifiedAccessConditions,
-            Some(&blob_doc),
+            blob_doc.as_ref(),
             Some(false),
         )?;
+
+        let blob_doc = blob_doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&blob_doc);
@@ -2078,19 +2084,20 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 context,
                 true, // forceCommitted
             )
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
         let source_modified_access_conditions =
             get_object(&options, "sourceModifiedAccessConditions");
         validate_read_conditions(
             context,
             source_modified_access_conditions.as_ref(),
-            Some(&source_blob),
+            source_blob.as_ref(),
             Some(true),
         )?;
+
+        let source_blob = source_blob.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         // Get destination blob (may not exist)
         let dest_blob = self
@@ -2264,19 +2271,20 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                 context,
                 true,
             )
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
         let source_modified_access_conditions =
             get_object(&options, "sourceModifiedAccessConditions");
         validate_read_conditions(
             context,
             source_modified_access_conditions.as_ref(),
-            Some(&source_blob),
+            source_blob.as_ref(),
             Some(false),
         )?;
+
+        let source_blob = source_blob.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         // Get destination blob
         let dest_blob = self
@@ -2568,12 +2576,13 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         let doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
-        validate_read_conditions(context, modifiedAccessConditions, Some(&doc), Some(false))?;
+        validate_read_conditions(context, modifiedAccessConditions, doc.as_ref(), Some(false))?;
+
+        let doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         // Validate lease
         let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
@@ -3120,12 +3129,13 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
 
         let doc = self
             .get_blob_with_lease_updated(account, container, blob, snapshot, context, false)
-            .await?
-            .ok_or_else(|| {
-                StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
-            })?;
+            .await?;
 
-        validate_read_conditions(context, modifiedAccessConditions, Some(&doc), Some(false))?;
+        validate_read_conditions(context, modifiedAccessConditions, doc.as_ref(), Some(false))?;
+
+        let doc = doc.ok_or_else(|| {
+            StorageErrorFactory::get_blob_not_found(context.contextId().as_deref())
+        })?;
 
         let validator = BlobReadLeaseValidator::new(lease_access_conditions.cloned());
         let adapter = BlobLeaseAdapter::new(&doc);
