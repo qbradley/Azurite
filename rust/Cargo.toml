@@ -6,6 +6,7 @@ members = [
     "crates/azurite-blob",
     "crates/azurite-queue",
     "crates/azurite-table",
+    "crates/azurite-integration-tests",
 ]
 
 [workspace.package]
