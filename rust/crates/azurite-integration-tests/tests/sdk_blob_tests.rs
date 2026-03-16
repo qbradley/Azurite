@@ -696,6 +696,65 @@ async fn test_container_lease_acquire_and_release() {
     let _ = client.delete().into_future().await;
 }
 
+/// Regression test: lease must be preserved across put_block_blob overwrites.
+/// Customer bug: second put_block_blob with same lease_id fails with
+/// LeaseNotPresentWithBlobOperation because Rust Azurite was dropping the lease.
+#[tokio::test]
+async fn test_lease_preserved_across_put_block_blob() {
+    ensure_server();
+    let (cc, _name) = create_test_container().await;
+    let blob = cc.blob_client("lease-overwrite.txt");
+
+    // Step 1: Create the blob
+    blob.put_block_blob(b"initial content".to_vec())
+        .into_future()
+        .await
+        .expect("create blob");
+
+    // Step 2: Acquire an infinite lease
+    let lease = blob
+        .acquire_lease(azure_core::prelude::LeaseDuration::Infinite)
+        .into_future()
+        .await
+        .expect("acquire lease");
+    let lease_id = lease.lease_id;
+
+    // Step 3: Overwrite blob with lease_id — should succeed
+    blob.put_block_blob(b"second content".to_vec())
+        .lease_id(lease_id.clone())
+        .into_future()
+        .await
+        .expect("first overwrite with lease");
+
+    // Step 4: Overwrite again with same lease_id — this was failing
+    blob.put_block_blob(b"third content".to_vec())
+        .lease_id(lease_id.clone())
+        .into_future()
+        .await
+        .expect("second overwrite with lease - lease must be preserved");
+
+    // Step 5: Verify the content is correct
+    let response = blob
+        .get_properties()
+        .lease_id(lease_id.clone())
+        .into_future()
+        .await
+        .expect("get properties");
+    assert_eq!(
+        response.blob.properties.lease_state,
+        Some(azure_core::LeaseState::Leased),
+        "lease should still be active"
+    );
+
+    // Cleanup: release lease and delete
+    blob.blob_lease_client(lease_id)
+        .release()
+        .into_future()
+        .await
+        .expect("release lease");
+    let _ = cc.delete().into_future().await;
+}
+
 // ---------------------------------------------------------------------------
 // Page Blob Operations
 // ---------------------------------------------------------------------------

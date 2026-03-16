@@ -1344,11 +1344,54 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             }
         }
 
-        // Validate lease conditions
+        // Validate lease conditions and sync lease state into new blob
+        let mut blob = blob;
         if let Some(existing_blob) = &existing {
             let validator = BlobWriteLeaseValidator::new(lease_access_conditions.cloned());
             let adapter = BlobLeaseAdapter::new(existing_blob);
             validator.validate(&adapter, context)?;
+
+            // Sync lease from existing blob into the new blob (BlobWriteLeaseSyncer).
+            // If the lease is expired or broken, reset to available; otherwise preserve it.
+            let lease_state = adapter.leaseState.as_deref().unwrap_or("available");
+            if lease_state == "expired" || lease_state == "broken" {
+                blob.properties.insert(
+                    "leaseState".to_string(),
+                    GeneratedValue::String("available".to_string()),
+                );
+                blob.properties.insert(
+                    "leaseStatus".to_string(),
+                    GeneratedValue::String("unlocked".to_string()),
+                );
+                blob.properties.remove("leaseDuration");
+                blob.leaseId = None;
+                blob.leaseExpireTime = None;
+                blob.leaseDurationSeconds = None;
+                blob.leaseBreakTime = None;
+            } else {
+                blob.leaseId = adapter.leaseId.clone();
+                blob.leaseExpireTime = adapter.leaseExpireTime;
+                blob.leaseDurationSeconds = adapter.leaseDurationSeconds;
+                blob.leaseBreakTime = adapter.leaseBreakTime;
+                if let Some(dur) = &adapter.leaseDurationType {
+                    blob.properties.insert(
+                        "leaseDuration".to_string(),
+                        GeneratedValue::String(dur.clone()),
+                    );
+                }
+                if let Some(state) = &adapter.leaseState {
+                    blob.properties.insert(
+                        "leaseState".to_string(),
+                        GeneratedValue::String(state.clone()),
+                    );
+                }
+                if let Some(status) = &adapter.leaseStatus {
+                    blob.properties.insert(
+                        "leaseStatus".to_string(),
+                        GeneratedValue::String(status.clone()),
+                    );
+                }
+            }
         }
 
         // Insert blob
