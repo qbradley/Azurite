@@ -251,3 +251,44 @@ For modules not yet translated, placeholder tests are marked `#[ignore]` instead
 
 **Key Insight:** Rust port achieves strong structural fidelity (serialization pipeline, auth machinery, handler architecture faithfully translated). Wire-format divergences are cosmetic to SDKs (which parse semantically) but matter for strict protocol compliance. The #1 fix (XML declaration) is mechanically simple and eliminates most visible difference across every XML response.
 
+## 2026-03-16: XML Declaration Parity Added (D-XML-Declaration)
+**By:** Aragorn (Rust Implementation Expert)  
+**What:** Rust serializers now emit `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` as the first line of every XML response, matching TS `xml2js.Builder` default behavior. Added to blob, queue, and table `stringifyXML()`/`jsonToXML()` implementations.  
+**Why:** TS xml2js emits this declaration by default on every XML response (blob GetBlobProperties, ListBlobs, SnapshotBlob, GetBlockList; queue GetQueueAcl, PeekMessages, GetMessages; table ListTables, QueryEntities, BatchTransaction). Rust quick_xml does not include it by default. Without this declaration, every XML response differs at the byte level from TS, breaking naive differential tests even when semantics match.  
+**Status:** ✅ IMPLEMENTED & TESTED (1031 tests passing)  
+**Impact:** Eliminates XML response header mismatch across all three services. Highest-impact Rust parity fix (addresses Samwise's #1 recommended priority).
+
+## 2026-03-16: Cross-Account SAS Copy-Source Validation Preserves Raw Query String (D-Copy-Source-Raw)
+**By:** Aragorn (Rust Implementation Expert)  
+**What:** `copyBlob` handler now preserves the raw SAS query string when appending `comp=metadata` for cross-account source validation. Instead of reconstructing the entire source URL and risking query normalization, the handler appends the metadata comparison flag directly to the raw query retained from the original source header.  
+**Why:** SAS tokens are part of externally supplied auth material and must be validated without modification. TS `URLBuilder` preserves the query string exactly as provided; reconstructing it could normalize or lose details (encoding, parameter order, special characters). Preserves fidelity with TS validation flow and avoids validation-specific URL drift.  
+**Status:** ✅ IMPLEMENTED & TESTED (1031 tests passing)  
+**Impact:** Cross-account copy now validates source SAS tokens correctly without reshaping the auth material.
+
+## 2026-03-16: Table Upsert/Merge TOCTOU Race Fixed With Atomic Lock (D-Table-Upsert-Race)
+**By:** Aragorn (Rust Implementation Expert)  
+**What:** `insertOrUpdateTableEntity` and `insertOrMergeTableEntity` handlers now use a single atomic write-lock scope to read the current entity snapshot and perform the mutation/insert, eliminating the TOCTOU (Time-of-Check-Time-of-Use) race window between separate existence queries and updates.  
+**Why:** Separate query-then-mutate paths allow concurrent operations to interleave: Thread A queries entity (doesn't exist) → Thread B inserts → Thread A inserts over Thread B's result. The fix applies the same atomic pattern used in blob `commitBlockList` race: all collection reads and mutations happen within one write lock scope. Preserves exact semantics (read-snapshot-and-mutate is atomic from the map's perspective) while preventing races.  
+**Status:** ✅ IMPLEMENTED & TESTED (1031 tests passing)  
+**Impact:** Table upsert/merge operations now race-free and deterministic under concurrent load.
+
+## 2026-03-16: Differential Testing Harness Deployed (D-Differential-Test-Harness)
+**By:** Boromir (QA Expert)  
+**What:** Added standalone differential test harness at `rust/scripts/differential-test.sh` (shell orchestrator) and `rust/scripts/differential_test.py` (HTTP client + comparison engine). Harness simultaneously:
+- Starts TS blob/queue/table services on ports 10000/10001/10002
+- Starts Rust service binaries on ports 11000/11001/11002
+- Sends identical authenticated HTTP requests to both stacks
+- Compares status codes, normalized headers, normalized bodies (XML/JSON)
+- Reports PASS/FAIL with diff details per scenario
+
+Normalization removes HTTP framing noise (Connection, Keep-Alive, chunked vs content-length) while preserving meaningful parity failures (ETag mismatches, extra headers, status drift, unexpected response fields).  
+**Why:** Existing test suites validate each stack against its own expectations, but not against each other on identical wire inputs. Differential testing provides a direct parity oracle: if TS returns X for input Y, Rust must return the same X. This harness decouples implementation testing from parity validation, enabling rapid iteration on remaining divergences.  
+**Status:** ✅ HARNESS DEPLOYED & OPERATIONAL (first run: 5 pass, 11 fail)  
+**First-Run Results:**
+- PASS: Queue create, put message, get messages; generic list containers, query entities
+- FAIL: Blob ETag divergences, Rust adds extra headers (x-ms-request-server-encrypted), copy blob status codes differ (TS 501 vs Rust 500), table create adds preferenceApplied/version fields, table insert entity ETag mismatch
+
+**Impact:** Established QA validation layer for cross-stack parity regression detection. Harness enables fast iteration: fix (Aragorn) → re-run (Boromir) → next fix cycle.
+
+**Next:** Re-run harness against Aragorn's XML/copy/upsert fixes to validate improvements.
+
