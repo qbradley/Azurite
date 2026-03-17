@@ -21,6 +21,7 @@ import pathlib
 import re
 import sys
 import time
+import urllib.parse
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -110,9 +111,14 @@ class ComparisonResult:
 class TrafficReplayer:
     """Replays recorded traffic and compares responses"""
     
-    def __init__(self, corpus_dir: pathlib.Path, target_host: str = TARGET_HOST):
+    def __init__(self, corpus_dir: pathlib.Path, target_host: str = TARGET_HOST, fresh_state: bool = False):
         self.corpus_dir = corpus_dir
         self.target_host = target_host
+        self.fresh_state = fresh_state
+        # Dynamic ETag mapping: recorded_etag -> actual_etag
+        self.etag_map: dict[str, str] = {}
+        # Dynamic snapshot timestamp mapping: recorded_timestamp -> actual_timestamp
+        self.snapshot_map: dict[str, str] = {}
     
     def replay_service(self, service: str) -> list[ComparisonResult]:
         """Replay all exchanges for a service"""
@@ -121,6 +127,10 @@ class TrafficReplayer:
         if not corpus_file.exists():
             print(f"[{service.upper()}] Corpus file not found: {corpus_file}", file=sys.stderr)
             return []
+        
+        # Clear state if fresh_state requested
+        if self.fresh_state and service == "blob":
+            self._clear_blob_containers()
         
         with corpus_file.open("r", encoding="utf-8") as f:
             corpus_data = json.load(f)
@@ -145,6 +155,44 @@ class TrafficReplayer:
         
         return results
     
+    def _clear_blob_containers(self) -> None:
+        """Delete all blob containers on target server for fresh state"""
+        try:
+            port = TARGET_PORTS["blob"]
+            conn = http.client.HTTPConnection(self.target_host, port, timeout=30)
+            
+            # List containers
+            conn.request("GET", "/?comp=list", headers={})
+            response = conn.getresponse()
+            body = response.read()
+            
+            if response.status == 200:
+                # Parse container names from XML
+                root = ET.fromstring(body)
+                containers = []
+                for container_elem in root.findall(".//{http://schemas.microsoft.com/ado/2007/08/dataservices}Name"):
+                    if container_elem.text:
+                        containers.append(container_elem.text)
+                
+                # Also try without namespace
+                for container_elem in root.findall(".//Containers/Container/Name"):
+                    if container_elem.text:
+                        containers.append(container_elem.text)
+                
+                # Delete each container
+                for container_name in containers:
+                    try:
+                        conn = http.client.HTTPConnection(self.target_host, port, timeout=30)
+                        conn.request("DELETE", f"/{container_name}?restype=container", headers={})
+                        del_response = conn.getresponse()
+                        del_response.read()  # Consume body
+                        print(f"  Deleted container: {container_name}", flush=True)
+                    except Exception as e:
+                        print(f"  Failed to delete container {container_name}: {e}", file=sys.stderr)
+            
+        except Exception as e:
+            print(f"  Failed to clear blob containers: {e}", file=sys.stderr)
+    
     def _replay_exchange(self, service: str, exchange: dict[str, Any]) -> ComparisonResult:
         """Replay a single exchange and compare"""
         seq = exchange["sequence_number"]
@@ -156,10 +204,18 @@ class TrafficReplayer:
         headers = request["headers"]
         body_data = request["body"]
         
+        # Substitute recorded ETags/snapshots in request with actual values
+        headers = self._substitute_request_etags(headers)
+        path = self._substitute_request_path(path)
+        
         body = self._decode_body(body_data)
         
         try:
             actual_response = self._send_request(service, method, path, headers, body)
+            
+            # Learn new ETag/snapshot mappings from this response
+            self._learn_etag_mapping(recorded_response, actual_response)
+            self._learn_snapshot_mapping(recorded_response, actual_response)
             
             result = self._compare_responses(
                 seq,
@@ -180,6 +236,163 @@ class TrafficReplayer:
                 status=0,
                 details=[f"Request failed: {e}"]
             )
+    
+    def _substitute_request_etags(self, headers: dict[str, str]) -> dict[str, str]:
+        """Substitute recorded ETags in request headers with actual ETags"""
+        substituted = {}
+        for name, value in headers.items():
+            lower_name = name.lower()
+            if lower_name in ("if-match", "if-none-match"):
+                # Handle multiple ETags or wildcard
+                if value.strip() == "*":
+                    substituted[name] = value
+                else:
+                    # Split by comma, substitute each ETag
+                    etags = [etag.strip() for etag in value.split(",")]
+                    new_etags = []
+                    for etag in etags:
+                        # Remove quotes for lookup, then re-add
+                        unquoted = etag.strip('"')
+                        if unquoted in self.etag_map:
+                            new_etags.append(f'"{self.etag_map[unquoted]}"')
+                        elif etag in self.etag_map:
+                            new_etags.append(self.etag_map[etag])
+                        else:
+                            new_etags.append(etag)
+                    substituted[name] = ", ".join(new_etags)
+            else:
+                substituted[name] = value
+        return substituted
+    
+    def _substitute_request_path(self, path: str) -> str:
+        """Substitute recorded snapshot timestamps in path query params"""
+        if "snapshot=" not in path:
+            return path
+        
+        # Parse query string and substitute snapshot parameter
+        parts = path.split("?", 1)
+        if len(parts) != 2:
+            return path
+        
+        base_path, query = parts
+        params = []
+        for param in query.split("&"):
+            if "=" in param:
+                key, value = param.split("=", 1)
+                if key == "snapshot":
+                    # The value in the path might be URL-encoded or not
+                    # Try both decoded and as-is
+                    decoded_value = urllib.parse.unquote(value)
+                    if decoded_value in self.snapshot_map:
+                        # Keep it unencoded - the HTTP library will encode it
+                        params.append(f"{key}={self.snapshot_map[decoded_value]}")
+                    elif value in self.snapshot_map:
+                        params.append(f"{key}={self.snapshot_map[value]}")
+                    else:
+                        params.append(param)
+                else:
+                    params.append(param)
+            else:
+                params.append(param)
+        
+        return f"{base_path}?{'&'.join(params)}"
+    
+    def _learn_etag_mapping(self, recorded_response: dict[str, Any], actual_response: dict[str, Any]) -> None:
+        """Learn ETag mapping from response headers and body"""
+        # Learn from response headers
+        recorded_etag = recorded_response.get("headers", {}).get("ETag") or recorded_response.get("headers", {}).get("etag")
+        actual_etag = actual_response.get("headers", {}).get("ETag") or actual_response.get("headers", {}).get("etag")
+        
+        if recorded_etag and actual_etag:
+            # Store both quoted and unquoted versions
+            recorded_unquoted = recorded_etag.strip('"')
+            actual_unquoted = actual_etag.strip('"')
+            self.etag_map[recorded_unquoted] = actual_unquoted
+            self.etag_map[recorded_etag] = actual_etag
+        
+        # Learn from XML body (e.g., list blobs, list containers)
+        recorded_body = self._decode_body(recorded_response["body"]) if isinstance(recorded_response["body"], dict) else recorded_response["body"].encode("utf-8") if isinstance(recorded_response["body"], str) else b""
+        actual_body = actual_response["body"]
+        
+        if recorded_body and actual_body:
+            try:
+                # Try parsing as XML
+                recorded_tree = ET.fromstring(recorded_body)
+                actual_tree = ET.fromstring(actual_body)
+                
+                # Extract ETags from XML elements
+                recorded_etags = self._extract_etags_from_xml(recorded_tree)
+                actual_etags = self._extract_etags_from_xml(actual_tree)
+                
+                # Map by position (assumes same order)
+                for rec_etag, act_etag in zip(recorded_etags, actual_etags):
+                    rec_unquoted = rec_etag.strip('"')
+                    act_unquoted = act_etag.strip('"')
+                    self.etag_map[rec_unquoted] = act_unquoted
+                    self.etag_map[rec_etag] = act_etag
+            except Exception:
+                pass  # Not XML or parse failed
+        
+        # Learn from JSON body
+        if recorded_body and actual_body:
+            try:
+                recorded_json = json.loads(recorded_body.decode("utf-8"))
+                actual_json = json.loads(actual_body.decode("utf-8"))
+                
+                # Extract ETags from JSON
+                recorded_etags = self._extract_etags_from_json(recorded_json)
+                actual_etags = self._extract_etags_from_json(actual_json)
+                
+                # Map by position
+                for rec_etag, act_etag in zip(recorded_etags, actual_etags):
+                    rec_unquoted = rec_etag.strip('"')
+                    act_unquoted = act_etag.strip('"')
+                    self.etag_map[rec_unquoted] = act_unquoted
+                    self.etag_map[rec_etag] = act_etag
+            except Exception:
+                pass  # Not JSON or parse failed
+    
+    def _learn_snapshot_mapping(self, recorded_response: dict[str, Any], actual_response: dict[str, Any]) -> None:
+        """Learn snapshot timestamp mapping from response headers"""
+        recorded_snapshot = recorded_response.get("headers", {}).get("x-ms-snapshot")
+        actual_snapshot = actual_response.get("headers", {}).get("x-ms-snapshot")
+        
+        if recorded_snapshot and actual_snapshot:
+            self.snapshot_map[recorded_snapshot] = actual_snapshot
+    
+    def _extract_etags_from_xml(self, element: ET.Element) -> list[str]:
+        """Extract all ETag values from XML tree"""
+        etags = []
+        
+        # Check element text if tag contains 'etag' (case-insensitive)
+        tag_name = element.tag.lower()
+        if "etag" in tag_name and element.text:
+            text = element.text.strip()
+            if text and self._looks_like_etag(text):
+                etags.append(text)
+        
+        # Recursively check children
+        for child in element:
+            etags.extend(self._extract_etags_from_xml(child))
+        
+        return etags
+    
+    def _extract_etags_from_json(self, obj: Any) -> list[str]:
+        """Extract all ETag values from JSON structure"""
+        etags = []
+        
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if "etag" in key.lower() and isinstance(value, str):
+                    if self._looks_like_etag(value):
+                        etags.append(value)
+                else:
+                    etags.extend(self._extract_etags_from_json(value))
+        elif isinstance(obj, list):
+            for item in obj:
+                etags.extend(self._extract_etags_from_json(item))
+        
+        return etags
     
     def _decode_body(self, body_data: dict[str, Any]) -> bytes:
         """Decode body from corpus format"""
@@ -532,13 +745,18 @@ def parse_args() -> argparse.Namespace:
         default=TARGET_HOST,
         help=f"Target host (default: {TARGET_HOST})",
     )
+    parser.add_argument(
+        "--fresh-state",
+        action="store_true",
+        help="Clear all containers before replay to eliminate state spillover",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     
-    replayer = TrafficReplayer(args.corpus_dir, args.target_host)
+    replayer = TrafficReplayer(args.corpus_dir, args.target_host, args.fresh_state)
     
     service_results = {}
     for service in args.services:
