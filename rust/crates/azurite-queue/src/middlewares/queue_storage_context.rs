@@ -272,9 +272,16 @@ fn extract_request_host(req: &GeneratedHttpRequest) -> String {
         .or_else(|| {
             req.getEndpoint()
                 .split_once("://")
-                .map(|(_, value)| value.to_string())
+                .map(|(_, value)| value.split('/').next().map(strip_port).unwrap_or_default())
         })
         .unwrap_or_default()
+}
+
+fn strip_port(host: &str) -> String {
+    host.rsplit_once(':')
+        .filter(|(left, right)| !left.contains(':') && right.chars().all(|ch| ch.is_ascii_digit()))
+        .map(|(left, _)| left.to_string())
+        .unwrap_or_else(|| host.to_string())
 }
 
 fn percent_decode_path(value: &str) -> String {
@@ -302,8 +309,11 @@ fn percent_decode_path(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::generated::context::Context;
+    use crate::generated::i_request::{GeneratedHttpRequest, HttpMethod};
 
-    use super::{extractStoragePartsFromPath, QueueStorageContextMiddlewareOptions};
+    use super::{
+        extractStoragePartsFromPath, extract_request_host, QueueStorageContextMiddlewareOptions,
+    };
 
     #[test]
     fn extracts_path_style_queue_message_paths() {
@@ -348,5 +358,29 @@ mod tests {
         let _ = Context::default();
         assert!(!options.skipApiVersionCheck);
         assert!(!options.disableProductStyleUrl);
+    }
+
+    #[test]
+    fn extract_request_host_strips_port_from_endpoint_fallback() {
+        let request = GeneratedHttpRequest::new(
+            HttpMethod::PUT,
+            "/devstoreaccount1/queue?timeout=30",
+            "http://127.0.0.1:11014",
+            "/devstoreaccount1/queue",
+        );
+
+        assert_eq!(extract_request_host(&request), "127.0.0.1");
+    }
+
+    #[test]
+    fn extract_request_host_prefers_parsed_absolute_url_without_port() {
+        let request = GeneratedHttpRequest::new(
+            HttpMethod::PUT,
+            "http://127.0.0.1:11014/devstoreaccount1/queue?timeout=30",
+            "http://127.0.0.1:11014",
+            "/devstoreaccount1/queue",
+        );
+
+        assert_eq!(extract_request_host(&request), "127.0.0.1");
     }
 }

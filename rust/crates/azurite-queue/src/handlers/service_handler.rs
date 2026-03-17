@@ -265,7 +265,7 @@ impl IServiceHandler for ServiceHandler {
             .any(|item| item.eq_ignore_ascii_case("metadata"));
         let service_endpoint = request
             .as_ref()
-            .map(|request| format!("{}/{}", request.getEndpoint(), account_name))
+            .map(|request| request_service_endpoint(request, &account_name))
             .unwrap_or_default();
         let queue_items = queues
             .iter()
@@ -289,6 +289,18 @@ impl IServiceHandler for ServiceHandler {
             .add_response_metadata(&mut response, &options, &context, false);
         Ok(response)
     }
+}
+
+fn request_service_endpoint(
+    request: &crate::generated::i_request::GeneratedHttpRequest,
+    account_name: &str,
+) -> String {
+    let base_endpoint = request
+        .getHeader("host")
+        .filter(|host| !host.is_empty())
+        .map(|host| format!("{}://{}", request.getProtocol(), host))
+        .unwrap_or_else(|| request.getEndpoint());
+    format!("{}/{}", base_endpoint, account_name)
 }
 
 fn queue_model_to_object(queue: &QueueModel, include_metadata: bool) -> GeneratedObject {
@@ -408,5 +420,33 @@ fn rename_key(object: &mut GeneratedObject, from: &str, to: &str) {
     }
     if let Some(value) = object.remove(from) {
         object.insert(to.to_string(), value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use crate::generated::i_request::{GeneratedHttpRequest, HttpMethod, RequestHeaderValue};
+
+    use super::request_service_endpoint;
+
+    #[test]
+    fn request_service_endpoint_prefers_host_header_with_port() {
+        let mut request = GeneratedHttpRequest::new(
+            HttpMethod::GET,
+            "/devstoreaccount1?comp=list",
+            "http://127.0.0.1",
+            "/devstoreaccount1",
+        );
+        request.headers = BTreeMap::from([(
+            "host".to_string(),
+            RequestHeaderValue::Single("127.0.0.1:11015".to_string()),
+        )]);
+
+        assert_eq!(
+            request_service_endpoint(&request, "devstoreaccount1"),
+            "http://127.0.0.1:11015/devstoreaccount1"
+        );
     }
 }

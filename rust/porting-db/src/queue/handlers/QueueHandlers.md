@@ -161,6 +161,11 @@ fn parse_metadata(
 - `parse_metadata()` uses HeaderConstants.X_MS_META prefix lookup (case-sensitive)
 - Metadata case preserved from request headers exactly
 - ACL XML parsing uses IAccessPolicy array pattern
+- Queue ACL round-trips are wire-sensitive: Rust must serialize returned `SignedIdentifier` fields in mapper order (`Id`, then `AccessPolicy`; `Start`, `Expiry`, `Permission` inside `AccessPolicy`) or parity checks fail even when SDK-level deserialization still succeeds
+
+### 2026-03-17 Pagination follow-up
+- `list_queues_segment()` should derive `ServiceEndpoint` from the raw `Host` header when present so returned pagination payloads preserve `host:port` exactly like TypeScript.
+- The serializer layer, not the handler, is responsible for emitting `ServiceEndpoint` as an XML attribute on `<EnumerationResults>`.
 
 ### MessagesHandler (382 LOC) — Implements IMessagesHandler
 ```rust

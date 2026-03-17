@@ -216,3 +216,9 @@ pub trait ILogger {        // Logger interface (13 LOC)
 6. **Serializer options**: Configure xml2js equivalent (likely quick-xml or minidom) with exact same settings
 7. **Error suppression**: Replicate HEAD-request-specific error body suppression logic exactly
 8. **String header lookups**: Case-preserve header names; use lowercase for equality checks (HTTP header names are case-insensitive by spec)
+
+## 2026-03-17 Queue ACL + Pagination Parity Notes
+
+- Queue XML output must preserve **mapper property order**, not `BTreeMap` key order. `SignedIdentifier` must serialize as `Id` then `AccessPolicy`, and `AccessPolicy` itself must stay `Start`, `Expiry`, `Permission` to match the TypeScript/xml2js wire format.
+- Queue XML serialization must honor `xmlIsAttribute` for list responses. `EnumerationResults` needs `ServiceEndpoint` as an XML attribute, not as a child element.
+- Queue list responses must build `ServiceEndpoint` from the incoming `Host` header when present so path-style local endpoints keep their port (`127.0.0.1:PORT`), matching `ExpressRequestAdapter.getEndpoint()` in TypeScript.

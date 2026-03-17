@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use chrono::DateTime;
+use indexmap::IndexMap;
 
 use crate::generated::artifacts::mappers::{get_mapper, Mapper};
 use crate::generated::artifacts::models::{
@@ -318,8 +319,8 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
         serde_json::Value::Object(object) => {
             if let Some(properties) = resolve_model_properties(mapper) {
                 let mut result = serde_json::Map::new();
-                for (key, value) in object {
-                    if let Some(property_mapper) = properties.get(key) {
+                for (key, property_mapper) in properties {
+                    if let Some(value) = object.get(key) {
                         let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
                             && property_mapper.xmlElementName.is_some()
                             && !property_mapper.xmlIsWrapped;
@@ -330,11 +331,21 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                             result.insert(element_name, mapped_array);
                         } else {
                             let mapped_key = mapped_name(property_mapper).unwrap_or(key).to_owned();
+                            let mapped_key = if property_mapper.xmlIsAttribute {
+                                format!("@{}", mapped_key)
+                            } else {
+                                mapped_key
+                            };
                             let mapped_value = apply_model_mapping(value, property_mapper);
                             result.insert(mapped_key, mapped_value);
                         }
-                    } else if resolve_additional_properties(mapper).is_some() {
-                        result.insert(key.clone(), value.clone());
+                    }
+                }
+                if resolve_additional_properties(mapper).is_some() {
+                    for (key, value) in object {
+                        if !properties.contains_key(key) {
+                            result.insert(key.clone(), value.clone());
+                        }
                     }
                 }
                 serde_json::Value::Object(result)
@@ -385,7 +396,7 @@ fn map_sequence_elements(value: &serde_json::Value, mapper: &Mapper) -> serde_js
     }
 }
 
-fn resolve_model_properties(mapper: &Mapper) -> Option<&BTreeMap<String, Mapper>> {
+fn resolve_model_properties(mapper: &Mapper) -> Option<&IndexMap<String, Mapper>> {
     if !mapper.r#type.modelProperties.is_empty() {
         Some(&mapper.r#type.modelProperties)
     } else {
@@ -463,4 +474,101 @@ fn ensure_rfc1123(value: &GeneratedValue) -> GeneratedValue {
         }
     }
     value.clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use azurite_common::logger::Logger;
+
+    use crate::generated::artifacts::models::{GeneratedBody, GeneratedResponse};
+    use crate::generated::artifacts::operation::Operation;
+    use crate::generated::artifacts::specifications::specification;
+    use crate::generated::context::Context;
+    use crate::generated::i_response::GeneratedHttpResponse;
+
+    fn string_value(value: &str) -> GeneratedValue {
+        GeneratedValue::String(value.to_string())
+    }
+
+    #[tokio::test]
+    async fn queue_get_access_policy_xml_matches_typescript_order() {
+        let context = Context::default();
+        let mut response = GeneratedResponse::new(200);
+        response.body = Some(GeneratedBody::Value(GeneratedValue::Array(vec![
+            GeneratedValue::Object(BTreeMap::from([
+                (
+                    "accessPolicy".to_string(),
+                    GeneratedValue::Object(BTreeMap::from([
+                        ("permission".to_string(), string_value("raup")),
+                        (
+                            "expiry".to_string(),
+                            string_value("2018-12-31T11:22:33.4560000Z"),
+                        ),
+                        (
+                            "start".to_string(),
+                            string_value("2017-12-31T11:22:33.4560000Z"),
+                        ),
+                    ])),
+                ),
+                ("id".to_string(), string_value("policy1")),
+            ])),
+        ])));
+        let spec = specification(Operation::Queue_GetAccessPolicy).unwrap();
+        let mut http_response = GeneratedHttpResponse::default();
+        let logger = Logger::default();
+
+        serialize(&context, &mut http_response, spec, &response, &logger)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            http_response.bodyStream.text(),
+            concat!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+                r#"<SignedIdentifiers><SignedIdentifier><Id>policy1</Id><AccessPolicy><Start>2017-12-31T11:22:33.4560000Z</Start><Expiry>2018-12-31T11:22:33.4560000Z</Expiry><Permission>raup</Permission></AccessPolicy></SignedIdentifier></SignedIdentifiers>"#
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn list_queues_segment_xml_uses_attribute_and_typescript_order() {
+        let context = Context::default();
+        let mut response = GeneratedResponse::new(200);
+        response.insert_field(
+            "serviceEndpoint",
+            string_value("http://127.0.0.1:11011/devstoreaccount1"),
+        );
+        response.insert_field("prefix", string_value("queue-prefix"));
+        response.insert_field("maxResults", GeneratedValue::Number(1.0));
+        response.insert_field(
+            "queueItems",
+            GeneratedValue::Array(vec![GeneratedValue::Object(BTreeMap::from([
+                (
+                    "metadata".to_string(),
+                    GeneratedValue::Object(BTreeMap::from([(
+                        "key".to_string(),
+                        string_value("val"),
+                    )])),
+                ),
+                ("name".to_string(), string_value("queue-prefix-x1")),
+            ]))]),
+        );
+        response.insert_field("nextMarker", string_value("5"));
+        let spec = specification(Operation::Service_ListQueuesSegment).unwrap();
+        let mut http_response = GeneratedHttpResponse::default();
+        let logger = Logger::default();
+
+        serialize(&context, &mut http_response, spec, &response, &logger)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            http_response.bodyStream.text(),
+            concat!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+                r#"<EnumerationResults ServiceEndpoint="http://127.0.0.1:11011/devstoreaccount1"><Prefix>queue-prefix</Prefix><MaxResults>1</MaxResults><Queues><Queue><Name>queue-prefix-x1</Name><Metadata><key>val</key></Metadata></Queue></Queues><NextMarker>5</NextMarker></EnumerationResults>"#
+            )
+        );
+    }
 }
