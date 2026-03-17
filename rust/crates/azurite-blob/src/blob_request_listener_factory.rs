@@ -170,6 +170,7 @@ impl RequestListenerState {
             self.blobStorageContextOptions.skipApiVersionCheck,
             self.blobStorageContextOptions.disableProductStyleUrl,
             self.blobStorageContextOptions.loose,
+            self.blobStorageContextOptions.bugForBugCompatibility,
         )
         .err()
         .map(|error| Box::new(error) as BoxedMiddlewareError);
@@ -321,6 +322,7 @@ pub struct BlobRequestListenerFactory {
     skipApiVersionCheck: Option<bool>,
     oauth: Option<OAuthLevel>,
     disableProductStyleUrl: Option<bool>,
+    bugForBugCompatibility: Option<bool>,
 }
 
 impl BlobRequestListenerFactory {
@@ -335,6 +337,7 @@ impl BlobRequestListenerFactory {
         skipApiVersionCheck: Option<bool>,
         oauth: Option<OAuthLevel>,
         disableProductStyleUrl: Option<bool>,
+        bugForBugCompatibility: Option<bool>,
     ) -> Self {
         Self {
             metadataStore,
@@ -346,6 +349,7 @@ impl BlobRequestListenerFactory {
             skipApiVersionCheck,
             oauth,
             disableProductStyleUrl,
+            bugForBugCompatibility,
         }
     }
 
@@ -433,6 +437,7 @@ impl BlobRequestListenerFactory {
                 self.skipApiVersionCheck,
                 self.disableProductStyleUrl,
                 self.loose,
+                self.bugForBugCompatibility,
             ),
             authenticationMiddleware: authenticationMiddlewareFactory
                 .createAuthenticationMiddleware(authenticators),

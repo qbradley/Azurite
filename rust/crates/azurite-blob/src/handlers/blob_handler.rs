@@ -31,6 +31,7 @@ use crate::generated::artifacts::models::{
     GeneratedObject, GeneratedResponse, GeneratedValue,
 };
 use crate::generated::context::Context;
+use crate::generated::errors::deserialization_error::DeserializationError;
 use crate::generated::handlers::i_blob_handler::IBlobHandler;
 use crate::generated::i_request::{GeneratedReadableStream, IRequest};
 use crate::handlers::base_handler::BaseHandler;
@@ -42,6 +43,7 @@ use crate::persistence::BlobId;
 const BLOB_API_VERSION: &str = "2025-11-05";
 const EMULATOR_ACCOUNT_SKUNAME: &str = "Standard_RAGRS";
 const EMULATOR_ACCOUNT_KIND: &str = "StorageV2";
+const BLOB_QUERY_COMPAT_MESSAGE: &str = "QueryRequest.Expression cannot be null or undefined.";
 
 // ─── Local header name constants ─────────────────────────────────────────────
 
@@ -1089,6 +1091,13 @@ impl IBlobHandler for BlobHandler {
         _options: BlobQueryOptionalParams,
         context: Context,
     ) -> crate::generated::GeneratedResult<BlobQueryResponse> {
+        let blobCtx = BlobStorageContext::new(&context);
+        if blobCtx.bugForBugCompatibility().unwrap_or(true) {
+            return Err(Box::new(DeserializationError::new(
+                BLOB_QUERY_COMPAT_MESSAGE,
+            )));
+        }
+
         Err(Box::new(NotImplementedError::new(
             context.contextId().as_deref(),
         )))

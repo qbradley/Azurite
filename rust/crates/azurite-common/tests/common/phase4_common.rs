@@ -194,6 +194,10 @@ impl IEnvironment for ExtentLimitEnvironment {
         false
     }
 
+    fn bugForBugCompatibility(&self) -> bool {
+        true
+    }
+
     fn cert(&self) -> Option<String> {
         None
     }
@@ -715,6 +719,7 @@ async fn phase4_environment_defaults_sentinels_and_bare_debug_match_typescript()
     assert!(!defaults.loose());
     assert!(!defaults.skipApiVersionCheck());
     assert!(!defaults.disableProductStyleUrl());
+    assert!(defaults.bugForBugCompatibility());
     assert!(!defaults.disableTelemetry());
     assert_eq!(defaults.extentMemoryLimit(), None);
 

@@ -171,6 +171,14 @@ Allow requests with any API version:
 ./target/release/azurite --skipApiVersionCheck
 ```
 
+### Blob Query Compatibility Mode
+
+Blob Query defaults to TypeScript-compatible behavior and returns HTTP 400 for empty `comp=query` requests. Disable that bug-for-bug mode to get the semantically correct 501 response instead:
+
+```bash
+./target/release/azurite --disableBugForBugCompatibility
+```
+
 ## Connecting from Client Applications
 
 Azurite uses the same connection strings and endpoints as Azure Storage.

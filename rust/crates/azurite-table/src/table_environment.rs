@@ -370,6 +370,10 @@ impl IEnvironment for TableEnvironment {
         ITableEnvironment::disableProductStyleUrl(self)
     }
 
+    fn bugForBugCompatibility(&self) -> bool {
+        true
+    }
+
     fn cert(&self) -> Option<String> {
         ITableEnvironment::cert(self)
     }

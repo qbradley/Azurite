@@ -322,6 +322,10 @@ impl IEnvironment for QueueEnvironment {
         self.flags.disableProductStyleUrl
     }
 
+    fn bugForBugCompatibility(&self) -> bool {
+        true
+    }
+
     fn cert(&self) -> Option<String> {
         self.flags.cert.clone()
     }

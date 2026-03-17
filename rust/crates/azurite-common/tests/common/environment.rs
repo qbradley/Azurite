@@ -18,6 +18,7 @@ struct EnvironmentFixture {
     loose: bool,
     skip_api_version_check: bool,
     disable_product_style_url: bool,
+    bug_for_bug_compatibility: bool,
     cert: Option<String>,
     key: Option<String>,
     pwd: Option<String>,
@@ -87,6 +88,10 @@ impl IEnvironment for EnvironmentFixture {
         self.disable_product_style_url
     }
 
+    fn bugForBugCompatibility(&self) -> bool {
+        self.bug_for_bug_compatibility
+    }
+
     fn cert(&self) -> Option<String> {
         self.cert.clone()
     }
@@ -139,6 +144,7 @@ async fn environment_contract_exposes_blob_queue_and_table_settings() {
         loose: false,
         skip_api_version_check: true,
         disable_product_style_url: true,
+        bug_for_bug_compatibility: true,
         cert: Some(String::new()),
         key: Some(String::new()),
         pwd: None,
@@ -164,6 +170,7 @@ async fn environment_contract_exposes_blob_queue_and_table_settings() {
     assert!(!environment.loose());
     assert!(environment.skipApiVersionCheck());
     assert!(environment.disableProductStyleUrl());
+    assert!(environment.bugForBugCompatibility());
     assert_eq!(environment.cert(), Some(String::new()));
     assert_eq!(environment.key(), Some(String::new()));
     assert_eq!(environment.pwd(), None);

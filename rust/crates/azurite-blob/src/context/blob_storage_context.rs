@@ -11,6 +11,7 @@ const BLOB_KEY: &str = "blob";
 const AUTHENTICATION_PATH_KEY: &str = "authenticationPath";
 const DISABLE_PRODUCT_STYLE_URL_KEY: &str = "disableProductStyleUrl";
 const LOOSE_KEY: &str = "loose";
+const BUG_FOR_BUG_COMPATIBILITY_KEY: &str = "bugForBugCompatibility";
 
 #[derive(Debug, Clone)]
 pub struct BlobStorageContext {
@@ -90,6 +91,14 @@ impl BlobStorageContext {
 
     pub fn setLoose(&self, loose: Option<bool>) {
         self.set_bool(LOOSE_KEY, loose);
+    }
+
+    pub fn bugForBugCompatibility(&self) -> Option<bool> {
+        self.get_bool(BUG_FOR_BUG_COMPATIBILITY_KEY)
+    }
+
+    pub fn setBugForBugCompatibility(&self, bugForBugCompatibility: Option<bool>) {
+        self.set_bool(BUG_FOR_BUG_COMPATIBILITY_KEY, bugForBugCompatibility);
     }
 
     fn get_string(&self, key: &str) -> Option<String> {

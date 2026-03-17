@@ -19,6 +19,7 @@ pub trait IEnvironment: Send + Sync {
     fn loose(&self) -> bool;
     fn skipApiVersionCheck(&self) -> bool;
     fn disableProductStyleUrl(&self) -> bool;
+    fn bugForBugCompatibility(&self) -> bool;
     fn cert(&self) -> Option<String>;
     fn key(&self) -> Option<String>;
     fn pwd(&self) -> Option<String>;

@@ -22,6 +22,7 @@ pub struct BlobConfiguration {
     pub metadataDBPath: String,
     pub extentDBPath: String,
     pub persistencePathArray: StoreDestinationArray,
+    pub bugForBugCompatibility: bool,
     pub isMemoryPersistence: bool,
     pub memoryStore: Option<MemoryExtentChunkStore>,
 }
@@ -46,6 +47,7 @@ impl BlobConfiguration {
         pwd: String,
         oauth: Option<String>,
         disableProductStyleUrl: bool,
+        bugForBugCompatibility: bool,
         isMemoryPersistence: bool,
         memoryStore: Option<MemoryExtentChunkStore>,
     ) -> Self {
@@ -69,6 +71,7 @@ impl BlobConfiguration {
             metadataDBPath,
             extentDBPath,
             persistencePathArray,
+            bugForBugCompatibility,
             isMemoryPersistence,
             memoryStore,
         }
@@ -97,6 +100,7 @@ impl Clone for BlobConfiguration {
             metadataDBPath: self.metadataDBPath.clone(),
             extentDBPath: self.extentDBPath.clone(),
             persistencePathArray: self.persistencePathArray.clone(),
+            bugForBugCompatibility: self.bugForBugCompatibility,
             isMemoryPersistence: self.isMemoryPersistence,
             memoryStore: self.memoryStore.clone(),
         }
@@ -123,6 +127,7 @@ impl Default for BlobConfiguration {
             String::new(),
             None,
             false,
+            true,
             false,
             None,
         )
@@ -160,6 +165,7 @@ impl fmt::Debug for BlobConfiguration {
             .field("skipApiVersionCheck", &self.base.skipApiVersionCheck)
             .field("oauth", &self.base.oauth)
             .field("disableProductStyleUrl", &self.base.disableProductStyleUrl)
+            .field("bugForBugCompatibility", &self.bugForBugCompatibility)
             .field("isMemoryPersistence", &self.isMemoryPersistence)
             .finish()
     }

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use azurite_blob::context::BlobStorageContext;
 use azurite_blob::errors::{
@@ -7,10 +8,20 @@ use azurite_blob::errors::{
 };
 use azurite_blob::generated::artifacts::models::GeneratedValue;
 use azurite_blob::generated::context::Context;
+use azurite_blob::generated::errors::MiddlewareError;
+use azurite_blob::generated::handlers::i_blob_handler::IBlobHandler;
 use azurite_blob::generated::i_response::ResponseHeaderValue;
+use azurite_blob::handlers::base_handler::BaseHandler;
+use azurite_blob::handlers::blob_handler::BlobHandler;
+use azurite_blob::handlers::page_blob_ranges_manager::PageBlobRangesManager;
+use azurite_blob::runtime_blob_metadata_store::RuntimeBlobMetadataStore;
+use azurite_common::i_logger::ILogger;
+use azurite_common::persistence::loki_extent_metadata_store::LokiExtentMetadata;
+use azurite_common::persistence::memory_extent_store::{MemoryExtentChunkStore, MemoryExtentStore};
 use pretty_assertions::assert_eq;
 use quick_xml::escape::escape;
 use regex::Regex;
+use tokio::sync::Mutex;
 
 const REQUEST_ID: &str = "req-123";
 const DEFAULT_BLOB_REQUEST_ID: &str = "DefaultBlobRequestID";
@@ -18,6 +29,43 @@ const DYNAMIC_MESSAGE: &str = "dynamic message";
 const AUTH_DETAIL: &str = "signature mismatch";
 const API_VERSION: &str = "2099-01-01";
 const TIMESTAMP_PATTERN: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z";
+const BUG_FOR_BUG_COMPATIBILITY_KEY: &str = "bugForBugCompatibility";
+const BLOB_QUERY_COMPAT_MESSAGE: &str = "QueryRequest.Expression cannot be null or undefined.";
+
+#[derive(Clone, Default)]
+struct TestLogger;
+
+impl ILogger for TestLogger {
+    fn info(&self, _message: &str, _context_id: Option<&str>) {}
+    fn error(&self, _message: &str, _context_id: Option<&str>) {}
+    fn warn(&self, _message: &str, _context_id: Option<&str>) {}
+    fn verbose(&self, _message: &str, _context_id: Option<&str>) {}
+    fn debug(&self, _message: &str, _context_id: Option<&str>) {}
+}
+
+fn blob_query_handler() -> BlobHandler {
+    let logger = Arc::new(TestLogger) as Arc<dyn ILogger + Send + Sync>;
+    let metadata_store = Arc::new(RuntimeBlobMetadataStore::new());
+    let extent_store = MemoryExtentStore::new(
+        "blob".to_string(),
+        MemoryExtentChunkStore::new(None),
+        LokiExtentMetadata::new("blob-query-tests".to_string(), true),
+        logger.clone(),
+        |status_code, storage_error_code, storage_error_message, storage_request_id| {
+            azurite_common::storage_error::StorageError::new(format!(
+                "{status_code}:{storage_error_code}:{storage_error_message}:{storage_request_id}"
+            ))
+        },
+    );
+    let base = BaseHandler::new(
+        metadata_store,
+        Arc::new(Mutex::new(Box::new(extent_store))),
+        logger,
+        false,
+    );
+
+    BlobHandler::new(base, Arc::new(PageBlobRangesManager::new()))
+}
 
 struct FactoryCase {
     name: &'static str,
@@ -378,6 +426,7 @@ fn blob_storage_context_propagates_fields_and_request_id_aliases_like_ts() {
     blob_context.setAuthenticationPath(Some(String::from("/acct/container/blob")));
     blob_context.setDisableProductStyleUrl(Some(false));
     blob_context.setLoose(Some(true));
+    blob_context.setBugForBugCompatibility(Some(false));
     blob_context.setXMsRequestID(Some(String::from("ctx-1")));
 
     assert_eq!(blob_context.account().as_deref(), Some("acct"));
@@ -391,6 +440,7 @@ fn blob_storage_context_propagates_fields_and_request_id_aliases_like_ts() {
     );
     assert_eq!(blob_context.disableProductStyleUrl(), Some(false));
     assert_eq!(blob_context.loose(), Some(true));
+    assert_eq!(blob_context.bugForBugCompatibility(), Some(false));
     assert_eq!(blob_context.xMsRequestID().as_deref(), Some("ctx-1"));
     assert_eq!(context.contextId().as_deref(), Some("ctx-1"));
 
@@ -403,4 +453,41 @@ fn blob_storage_context_propagates_fields_and_request_id_aliases_like_ts() {
     blob_context.setContainer(None);
     assert_eq!(BlobStorageContext::new(&context).blob(), None);
     assert_eq!(BlobStorageContext::new(&context).container(), None);
+}
+
+#[tokio::test]
+async fn blob_query_defaults_to_bug_for_bug_compatibility_mode() {
+    let handler = blob_query_handler();
+    let context = Context::from_holder(Context::new_holder(), "/blob/query/default", None, None);
+    context.setContextId(Some(REQUEST_ID.to_string()));
+
+    let err = handler
+        .query(BTreeMap::new(), context)
+        .await
+        .expect_err("Blob_Query should fail");
+    let middleware_error = err
+        .downcast_ref::<MiddlewareError>()
+        .expect("compat mode should surface a middleware-style 400");
+
+    assert_eq!(middleware_error.statusCode, 400);
+    assert_eq!(middleware_error.message, BLOB_QUERY_COMPAT_MESSAGE);
+    assert!(middleware_error.body.is_none());
+}
+
+#[tokio::test]
+async fn blob_query_returns_not_implemented_when_bug_for_bug_compatibility_is_disabled() {
+    let handler = blob_query_handler();
+    let context = Context::from_holder(Context::new_holder(), "/blob/query/strict", None, None);
+    context.setContextId(Some(REQUEST_ID.to_string()));
+    context.insertExtra(BUG_FOR_BUG_COMPATIBILITY_KEY, GeneratedValue::Bool(false));
+
+    let err = handler
+        .query(BTreeMap::new(), context)
+        .await
+        .expect_err("Blob_Query should fail");
+    let not_implemented = err
+        .downcast_ref::<NotImplementedError>()
+        .expect("compat disabled should preserve 501 NotImplementedError");
+
+    assert_eq!(not_implemented.statusCode, 501);
 }

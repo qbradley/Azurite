@@ -17,6 +17,7 @@ pub trait IBlobEnvironment: Send + Sync {
     async fn debug(&self) -> Result<Option<String>, StorageError>;
     fn oauth(&self) -> Option<String>;
     fn disableProductStyleUrl(&self) -> bool;
+    fn bugForBugCompatibility(&self) -> bool;
     fn inMemoryPersistence(&self) -> bool;
     fn extentMemoryLimit(&self) -> Option<f64>;
     fn disableTelemetry(&self) -> bool;

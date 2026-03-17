@@ -27,6 +27,7 @@ pub struct BlobStorageContextMiddlewareOptions {
     pub skipApiVersionCheck: bool,
     pub disableProductStyleUrl: bool,
     pub loose: bool,
+    pub bugForBugCompatibility: bool,
 }
 
 #[allow(non_snake_case)]
@@ -34,11 +35,13 @@ pub fn createStorageBlobContextMiddleware(
     skipApiVersionCheck: Option<bool>,
     disableProductStyleUrl: Option<bool>,
     loose: Option<bool>,
+    bugForBugCompatibility: Option<bool>,
 ) -> BlobStorageContextMiddlewareOptions {
     BlobStorageContextMiddlewareOptions {
         skipApiVersionCheck: skipApiVersionCheck.unwrap_or(false),
         disableProductStyleUrl: disableProductStyleUrl.unwrap_or(false),
         loose: loose.unwrap_or(false),
+        bugForBugCompatibility: bugForBugCompatibility.unwrap_or(true),
     }
 }
 
@@ -62,6 +65,7 @@ pub fn blobStorageContextMiddleware(
         options.skipApiVersionCheck,
         options.disableProductStyleUrl,
         options.loose,
+        options.bugForBugCompatibility,
     )
 }
 
@@ -76,6 +80,7 @@ pub fn internalBlobStorageContextMiddleware(
     skipApiVersionCheck: bool,
     disableProductStyleUrl: bool,
     loose: bool,
+    bugForBugCompatibility: bool,
 ) -> Result<(), StorageError> {
     res.setHeader(
         HeaderConstants::SERVER,
@@ -93,6 +98,7 @@ pub fn internalBlobStorageContextMiddleware(
     blobContext.setStartTime(Some(Utc::now()));
     blobContext.setDisableProductStyleUrl(Some(disableProductStyleUrl));
     blobContext.setLoose(Some(loose));
+    blobContext.setBugForBugCompatibility(Some(bugForBugCompatibility));
     blobContext.setXMsRequestID(Some(requestID.clone()));
 
     logger.info(

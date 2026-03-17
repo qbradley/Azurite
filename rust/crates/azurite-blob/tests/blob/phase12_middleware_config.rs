@@ -42,6 +42,7 @@ mod phase12_middleware_config_tests {
         );
         assert_eq!(config.base.enableAccessLog, DEFAULT_ENABLE_ACCESS_LOG);
         assert_eq!(config.base.enableDebugLog, DEFAULT_ENABLE_DEBUG_LOG);
+        assert!(config.bugForBugCompatibility);
         assert_eq!(config.metadataDBPath, DEFAULT_BLOB_LOKI_DB_PATH);
         assert_eq!(config.extentDBPath, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH);
     }
@@ -69,6 +70,7 @@ mod phase12_middleware_config_tests {
             String::new(),
             None,
             false,
+            true,
             false,
             None,
         );
@@ -80,6 +82,7 @@ mod phase12_middleware_config_tests {
         assert_eq!(config.extentDBPath, "/custom/extent.json");
         assert!(config.base.loose);
         assert!(config.base.skipApiVersionCheck);
+        assert!(config.bugForBugCompatibility);
     }
 
     #[test]
@@ -136,9 +139,24 @@ mod phase12_middleware_config_tests {
         assert!(<BlobEnvironment as IBlobEnvironment>::skipApiVersionCheck(
             &env
         ));
+        assert!(<BlobEnvironment as IBlobEnvironment>::bugForBugCompatibility(&env));
         assert!(<BlobEnvironment as IBlobEnvironment>::inMemoryPersistence(
             &env
         ));
+    }
+
+    #[test]
+    fn test_blob_environment_bug_for_bug_compatibility_can_be_disabled() {
+        let defaults = BlobEnvironment::new(vec!["azurite-blob".to_string()])
+            .expect("Failed to parse default args");
+        let disabled = BlobEnvironment::new(vec![
+            "azurite-blob".to_string(),
+            "--disableBugForBugCompatibility".to_string(),
+        ])
+        .expect("Failed to parse compat args");
+
+        assert!(<BlobEnvironment as IBlobEnvironment>::bugForBugCompatibility(&defaults));
+        assert!(!<BlobEnvironment as IBlobEnvironment>::bugForBugCompatibility(&disabled));
     }
 
     #[tokio::test]

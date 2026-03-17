@@ -32,6 +32,7 @@ struct EnvironmentFlags {
     loose: bool,
     skipApiVersionCheck: bool,
     disableProductStyleUrl: bool,
+    bugForBugCompatibility: bool,
     cert: Option<String>,
     key: Option<String>,
     pwd: Option<String>,
@@ -59,6 +60,7 @@ impl Default for EnvironmentFlags {
             loose: false,
             skipApiVersionCheck: false,
             disableProductStyleUrl: false,
+            bugForBugCompatibility: true,
             cert: None,
             key: None,
             pwd: None,
@@ -237,6 +239,12 @@ impl Environment {
                 arg.help("Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri")
             })
             .arg(
+                Arg::new("disableBugForBugCompatibility")
+                    .long("disableBugForBugCompatibility")
+                    .help("Optional. Disable Blob_Query bug-for-bug compatibility mode and return the semantically correct 501 response")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
                 Arg::new("disableTelemetry")
                     .long("disableTelemetry")
                     .help("Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default.")
@@ -303,6 +311,7 @@ impl Environment {
             loose: matches.get_flag("loose"),
             skipApiVersionCheck: matches.get_flag("skipApiVersionCheck"),
             disableProductStyleUrl: matches.get_flag("disableProductStyleUrl"),
+            bugForBugCompatibility: !matches.get_flag("disableBugForBugCompatibility"),
             cert: matches.get_one::<String>("cert").cloned(),
             key: matches.get_one::<String>("key").cloned(),
             pwd: matches.get_one::<String>("pwd").cloned(),
@@ -379,6 +388,10 @@ impl IEnvironment for Environment {
 
     fn disableProductStyleUrl(&self) -> bool {
         self.flags.disableProductStyleUrl
+    }
+
+    fn bugForBugCompatibility(&self) -> bool {
+        self.flags.bugForBugCompatibility
     }
 
     fn cert(&self) -> Option<String> {

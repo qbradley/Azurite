@@ -194,6 +194,7 @@ impl BlobServer {
                 Some(self.configuration.skipApiVersionCheck),
                 self.configuration.getOAuthLevel(),
                 Some(self.configuration.disableProductStyleUrl),
+                Some(self.configuration.bugForBugCompatibility),
             ));
         self.serverBase = Some(ServerBase::new(
             self.configuration.host.clone(),

@@ -34,6 +34,7 @@ struct BlobEnvironmentFlags {
     debug: Option<String>,
     oauth: Option<String>,
     disableProductStyleUrl: bool,
+    bugForBugCompatibility: bool,
     inMemoryPersistence: bool,
     extentMemoryLimit: Option<f64>,
     disableTelemetry: bool,
@@ -165,6 +166,12 @@ impl BlobEnvironment {
                     .action(ArgAction::SetTrue),
             )
             .arg(
+                Arg::new("disableBugForBugCompatibility")
+                    .long("disableBugForBugCompatibility")
+                    .help("Optional. Disable Blob_Query bug-for-bug compatibility mode and return the semantically correct 501 response")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
                 Arg::new("disableTelemetry")
                     .long("disableTelemetry")
                     .help("Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product")
@@ -216,6 +223,7 @@ impl BlobEnvironment {
             debug: matches.get_one::<String>("debug").cloned(),
             oauth: matches.get_one::<String>("oauth").cloned(),
             disableProductStyleUrl: matches.get_flag("disableProductStyleUrl"),
+            bugForBugCompatibility: !matches.get_flag("disableBugForBugCompatibility"),
             inMemoryPersistence: matches.get_flag("inMemoryPersistence"),
             extentMemoryLimit,
             disableTelemetry: matches.get_flag("disableTelemetry"),
@@ -329,6 +337,10 @@ impl IBlobEnvironment for BlobEnvironment {
         self.flags.disableProductStyleUrl
     }
 
+    fn bugForBugCompatibility(&self) -> bool {
+        self.flags.bugForBugCompatibility
+    }
+
     fn inMemoryPersistence(&self) -> bool {
         if self.flags.inMemoryPersistence {
             if self.flags.location.is_some() {
@@ -408,6 +420,10 @@ impl IBlobEnvironment for CommonEnvironment {
         IEnvironment::disableProductStyleUrl(self)
     }
 
+    fn bugForBugCompatibility(&self) -> bool {
+        IEnvironment::bugForBugCompatibility(self)
+    }
+
     fn inMemoryPersistence(&self) -> bool {
         IEnvironment::inMemoryPersistence(self)
     }
@@ -478,6 +494,10 @@ impl IEnvironment for BlobEnvironment {
 
     fn disableProductStyleUrl(&self) -> bool {
         IBlobEnvironment::disableProductStyleUrl(self)
+    }
+
+    fn bugForBugCompatibility(&self) -> bool {
+        IBlobEnvironment::bugForBugCompatibility(self)
     }
 
     fn cert(&self) -> Option<String> {

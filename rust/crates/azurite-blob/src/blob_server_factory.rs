@@ -112,6 +112,7 @@ impl BlobServerFactory {
             blobEnvironment.pwd().unwrap_or_default(),
             blobEnvironment.oauth(),
             blobEnvironment.disableProductStyleUrl(),
+            blobEnvironment.bugForBugCompatibility(),
             blobEnvironment.inMemoryPersistence(),
             None,
         );
