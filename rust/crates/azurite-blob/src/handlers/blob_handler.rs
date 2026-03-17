@@ -40,7 +40,7 @@ use crate::persistence::BlobId;
 // ─── Local constants (mirrored from TS utils/constants.ts) ──────────────────
 
 const BLOB_API_VERSION: &str = "2025-11-05";
-const EMULATOR_ACCOUNT_SKUNAME: &str = "StandardRAGRS";
+const EMULATOR_ACCOUNT_SKUNAME: &str = "Standard_RAGRS";
 const EMULATOR_ACCOUNT_KIND: &str = "StorageV2";
 
 // ─── Local header name constants ─────────────────────────────────────────────

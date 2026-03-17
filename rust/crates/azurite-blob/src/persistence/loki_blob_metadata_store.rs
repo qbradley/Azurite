@@ -2593,57 +2593,53 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
             );
         }
 
-        let response_code = if get_string(&doc.properties, "accessTier").as_deref()
-            == Some(ACCESS_TIER_ARCHIVE)
-            && matches!(tier, ACCESS_TIER_COOL | ACCESS_TIER_HOT | ACCESS_TIER_COLD)
-        {
-            202
-        } else {
-            200
-        };
-
-        if get_string(&doc.properties, "blobType").as_deref() != Some(BLOB_TYPE_BLOCK_BLOB) {
-            return Err(StorageErrorFactory::getAccessTierNotSupportedForBlobType(
-                context.contextId().as_deref().unwrap_or(""),
-            ));
-        }
-
-        if !matches!(
+        let is_block_blob =
+            get_string(&doc.properties, "blobType").as_deref() == Some(BLOB_TYPE_BLOCK_BLOB);
+        let is_valid_tier = matches!(
             tier,
             ACCESS_TIER_ARCHIVE | ACCESS_TIER_COOL | ACCESS_TIER_HOT | ACCESS_TIER_COLD
-        ) {
-            return Err(invalid_header_value(
-                context.contextId().as_deref(),
-                "x-ms-access-tier",
-                tier,
-            ));
+        );
+
+        if is_valid_tier && is_block_blob {
+            let response_code = if get_string(&doc.properties, "accessTier").as_deref()
+                == Some(ACCESS_TIER_ARCHIVE)
+                && matches!(tier, ACCESS_TIER_COOL | ACCESS_TIER_HOT | ACCESS_TIER_COLD)
+            {
+                202
+            } else {
+                200
+            };
+
+            set_string(&mut doc.properties, "accessTier", Some(tier.to_string()));
+            set_bool(&mut doc.properties, "accessTierInferred", Some(false));
+            set_value(
+                &mut doc.properties,
+                "accessTierChangeTime",
+                context
+                    .startTime()
+                    .map(|value| GeneratedValue::String(formatRfc1123(value))),
+            );
+
+            let adapter = BlobLeaseAdapter::new(&doc);
+            let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
+            let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
+            let _ = syncer.sync(lease_state.lease());
+
+            let mut blobs = self.blobs_collection.write().unwrap();
+            let key = (
+                account.to_string(),
+                container.to_string(),
+                blob.to_string(),
+                "".to_string(),
+            );
+            blobs.insert(key, doc);
+
+            Ok(response_code)
+        } else {
+            Err(StorageErrorFactory::getAccessTierNotSupportedForBlobType(
+                context.contextId().as_deref().unwrap_or(""),
+            ))
         }
-
-        set_string(&mut doc.properties, "accessTier", Some(tier.to_string()));
-        set_bool(&mut doc.properties, "accessTierInferred", Some(false));
-        set_value(
-            &mut doc.properties,
-            "accessTierChangeTime",
-            context
-                .startTime()
-                .map(|value| GeneratedValue::String(formatRfc1123(value))),
-        );
-
-        let adapter = BlobLeaseAdapter::new(&doc);
-        let lease_state = LeaseFactory::create_lease_state(&adapter, context)?;
-        let mut syncer = BlobWriteLeaseSyncer::new(&mut doc);
-        let _ = syncer.sync(lease_state.lease());
-
-        let mut blobs = self.blobs_collection.write().unwrap();
-        let key = (
-            account.to_string(),
-            container.to_string(),
-            blob.to_string(),
-            "".to_string(),
-        );
-        blobs.insert(key, doc);
-
-        Ok(response_code)
     }
 
     async fn setBlobTag(

@@ -36,7 +36,7 @@ pub static EMULATOR_ACCOUNT_KEY: LazyLock<Vec<u8>> = LazyLock::new(|| {
         .decode(EMULATOR_ACCOUNT_KEY_STR)
         .unwrap_or_default()
 });
-pub const EMULATOR_ACCOUNT_SKUNAME: &str = "StandardRAGRS";
+pub const EMULATOR_ACCOUNT_SKUNAME: &str = "Standard_RAGRS";
 pub const EMULATOR_ACCOUNT_KIND: &str = "StorageV2";
 pub const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED: bool = false;
 pub const DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT: u64 = 5;
