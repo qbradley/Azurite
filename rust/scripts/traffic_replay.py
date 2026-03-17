@@ -30,6 +30,7 @@ from typing import Any, Optional
 
 TRANSPORT_IGNORED_HEADER_NAMES = {
     "connection",
+    "content-length",
     "keep-alive",
     "server",
     "transfer-encoding",
@@ -38,10 +39,17 @@ TRANSPORT_IGNORED_HEADER_NAMES = {
 DYNAMIC_HEADER_PLACEHOLDERS = {
     "date": "DYNAMIC_DATE",
     "etag": "DYNAMIC_ETAG",
+    "last-modified": "DYNAMIC_TIMESTAMP",
     "x-ms-copy-id": "DYNAMIC_COPY_ID",
+    "x-ms-copy-completion-time": "DYNAMIC_TIMESTAMP",
+    "x-ms-copy-source": "DYNAMIC_COPY_SOURCE",
+    "x-ms-creation-time": "DYNAMIC_TIMESTAMP",
     "x-ms-request-id": "DYNAMIC_REQUEST_ID",
     "x-ms-snapshot": "DYNAMIC_SNAPSHOT",
     "x-ms-version-id": "DYNAMIC_VERSION_ID",
+    "x-ms-expiry-time": "DYNAMIC_TIMESTAMP",
+    "x-ms-access-tier-change-time": "DYNAMIC_TIMESTAMP",
+    "x-ms-immutability-policy-until-date": "DYNAMIC_TIMESTAMP",
 }
 
 DYNAMIC_FIELD_PLACEHOLDERS = {

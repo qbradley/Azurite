@@ -228,10 +228,11 @@ class RecordingProxyHandler(BaseHTTPRequestHandler):
         body: bytes
     ) -> None:
         """Send backend response to client"""
-        self.send_response(status, reason)
+        # Use send_response_only to avoid auto-added Server/Date headers
+        self.send_response_only(status, reason)
         
         for name, value in headers:
-            if name.lower() not in ("connection", "transfer-encoding"):
+            if name.lower() not in ("connection", "transfer-encoding", "content-length"):
                 self.send_header(name, value)
         
         self.send_header("Content-Length", str(len(body)))
@@ -360,7 +361,33 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     
-    proxies = []
+    proxies: list[RecordingProxy] = []
+    shutdown_requested = False
+
+    def _shutdown(signum: int, frame: object) -> None:
+        nonlocal shutdown_requested
+        if not shutdown_requested:
+            shutdown_requested = True
+            print(f"\n=== Signal {signum} received, saving corpus ===", flush=True)
+            _save_all()
+            sys.exit(0)
+
+    def _save_all() -> None:
+        for p in proxies:
+            p.stop()
+        total = 0
+        for p in proxies:
+            stats = p.get_stats()
+            print(f"{stats['service']}: {stats['exchange_count']} exchanges", flush=True)
+            total += stats['exchange_count']
+            p.save_corpus()
+        print(f"\nTotal: {total} exchanges recorded", flush=True)
+        print(f"Corpus directory: {args.output_dir}", flush=True)
+
+    import signal
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
+
     try:
         for service in args.services:
             proxy = RecordingProxy(service, args.output_dir)
@@ -378,19 +405,8 @@ def main() -> int:
         print("\n\n=== Stopping Recording ===", flush=True)
     
     finally:
-        for proxy in proxies:
-            proxy.stop()
-        
-        print("\n=== Recording Statistics ===", flush=True)
-        total_exchanges = 0
-        for proxy in proxies:
-            stats = proxy.get_stats()
-            print(f"{stats['service']}: {stats['exchange_count']} exchanges", flush=True)
-            total_exchanges += stats['exchange_count']
-            proxy.save_corpus()
-        
-        print(f"\nTotal: {total_exchanges} exchanges recorded", flush=True)
-        print(f"Corpus directory: {args.output_dir}", flush=True)
+        if not shutdown_requested:
+            _save_all()
     
     return 0
 
