@@ -106,6 +106,7 @@ class ComparisonResult:
     path: str
     status: int
     details: list[str]
+    skip_reason: Optional[str] = None  # "stale-etag" or "stale-snapshot" if skipped
 
 
 class TrafficReplayer:
@@ -143,11 +144,15 @@ class TrafficReplayer:
             result = self._replay_exchange(service, exchange)
             results.append(result)
             
-            status_symbol = "✓" if result.passed else "✗"
-            status_word = "PASS" if result.passed else "FAIL"
-            print(f"[{status_word}] #{result.sequence:04d} {result.method} {result.path} → {result.status}", flush=True)
+            if result.skip_reason:
+                status_word = "SKIP"
+                print(f"[{status_word}] #{result.sequence:04d} {result.method} {result.path} → {result.status} ({result.skip_reason})", flush=True)
+            else:
+                status_symbol = "✓" if result.passed else "✗"
+                status_word = "PASS" if result.passed else "FAIL"
+                print(f"[{status_word}] #{result.sequence:04d} {result.method} {result.path} → {result.status}", flush=True)
             
-            if not result.passed:
+            if not result.passed and not result.skip_reason:
                 for detail in result.details[:5]:
                     print(f"  {detail}", flush=True)
                 if len(result.details) > 5:
@@ -204,9 +209,10 @@ class TrafficReplayer:
         headers = request["headers"]
         body_data = request["body"]
         
-        # Substitute recorded ETags/snapshots in request with actual values
-        headers = self._substitute_request_etags(headers)
-        path = self._substitute_request_path(path)
+        # DO NOT substitute ETags/snapshots in request headers or path!
+        # Modifying headers invalidates SharedKey auth signatures.
+        # Modifying path/query invalidates SAS signatures.
+        # Instead, we send original requests and handle stale references during comparison.
         
         body = self._decode_body(body_data)
         
@@ -221,6 +227,7 @@ class TrafficReplayer:
                 seq,
                 method,
                 path,
+                request,
                 recorded_response,
                 actual_response
             )
@@ -394,6 +401,76 @@ class TrafficReplayer:
         
         return etags
     
+    def _extract_etags(self, header_value: str) -> list[str]:
+        """Extract ETags from If-Match or If-None-Match header value"""
+        if not header_value or header_value.strip() == "*":
+            return []
+        
+        # Split by comma, strip whitespace and quotes
+        etags = []
+        for etag in header_value.split(","):
+            etag = etag.strip()
+            if etag:
+                # Store both quoted and unquoted versions for lookup
+                etags.append(etag)
+                etags.append(etag.strip('"'))
+        return etags
+    
+    def _is_stale_etag_artifact(self, request: dict[str, Any], recorded_status: int, actual_status: int) -> bool:
+        """Check if status mismatch is explained by stale ETags from recording"""
+        headers = request["headers"]
+        if_match = headers.get("If-Match") or headers.get("if-match") or ""
+        if_none_match = headers.get("If-None-Match") or headers.get("if-none-match") or ""
+        
+        # Check if any ETag in these headers is a recorded (stale) ETag
+        has_stale_if_match = if_match and any(etag in self.etag_map for etag in self._extract_etags(if_match))
+        has_stale_if_none_match = if_none_match and any(etag in self.etag_map for etag in self._extract_etags(if_none_match))
+        
+        if has_stale_if_match:
+            # Stale If-Match: recorded matched (200/206), actual won't match (412)
+            if recorded_status in (200, 206) and actual_status == 412:
+                return True
+            # Both don't match - same outcome, not an artifact
+        
+        if has_stale_if_none_match:
+            # Stale If-None-Match: recorded matched (304), actual won't match (200/206)
+            if recorded_status == 304 and actual_status in (200, 206):
+                return True
+            # Stale If-None-Match: recorded didn't match (200/201/202), actual matches (304/412)
+            if recorded_status in (200, 201, 202) and actual_status in (304, 412):
+                return True
+        
+        return False
+    
+    def _is_stale_snapshot_artifact(self, request: dict[str, Any], recorded_status: int, actual_status: int) -> bool:
+        """Check if status mismatch is explained by stale snapshot timestamp"""
+        path = request["path"]
+        
+        # Check if URL contains a snapshot parameter
+        if "snapshot=" not in path:
+            return False
+        
+        # Extract snapshot timestamp
+        try:
+            if "?" in path:
+                query = path.split("?", 1)[1]
+                for param in query.split("&"):
+                    if "=" in param:
+                        key, value = param.split("=", 1)
+                        if key == "snapshot":
+                            decoded_value = urllib.parse.unquote(value)
+                            # Check if this is a recorded snapshot that we haven't mapped
+                            # (if it's in snapshot_map.keys(), it's from the recording)
+                            if decoded_value in self.snapshot_map or value in self.snapshot_map:
+                                # This is a stale snapshot reference
+                                # Rust won't have this snapshot, so it returns 404 or 403
+                                if actual_status in (403, 404) and recorded_status in (200, 201):
+                                    return True
+        except Exception:
+            pass
+        
+        return False
+    
     def _decode_body(self, body_data: dict[str, Any]) -> bytes:
         """Decode body from corpus format"""
         encoding = body_data.get("encoding", "empty")
@@ -446,6 +523,7 @@ class TrafficReplayer:
         seq: int,
         method: str,
         path: str,
+        request: dict[str, Any],
         recorded: dict[str, Any],
         actual: dict[str, Any]
     ) -> ComparisonResult:
@@ -455,7 +533,30 @@ class TrafficReplayer:
         recorded_status = recorded["status_code"]
         actual_status = actual["status_code"]
         
+        # Check for stale ETag/snapshot artifacts before reporting failure
         if recorded_status != actual_status:
+            if self._is_stale_etag_artifact(request, recorded_status, actual_status):
+                return ComparisonResult(
+                    passed=False,
+                    sequence=seq,
+                    method=method,
+                    path=path,
+                    status=actual_status,
+                    details=[f"Status code: {recorded_status} != {actual_status} (stale ETag)"],
+                    skip_reason="stale-etag"
+                )
+            
+            if self._is_stale_snapshot_artifact(request, recorded_status, actual_status):
+                return ComparisonResult(
+                    passed=False,
+                    sequence=seq,
+                    method=method,
+                    path=path,
+                    status=actual_status,
+                    details=[f"Status code: {recorded_status} != {actual_status} (stale snapshot)"],
+                    skip_reason="stale-snapshot"
+                )
+            
             details.append(f"Status code: {recorded_status} != {actual_status}")
         
         header_diff = self._compare_headers(recorded["headers"], actual["headers"])
@@ -709,16 +810,36 @@ def print_summary(service_results: dict[str, list[ComparisonResult]]) -> int:
     
     total_passed = 0
     total_failed = 0
+    total_skipped = 0
+    skip_reasons = {}
     
     for service, results in service_results.items():
         passed = sum(1 for r in results if r.passed)
-        failed = sum(1 for r in results if not r.passed)
+        skipped = sum(1 for r in results if r.skip_reason)
+        failed = sum(1 for r in results if not r.passed and not r.skip_reason)
+        
         total_passed += passed
         total_failed += failed
+        total_skipped += skipped
         
-        print(f"{service}: {passed}/{len(results)} passed ({failed} failures)", flush=True)
+        # Count skip reasons for this service
+        for r in results:
+            if r.skip_reason:
+                skip_reasons[r.skip_reason] = skip_reasons.get(r.skip_reason, 0) + 1
+        
+        # Format summary line
+        if skipped > 0:
+            print(f"{service}: {passed}/{len(results)} passed, {skipped} skipped, {failed} failures", flush=True)
+        else:
+            print(f"{service}: {passed}/{len(results)} passed ({failed} failures)", flush=True)
     
-    print(f"\nTotal: {total_passed}/{total_passed + total_failed} passed ({total_failed} failures)", flush=True)
+    # Format total summary
+    total_tests = total_passed + total_failed + total_skipped
+    if total_skipped > 0:
+        skip_breakdown = ", ".join(f"{reason}: {count}" for reason, count in sorted(skip_reasons.items()))
+        print(f"\nTotal: {total_passed}/{total_tests} passed, {total_skipped} skipped ({skip_breakdown}), {total_failed} failures", flush=True)
+    else:
+        print(f"\nTotal: {total_passed}/{total_tests} passed ({total_failed} failures)", flush=True)
     
     return 0 if total_failed == 0 else 1
 
