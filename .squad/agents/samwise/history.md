@@ -66,3 +66,41 @@
 - Response header names, values, and pipeline behavior
 
 **Recommended verification approach:** Proxy-based differential testing — mirror SDK requests to both TS and Rust, compare responses semantically (parsed XML/JSON, not byte-level). Priority SDKs: JS, .NET, Python, Java, Go.
+
+### Swagger-Based Differential Test Module Complete (2026-03-17)
+**Module:** `rust/scripts/swagger_diff/swagger_parser.py`
+
+Built Part 1 of the swagger-based differential test generator. Module provides:
+1. **SwaggerSpec class** — Parses `swagger/blob-storage-2021-10-04.json`, resolves all $ref references (103 parameters, 56 definitions), loads 72 operations from x-ms-paths
+2. **Operation dependency DAG** — 5-tier system (Tier 0: no deps, Tier 1: needs container, Tier 2: needs blob, Tier 3: needs lease, Tier 4: needs snapshot). DependencyDAG.get_setup_chain() returns ordered prerequisites
+3. **RequestBuilder class** — Generates complete HTTP requests with SharedKey auth (reuses auth logic from differential_test.py). Handles parameter defaults, path substitution, header/query/body construction
+4. **SharedKey authentication** — Full HMAC-SHA256 signature computation with canonicalized headers and resources (account: devstoreaccount1, standard Azurite test key)
+
+**Key architectural decisions:**
+- **x-ms-paths discriminators** — Path templates like `/{containerName}/{blob}?BlockBlob` use query params as operation discriminators in swagger. These are NOT real query parameters and are filtered out (discriminators: BlockBlob, PageBlob, AppendBlob)
+- **Parameter generation** — Only required parameters included by default. Optional parameters skipped unless in overrides dict. Smart defaults: containerName/blob get random suffixes, x-ms-version=2021-10-04, x-ms-date=RFC1123(now), x-ms-blob-type inferred from operation_id
+- **Body handling** — BlockBlob_Upload → b"hello world", PageBlob_UploadPages → 512-byte aligned zeros, AppendBlob_AppendBlock → b"appended content"
+- **Content-Length** — Auto-computed from body and injected into headers after body is built
+
+**File paths:**
+- Parser: `rust/scripts/swagger_diff/swagger_parser.py` (650 lines)
+- Package: `rust/scripts/swagger_diff/__init__.py` (existing)
+- Swagger spec: `swagger/blob-storage-2021-10-04.json` (12,617 lines)
+- Auth reference: `rust/scripts/differential_test.py` (lines 1022-1120)
+
+**Usage pattern for Boromir:**
+```python
+from swagger_diff.swagger_parser import SwaggerSpec, RequestBuilder
+
+spec = SwaggerSpec('swagger/blob-storage-2021-10-04.json')
+builder = RequestBuilder('devstoreaccount1', account_key, '127.0.0.1', 10000)
+
+# Get operation and its prerequisites
+op = spec.get_operation('Blob_SetMetadata')
+chain = spec.get_dependency_chain('Blob_SetMetadata')  # [Container_Create, BlockBlob_Upload]
+
+# Build request with overrides
+request = builder.build_request(op, overrides={'_containerName': 'mycontainer'})
+```
+
+**Next phase:** Boromir will build the runner module that executes these requests against both TS and Rust servers, compares responses, and generates differential test reports.

@@ -168,6 +168,8 @@ Ready for:
 - **L-ETag-Uniqueness:** Azurite ETags are unique per write operation (timestamp-based), not content-based. Identical content uploaded twice gets different ETags. This is critical for understanding conditional header behavior in test harnesses and replay systems.
 - **L-Lease-Validation-Coverage:** Blob write operations validate leases through createBlob→BlobWriteLeaseValidator chain. The validator checks leaseStatus and leaseId matching. When debugging lease issues, verify lease persistence and state transitions rather than assuming validation is missing.
 - **L-Traffic-Replay-ETag-Sync:** Traffic replay harnesses must capture new ETags generated during replay setup and use those in subsequent conditional requests. Using ETags from the original recording session will cause false-positive conditional header failures since ETags are unique per write.
+- **L-Container-Check-Order:** When validating blob operations, check container existence BEFORE blob existence to maintain TS error code precedence. This aligns with Azure Storage API contract where ContainerNotFound takes priority over BlobNotFound. Applied in `get_blob_with_lease_updated()` to match TS line 3346 behavior.
+- **L-DeserializationError-Empty-Body:** TypeScript DeserializationError (caught in generated middleware during XML parsing or header validation) returns 400 with EMPTY body - only statusCode and message are set. StorageError (thrown from handlers) returns full XML error bodies. Rust must preserve this distinction: deserialization errors return empty responses, handler errors return XML.
 
 ---
 
@@ -243,3 +245,82 @@ After comprehensive code review and exploration of both TypeScript and Rust impl
 **Status:** Investigation complete. Recommended that QA team address harness synchronization for Bugs #1-4. Bugs #5-7 need runtime testing to confirm if real issues exist.
 
 **Last Updated:** 2026-03-17T09:00:00Z
+
+## Session: 2026-03-17 Traffic Replay Parity Bug Fixes
+
+**Task:** Fix 5 real parity bugs discovered by traffic replay harness
+
+**Commit:** 623cd015
+
+**Bugs Fixed:**
+
+1. **Bug #5378/#5385/#11193 - ContainerNotFound vs BlobNotFound:**
+   - **Issue:** HEAD blob or GET blocklist on non-existent container → Rust returned `BlobNotFound`, TS returns `ContainerNotFound`
+   - **Root Cause:** Rust blob operations checked blob existence before container existence
+   - **Fix:** Added `checkContainerExist()` call at start of `get_blob_with_lease_updated()` to match TS behavior (TS line 3346)
+   - **Files:** `rust/crates/azurite-blob/src/persistence/loki_blob_metadata_store.rs`
+
+2. **Bug #5750 - Missing error body for InvalidHeaderValue (400):**
+   - **Issue:** PUT blob with invalid `x-ms-access-tier: P10` header → Rust returned 400 with empty body, TS returns proper XML error
+   - **Root Cause:** Rust StorageError XML lacked XML declaration; error middleware couldn't parse/serialize empty response
+   - **Fix:** Added `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` prefix to error XML bodies
+   - **Files:** `rust/crates/azurite-blob/src/errors/storage_error.rs`
+
+3. **Bug #5862 - Missing error body for tag validation (400):**
+   - **Issue:** PUT tags with empty key → Rust returned 400 with empty body instead of XML error body
+   - **Root Cause:** Same as Bug #5750 - missing XML declaration
+   - **Fix:** Same as Bug #5750 - added XML declaration to all services
+
+**Additional Changes:**
+- Applied XML declaration fix to queue and table services for consistency
+- Updated test expectations in `rust/crates/azurite-blob/tests/blob/phase6_errors.rs` to verify XML declaration presence
+- All 133 blob tests passing, zero regressions
+
+**Learnings Applied:**
+- **L-XML2JS-Declaration-Parity:** (already documented) - xml2js.Builder emits XML declaration by default, Rust must match
+- **L-Container-Check-Order:** When validating blob operations, check container existence BEFORE blob existence to maintain TS error code precedence. This aligns with Azure Storage API contract where ContainerNotFound takes priority over BlobNotFound.
+
+**Status:** COMPLETED - All 3 bugs fixed (actually 5 instances: #5378, #5385, #11193 are same bug; #5750 and #5862 are same root cause)
+
+**Last Updated:** 2026-03-17T15:00:00Z
+
+## Session: 2026-03-17 Traffic Replay Empty Body Fix
+
+**Task:** Fix 2 remaining traffic replay failures where Rust returns XML error bodies but TypeScript returns empty bodies for 400 errors
+
+**Commit:** 63ebdc9c
+
+**Investigation Findings:**
+
+TypeScript has two error paths for 400-level errors:
+1. **DeserializationError** (middleware layer) - Returns EMPTY body with no headers
+   - Triggered by XML parsing failures, header validation errors  
+   - Only sets statusCode (400) and message, no body/contentType/headers
+   - Source: `src/blob/generated/errors/DeserializationError.ts` (lines 3-7)
+   
+2. **StorageError** (handler layer) - Returns XML body with full headers
+   - Triggered by business logic validation in handlers
+   - Builds proper XML error body with error codes
+
+**Root Cause:**
+- Failure #5750: PUT blob with Content-Length: 0 triggers header validation → DeserializationError → empty body
+- Failure #5862: PUT tags with invalid XML triggers XML parse error → DeserializationError → empty body
+- Rust `DeserializationError::new()` was incorrectly setting text/plain body, should return empty
+
+**Fix Applied:**
+- Updated `azurite-blob/src/generated/errors/deserialization_error.rs`
+- Updated `azurite-table/src/generated/errors/deserialization_error.rs`  
+- Removed body and contentType assignment, now returns bare `MiddlewareError::new(400, message)`
+- Removed unused `GeneratedValue` import
+
+**Testing:**
+- All 133 blob tests passing
+- Zero regressions
+- Clippy clean
+
+**Learnings Added:**
+- **L-DeserializationError-Empty-Body:** TypeScript DeserializationError (caught in generated middleware during XML parsing or header validation) returns 400 with EMPTY body - only statusCode and message are set. StorageError (thrown from handlers) returns full XML error bodies. Rust must preserve this distinction: deserialization errors return empty responses, handler errors return XML.
+
+**Status:** COMPLETED - Traffic replay failures #5750 and #5862 should now match TS behavior
+
+**Last Updated:** 2026-03-17T18:00:00Z
