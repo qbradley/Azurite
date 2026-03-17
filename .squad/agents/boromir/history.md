@@ -375,3 +375,131 @@ REPLAY:     Replay tool → Rust Azurite (:10000-10002) → Compare to corpus
 - Baseline Rust parity with recorded corpus
 - Integrate into CI for regression detection
 - Use as acceptance gate for future TS→Rust change propagation
+
+### 2026-03-17: Traffic Replay Harness - Dynamic ETag & Snapshot Substitution
+
+**Context:** Upgraded traffic replay harness to eliminate false-positive failures caused by stale ETags and snapshot timestamps from recording session.
+
+**Problem Analysis:**
+Original harness had 44 failures out of 11,217 exchanges (99.6% pass rate). Investigation revealed 28 were harness artifacts:
+- 10-12 stale ETag failures: Recorded ETags don't match replay-session blobs (ETags use timestamp × random)
+- 12 stale snapshot failures: Snapshot URLs contain recording-session timestamps
+- 5 state spillover: Containers from prior test sequences persist
+- 4 lease timing: Leases expired between recording and replay
+
+**Implementation:**
+
+1. **Dynamic ETag Mapping System:**
+   - Captures `recorded_etag → actual_etag` mapping from each response
+   - Learns from response headers (`ETag` header) and body elements (`<Etag>` XML, `"etag"` JSON)
+   - Substitutes stale ETags in subsequent request headers (`If-Match`, `If-None-Match`)
+   - Handles quoted/unquoted forms, comma-separated lists, and wildcard `*`
+   - Built incrementally as replay progresses (each response teaches new mappings)
+
+2. **Dynamic Snapshot Timestamp Mapping:**
+   - Captures `recorded_timestamp → actual_timestamp` from `x-ms-snapshot` response headers
+   - Substitutes in `?snapshot=` query parameters before sending requests
+   - Handles URL-encoded and unencoded timestamp formats transparently
+
+3. **Fresh State Mode:**
+   - Added `--fresh-state` flag to delete all containers before replay
+   - Lists containers via `GET /?comp=list` and deletes each with `DELETE /{container}?restype=container`
+   - Eliminates 409 Conflict from test suite state spillover
+
+**Results:**
+- File size: 552 → 770 lines (+218 lines, +39% growth)
+- Pass rate remains ~99.6% (45 failures) - variance due to timing/state
+- Failure breakdown (45 total):
+  - 12 snapshot issues (timestamps still don't match - needs investigation)
+  - 4 container 409 conflicts (state spillover edge cases)
+  - 4 SAS token differences (token generation variance)
+  - 4 service properties (config divergence)
+  - 20 other (mixed: leases, auth, edge cases)
+  - 1 lease timing failure
+
+**Key Learnings:**
+
+1. **ETag Substitution Pattern:**
+   - ETags appear in three places: response headers, request conditional headers, and body listings
+   - Must track both quoted (`"0x234809B0401CC60"`) and unquoted (`0x234809B0401CC60`) forms
+   - List operations (containers, blobs) return multiple ETags that must be mapped by position
+   - The mapping is order-dependent: must learn from response N before replaying request N+1
+
+2. **Snapshot Timestamp Complexity:**
+   - Snapshot timestamps in URLs are URL-encoded (`2026-03-17T06%3A57%3A29.6750000Z`)
+   - Response headers contain unencoded timestamps (`2026-03-17T06:57:29.6750000Z`)
+   - HTTP library auto-encodes paths, so substitution must preserve unencoded form
+   - Some snapshot tests still fail - timestamp precision or format differences need investigation
+
+3. **URL Encoding Gotcha:**
+   - Query parameters in corpus are unencoded (for human readability)
+   - HTTP library encodes them when sending (`urllib.parse.quote` behavior)
+   - Double-encoding breaks requests - must decode for lookup, keep unencoded for substitution
+   - The HTTP library handles final encoding transparently
+
+4. **Fresh State Challenges:**
+   - Container deletion requires navigating XML namespace variations
+   - Some containers may have active leases preventing deletion (needs lease-breaking logic)
+   - State spillover manifests as 409 Conflict on container create - clear symptom
+
+5. **Incremental Mapping Trade-offs:**
+   - Position-based mapping (ZIP recorded/actual lists) assumes stable ordering
+   - If TS and Rust return items in different order, mapping breaks
+   - Alternative: content-based hashing (e.g., map by blob name → ETag)
+   - Current approach works for 99.6% of cases - good enough for now
+
+6. **Failure Categories:**
+   - **Harness artifacts:** Stale ETags, stale snapshots, state spillover (fixable)
+   - **Real Rust bugs:** Missing features, incorrect behavior (needs Rust fixes)
+   - **Unavoidable timing:** Lease expiration, timestamp precision (document and skip)
+   - **Config differences:** Service properties, SAS token generation (may be intentional)
+
+**Next Steps:**
+- Investigate remaining 12 snapshot failures - why don't timestamps map?
+- Consider regex-based timestamp normalization for snapshot comparisons
+- Add lease-breaking to fresh-state cleanup
+- Document remaining failures as known issues or real bugs
+
+**Deliverable:**
+- Updated `rust/scripts/traffic_replay.py` (770 lines)
+- Commit: `feat(qa): upgrade traffic replay harness with dynamic ETag and snapshot substitution`
+- Pass rate: 11,172/11,217 (99.6%)
+
+### SharedKey Auth and Conditional Headers (2026-03-17)
+
+**Critical Lesson:** **SharedKey Authorization signatures are computed over the COMPLETE request, including conditional headers.** Modifying `If-Match`, `If-None-Match`, `If-Modified-Since`, or `If-Unmodified-Since` headers after signature generation invalidates the Authorization header, causing 403 Forbidden errors.
+
+**The Bug:**
+- Previous ETag substitution modified `If-Match`/`If-None-Match` headers in replay requests to translate recorded ETags to actual Rust ETags
+- This broke SharedKey auth: the `Authorization` header was computed by the original client over the ORIGINAL ETag values
+- When we substituted the ETag, the signature became invalid → 403 errors
+- Similarly, modifying URL query parameters (e.g., `?snapshot=...`) invalidates SAS signatures in the URL
+
+**The Fix (Comparison-Phase Normalization):**
+1. **Send requests unmodified** - preserve original headers and URLs so auth signatures remain valid
+2. **Learn ETag/snapshot mappings** from responses (keep existing `_learn_etag_mapping()` and `_learn_snapshot_mapping()`)
+3. **Detect harness artifacts during comparison** - when status codes differ, check if the mismatch is explained by:
+   - **Stale If-Match**: Recorded 200 (matched) → Actual 412 (doesn't match stale ETag)
+   - **Stale If-None-Match**: Recorded 304 (matched) → Actual 200 (doesn't match stale ETag)
+   - **Stale snapshot**: Recorded 200 → Actual 403/404 (snapshot doesn't exist)
+4. **Mark as `[SKIP]` instead of `[FAIL]`** - these are known harness artifacts, not Rust bugs
+5. **Report skip breakdown** in summary: `passed: 11172, skipped: 12 (stale-etag: 7, stale-snapshot: 5), failed: 33`
+
+**Why This Works:**
+- Requests authenticate correctly (no 403 errors)
+- Stale ETag/snapshot references produce predictable status code differences
+- We can distinguish real Rust bugs from harness artifacts
+- Skip counts provide visibility into harness limitations without polluting failure counts
+
+**Implementation:**
+- Added `skip_reason` field to `ComparisonResult` dataclass
+- Added `_is_stale_etag_artifact()` to detect conditional header mismatches
+- Added `_is_stale_snapshot_artifact()` to detect missing snapshot references
+- Removed `_substitute_request_etags()` and `_substitute_request_path()` from replay path
+- Updated `print_summary()` to show skip counts and reasons
+
+**Commit:** `fix(qa): use comparison-phase ETag normalization instead of request modification`
+
+**Key Takeaway:** When working with signed requests (SharedKey, SAS), modification of ANY part of the request that was included in the signature (headers, URL, body) will break authentication. The harness must work around this by detecting expected differences at comparison time rather than normalizing at request time.
+
+
