@@ -367,3 +367,48 @@ After normalization pass, scorecard improved from **6 pass / 10 fail** to **23 p
 Established repeatable, maintainable harness validation layer. Scorecard now reflects true parity gaps (List Blobs serializer bug) rather than cosmetic differences. Harness ready for rapid iteration: fix → re-run → next fix.
 
 ---
+
+## 2026-03-16: Aragorn Markdown File Organization (D-Markdown-Org)
+**By:** Aragorn (TS-to-Rust Migration Lead)  
+**Date:** 2026-03-17T01:04:00Z  
+**Status:** COMPLETE
+
+### Decision
+Centralize all team markdown note files into `rust/porting-db/notes/{topic-slug}/NOTE.md` pattern.
+
+### Context
+19 markdown note files were scattered in `rust/` root directory and project home directory, reducing discoverability and violating repository organization standards.
+
+### Action
+Relocated all notes into organized `rust/porting-db/notes/` directory structure with descriptive topic slugs.
+
+### Why
+- Maintains coherent repository structure
+- Improves discoverability for team members
+- Keeps home and rust root directories clean
+- Establishes clear convention for future documentation
+
+### Scope
+- File cleanup completed in commit 3a5bd0b1
+- Standard now applies to all future note creation
+
+---
+
+## 2026-03-17: Team Directive on Note Organization (D-Note-Directive)
+**By:** Quetzal Bradley (Project Owner)  
+**Date:** 2026-03-17T00:33:00Z  
+**Status:** ACTIVE
+
+### Directive
+Notes created by the team MUST go in `rust/porting-db/notes/{topic-slug}/NOTE.md` where `{topic-slug}` is a descriptive topic identifier and NOTE is a descriptive filename.
+
+### Prohibition
+Do NOT put loose markdown files in `rust/` root or the home directory.
+
+### Why
+- User request for repository organization
+- Enables easy team navigation
+- Prevents clutter in primary directory structures
+- Captured for team memory
+
+---
