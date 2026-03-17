@@ -92,6 +92,65 @@ Comparison rules:
 
 The harness uses the per-service Rust binaries intentionally. `run-integration-tests.sh` still documents the known unified-binary startup issues.
 
+## Traffic Capture & Replay Differential Testing Harness
+
+**NEW**: `capture-and-replay.sh` + `traffic_recorder.py` + `traffic_replay.py`
+
+This harness turns the existing 998 TypeScript integration tests into thousands of differential assertions automatically by:
+
+1. **Recording** all HTTP traffic from TS integration tests through a proxy
+2. **Replaying** that recorded traffic against Rust Azurite
+3. **Comparing** each response using semantic normalization
+
+Unlike `differential-test.sh` which tests ~20 hand-crafted scenarios, this harness captures and replays **every HTTP exchange** from the full TS test suite (typically thousands of requests).
+
+### Quick Start
+
+From the repository root:
+
+```bash
+# Full workflow: record + replay
+./rust/scripts/capture-and-replay.sh
+
+# Record only (saves corpus to rust/scripts/traffic_corpus/)
+./rust/scripts/capture-and-replay.sh record
+
+# Replay only (assumes corpus exists)
+./rust/scripts/capture-and-replay.sh replay
+```
+
+### Architecture
+
+**Recording Phase**:
+```
+Mocha tests → Recording Proxy (:11000/:11001/:11002) → TS Azurite (:10000/:10001/:10002)
+All request/response pairs saved to corpus files
+```
+
+**Replay Phase**:
+```
+Replay Tool → Rust Azurite (:10000/:10001/:10002)
+Each response compared to recorded corpus
+```
+
+### Key Features
+
+- **No external dependencies** — Python stdlib only
+- **Thread-safe recording** — Handles concurrent test connections
+- **Binary body support** — Stores base64-encoded binary data
+- **Semantic normalization** — Ignores dynamic IDs, timestamps, ETags
+- **Stateful replay** — Preserves request sequence for correct state evolution
+- **Exhaustive coverage** — Every HTTP exchange from 998 tests becomes a parity assertion
+
+### Output
+
+The harness produces:
+- `blob_traffic.json`, `queue_traffic.json`, `table_traffic.json` — Recorded corpus
+- Detailed pass/fail report for each replayed exchange
+- Diff output for failures (headers, body)
+
+See `rust/scripts/TRAFFIC_HARNESS.md` for complete documentation.
+
 ## Current limitations / known issues
 
 - The companion TypeScript harness patch is required so `AZURITE_EXTERNAL_SERVER=1` makes the factories return no-op server objects instead of starting the TypeScript emulator.
