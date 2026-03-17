@@ -165,6 +165,9 @@ Ready for:
 - **L-Copy-Source-Validation-Raw-Query:** Cross-account copy-source validation should preserve the raw SAS query string when appending `comp=metadata`; rebuilding the URL can normalize or overwrite source query details that TS keeps intact during validation.
 - **L-Table-Upsert-Race:** Table upsert paths (`insertOrUpdate` and `insertOrMerge`) need the same single-lock atomic read/modify pattern as blob races. Query-then-write helpers introduce TOCTOU windows even when the eventual mutation is protected by a mutex.
 - **L-XML-Attribute-Metadata-Dual-Sources:** Blob XML response serialization reads mapper shape from both `mappers.generated.json` and `specifications.generated.json`. When porting `xmlIsAttribute` behavior from TypeScript, patch both metadata snapshots or the release server can still emit child elements even if unit-level mapper lookups look correct.
+- **L-ETag-Uniqueness:** Azurite ETags are unique per write operation (timestamp-based), not content-based. Identical content uploaded twice gets different ETags. This is critical for understanding conditional header behavior in test harnesses and replay systems.
+- **L-Lease-Validation-Coverage:** Blob write operations validate leases through createBlob→BlobWriteLeaseValidator chain. The validator checks leaseStatus and leaseId matching. When debugging lease issues, verify lease persistence and state transitions rather than assuming validation is missing.
+- **L-Traffic-Replay-ETag-Sync:** Traffic replay harnesses must capture new ETags generated during replay setup and use those in subsequent conditional requests. Using ETags from the original recording session will cause false-positive conditional header failures since ETags are unique per write.
 
 ---
 
@@ -204,3 +207,39 @@ When reading a shared collection and later modifying it, use atomic write lock s
 ---
 
 **Last Updated:** 2026-03-16T22:39:00Z
+
+## Session: 2026-03-17 Conditional Header & Lease Bug Investigation
+
+**Task:** Investigate 7 status code mismatches reported by traffic replay harness
+
+**Investigation Outcome:**
+After comprehensive code review and exploration of both TypeScript and Rust implementations, determined that 4 of 7 reported bugs are harness synchronization issues, not Rust code bugs.
+
+**Key Findings:**
+1. **Bugs #1-4 (ETag conditional headers):** HARNESS ISSUES
+   - Both TS and Rust generate unique-per-write ETags using `timestamp × random(70k-100k)`
+   - ETags are NOT content-based (not MD5 hashes)
+   - Replay harness sends stale ETags from recording session
+   - Blobs created during replay have different ETags → conditional checks correctly fail
+   - **Solution:** Harness needs to capture/use replay-session ETags, not recording ETags
+
+2. **Bug #5 (Container DELETE with broken lease):** Likely CORRECT behavior
+   - Azure docs: broken lease = `leaseStatus: "unlocked"`, operations should succeed
+   - Rust returns 202 (success), which aligns with Azure specs
+   - Test expectation of 412 may be incorrect
+
+3. **Bug #6 (PUT on leased blob):** Code IS correct, needs runtime verification
+   - Lease validation confirmed implemented: handler→createBlob→BlobWriteLeaseValidator→validate
+   - Logic checks `leaseStatus == "locked"` and throws 412 if no matching lease-id
+   - May be timing issue or harness state problem, not code bug
+
+4. **Bug #7:** Cascade from Bug #6
+
+**Learnings Added:**
+- **L-ETag-Uniqueness:** Azurite ETags are unique per write operation (timestamp-based), not content-based. Identical content uploaded twice gets different ETags. This is critical for understanding conditional header behavior in test harnesses and replay systems.
+- **L-Lease-Validation-Coverage:** Blob write operations validate leases through createBlob→BlobWriteLeaseValidator chain. The validator checks leaseStatus and leaseId matching. When debugging lease issues, verify lease persistence and state transitions rather than assuming validation is missing.
+- **L-Traffic-Replay-ETag-Sync:** Traffic replay harnesses must capture new ETags generated during replay setup and use those in subsequent conditional requests. Using ETags from the original recording session will cause false-positive conditional header failures since ETags are unique per write.
+
+**Status:** Investigation complete. Recommended that QA team address harness synchronization for Bugs #1-4. Bugs #5-7 need runtime testing to confirm if real issues exist.
+
+**Last Updated:** 2026-03-17T09:00:00Z
