@@ -104,3 +104,29 @@ request = builder.build_request(op, overrides={'_containerName': 'mycontainer'})
 ```
 
 **Next phase:** Boromir will build the runner module that executes these requests against both TS and Rust servers, compares responses, and generates differential test reports.
+
+### Azure Batch Request Format Implementation (2026-03-17)
+**Module:** `rust/scripts/swagger_diff/swagger_parser.py` (added batch support)
+
+Fixed the swagger differential test harness to properly generate Azure Storage batch request bodies for `Service_SubmitBatch` and `Container_SubmitBatch` operations.
+
+**Azure Batch Request Format Requirements:**
+1. **Content-Type:** Must be `multipart/mixed; boundary=batch_<uuid>` (not `application/octet-stream`)
+2. **Body Structure:** Multipart MIME with embedded HTTP sub-requests
+3. **Sub-request Format:** Each part contains:
+   - `Content-Type: application/http`
+   - `Content-Transfer-Encoding: binary`
+   - `Content-ID: <sequence-number>`
+   - Full HTTP request message (method, path, headers, optional body)
+4. **Sub-request Authentication:** Each embedded sub-request MUST have its own SharedKey Authorization header computed independently
+
+**Implementation Details:**
+- Added `_build_batch_body()` method to generate proper multipart batch bodies
+- Modified `_build_body()` to delegate batch operations to the specialized handler
+- Modified `_generate_param_values()` to skip setting Content-Type for batch operations (set by batch body builder)
+- Each batch contains one DELETE sub-request targeting the blob created by the setup chain
+- Sub-request uses full canonicalized path (`/devstoreaccount1/container/blob`) with independent SharedKey signature
+- Boundary uses UUID format: `batch_<uuid>`
+- Body uses CRLF line endings (`\r\n`) per HTTP multipart spec
+
+**Key Learning:** Batch operations are fundamentally different from normal requests because they contain complete HTTP requests as payload. The outer request needs one SharedKey signature, and each inner sub-request needs its own independent SharedKey signature computed over its own headers and path. The test harness now generates valid batch requests that both TS and Rust implementations can process.

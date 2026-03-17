@@ -174,6 +174,7 @@ class ComparisonEngine:
     
     def _normalize_headers(self, headers: dict[str, str]) -> dict[str, str]:
         """Normalize headers for comparison"""
+        import re
         normalized = {}
         
         for name, value in headers.items():
@@ -183,6 +184,13 @@ class ComparisonEngine:
                 continue
             
             normalized_value = DYNAMIC_HEADER_PLACEHOLDERS.get(lower_name, value.strip())
+            # Normalize batch boundary UUIDs in content-type
+            if lower_name == "content-type":
+                normalized_value = re.sub(
+                    r'boundary=batch_[0-9a-f-]+',
+                    'boundary=batch_DYNAMIC',
+                    normalized_value
+                )
             normalized[lower_name] = normalized_value
         
         return normalized
@@ -200,7 +208,9 @@ class ComparisonEngine:
         
         content_type = self._detect_content_type(ts_headers, rust_headers, ts_body, rust_body)
         
-        if content_type == "json":
+        if content_type == "multipart":
+            return self._compare_multipart_bodies(ts_body, rust_body)
+        elif content_type == "json":
             return self._compare_json_bodies(ts_body, rust_body)
         elif content_type == "xml":
             return self._compare_xml_bodies(ts_body, rust_body)
@@ -223,6 +233,8 @@ class ComparisonEngine:
         
         combined = " ".join(content_types)
         
+        if "multipart/mixed" in combined:
+            return "multipart"
         if "json" in combined:
             return "json"
         if "xml" in combined:
@@ -235,6 +247,45 @@ class ComparisonEngine:
             return "xml"
         
         return "binary"
+    
+    def _compare_multipart_bodies(self, ts_body: bytes, rust_body: bytes) -> list[str]:
+        """Compare multipart batch response bodies by sub-response status and error codes"""
+        import re
+        
+        def extract_sub_responses(body: bytes) -> list[tuple[str, str]]:
+            """Extract (status_line, error_code) from each sub-response"""
+            text = body.decode("utf-8", errors="replace")
+            parts = re.split(r'--batch_[0-9a-f-]+', text)
+            results = []
+            for part in parts:
+                part = part.strip()
+                if not part or part == "--":
+                    continue
+                status_match = re.search(r'HTTP/1\.1 (\d+ [^\r\n]+)', part)
+                error_match = re.search(r'x-ms-error-code:\s*(\S+)', part, re.IGNORECASE)
+                if status_match:
+                    status = status_match.group(1).strip()
+                    error = error_match.group(1) if error_match else ""
+                    results.append((status, error))
+            return results
+        
+        ts_subs = extract_sub_responses(ts_body)
+        rust_subs = extract_sub_responses(rust_body)
+        
+        diffs = []
+        if len(ts_subs) != len(rust_subs):
+            diffs.append(f"Batch sub-response count: TS={len(ts_subs)} != Rust={len(rust_subs)}")
+            return diffs
+        
+        for i, (ts_sub, rust_sub) in enumerate(zip(ts_subs, rust_subs)):
+            ts_status, ts_error = ts_sub
+            rust_status, rust_error = rust_sub
+            if ts_status != rust_status:
+                diffs.append(f"Sub-response {i} status: TS={ts_status} != Rust={rust_status}")
+            if ts_error != rust_error:
+                diffs.append(f"Sub-response {i} error code: TS={ts_error} != Rust={rust_error}")
+        
+        return diffs
     
     def _compare_json_bodies(self, ts_body: bytes, rust_body: bytes) -> list[str]:
         """Compare JSON bodies with normalization"""

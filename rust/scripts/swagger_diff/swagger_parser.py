@@ -13,6 +13,7 @@ import json
 import random
 import string
 import urllib.parse
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -308,8 +309,8 @@ class RequestBuilder:
         # Build headers
         headers = self._build_headers(operation, param_values)
         
-        # Build body
-        body = self._build_body(operation, param_values)
+        # Build body (may modify headers, e.g., Content-Type for batch)
+        body = self._build_body(operation, param_values, headers, overrides)
         
         # Update headers based on body and method
         self._update_headers_for_body(headers, body, operation.method)
@@ -371,7 +372,12 @@ class RequestBuilder:
                 continue
             elif param.name == "Content-Type":
                 if operation.request_body:
-                    values[param.name] = "application/octet-stream"
+                    # Batch operations need special Content-Type
+                    if "SubmitBatch" in operation.operation_id:
+                        # Will be set in _build_body with batch boundary
+                        pass
+                    else:
+                        values[param.name] = "application/octet-stream"
             elif param.name == "x-ms-lease-duration":
                 values[param.name] = "15"
             elif param.name == "x-ms-blob-content-length" and "PageBlob" in operation.operation_id:
@@ -452,10 +458,15 @@ class RequestBuilder:
         
         return headers
     
-    def _build_body(self, operation: Operation, param_values: dict[str, Any]) -> bytes:
+    def _build_body(self, operation: Operation, param_values: dict[str, Any], 
+                    headers: dict[str, str], overrides: dict[str, Any]) -> bytes:
         """Build request body"""
         if not operation.request_body:
             return b""
+        
+        # Handle batch operations specially
+        if "SubmitBatch" in operation.operation_id:
+            return self._build_batch_body(operation, param_values, headers, overrides)
         
         # For blob uploads, use simple test content
         if operation.operation_id == "BlockBlob_Upload":
@@ -469,6 +480,60 @@ class RequestBuilder:
         # For XML bodies, would need to generate from schema
         # For now, return empty
         return b""
+    
+    def _build_batch_body(self, operation: Operation, param_values: dict[str, Any],
+                          headers: dict[str, str], overrides: dict[str, Any]) -> bytes:
+        """Build multipart batch request body for Service_SubmitBatch and Container_SubmitBatch"""
+        # Generate batch boundary
+        batch_id = str(uuid.uuid4())
+        boundary = f"batch_{batch_id}"
+        
+        # Set Content-Type header with boundary
+        headers["Content-Type"] = f"multipart/mixed; boundary={boundary}"
+        
+        # Get container and blob from overrides (set by setup chain)
+        container_name = overrides.get("_containerName", "testcontainer")
+        blob_name = overrides.get("_blob", "testblob")
+        
+        # Build a single sub-request (DELETE blob)
+        # The sub-request path for blob operations
+        sub_path = f"/{self.account_name}/{container_name}/{blob_name}"
+        sub_method = "DELETE"
+        
+        # Build sub-request headers
+        sub_headers = {
+            "x-ms-version": "2021-10-04",
+            "x-ms-date": self._format_rfc1123(dt.datetime.now(dt.timezone.utc)),
+            "Content-Length": "0"
+        }
+        
+        # Compute auth for sub-request
+        sub_query_params = []
+        sub_body = b""
+        sub_auth = self.compute_shared_key(sub_method, sub_path, sub_headers, sub_query_params, sub_body)
+        sub_headers["Authorization"] = sub_auth
+        
+        # Build the sub-request HTTP message
+        sub_request_lines = [
+            f"{sub_method} {sub_path} HTTP/1.1"
+        ]
+        for name, value in sub_headers.items():
+            sub_request_lines.append(f"{name}: {value}")
+        sub_request_lines.append("")  # Empty line after headers
+        sub_request = "\r\n".join(sub_request_lines)
+        
+        # Build multipart body
+        parts = []
+        parts.append(f"--{boundary}")
+        parts.append("Content-Type: application/http")
+        parts.append("Content-Transfer-Encoding: binary")
+        parts.append("Content-ID: 0")
+        parts.append("")
+        parts.append(sub_request)
+        parts.append(f"--{boundary}--")
+        
+        batch_body = "\r\n".join(parts) + "\r\n"
+        return batch_body.encode("utf-8")
     
     def _update_headers_for_body(self, headers: dict[str, str], body: bytes, method: str):
         """Update headers based on body content and method"""
