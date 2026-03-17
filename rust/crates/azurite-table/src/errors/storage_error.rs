@@ -176,6 +176,16 @@ fn build_body_json(
     Value::Object(root).to_string()
 }
 
+fn push_xml_element(body: &mut String, tag: &str, value: &str) {
+    body.push_str("  <");
+    body.push_str(tag);
+    body.push('>');
+    body.push_str(&escape(value));
+    body.push_str("</");
+    body.push_str(tag);
+    body.push_str(">\n");
+}
+
 fn build_body_xml(
     storageErrorCode: &str,
     message: &str,
@@ -183,24 +193,41 @@ fn build_body_xml(
 ) -> String {
     // L-XML2JS-Declaration-Parity: xml2js.Builder emits XML declaration by default
     let mut bodyInXML =
-        String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Error>");
-    bodyInXML.push_str("<Code>");
-    bodyInXML.push_str(&escape(storageErrorCode));
-    bodyInXML.push_str("</Code>");
-    bodyInXML.push_str("<Message>");
-    bodyInXML.push_str(&escape(message));
-    bodyInXML.push_str("</Message>");
+        String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Error>\n");
+    push_xml_element(&mut bodyInXML, "Code", storageErrorCode);
+    push_xml_element(&mut bodyInXML, "Message", message);
 
     for (key, value) in storageAdditionalErrorMessages {
-        bodyInXML.push('<');
-        bodyInXML.push_str(key);
-        bodyInXML.push('>');
-        bodyInXML.push_str(&escape(value));
-        bodyInXML.push_str("</");
-        bodyInXML.push_str(key);
-        bodyInXML.push('>');
+        push_xml_element(&mut bodyInXML, key, value);
     }
 
     bodyInXML.push_str("</Error>");
     bodyInXML
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_body_xml;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn build_body_xml_pretty_prints_elements() {
+        let xml = build_body_xml(
+            "InvalidInput",
+            "Broken\nRequestId:request-id\nTime:2026-03-17T00:00:00.000Z",
+            &BTreeMap::from([(String::from("Detail"), String::from("Thing"))]),
+        );
+
+        assert_eq!(
+            xml,
+            concat!(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+                "<Error>\n",
+                "  <Code>InvalidInput</Code>\n",
+                "  <Message>Broken\nRequestId:request-id\nTime:2026-03-17T00:00:00.000Z</Message>\n",
+                "  <Detail>Thing</Detail>\n",
+                "</Error>"
+            )
+        );
+    }
 }

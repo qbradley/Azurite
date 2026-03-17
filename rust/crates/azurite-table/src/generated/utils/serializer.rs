@@ -1,6 +1,5 @@
-use std::collections::BTreeMap;
-
 use chrono::DateTime;
+use indexmap::IndexMap;
 
 use crate::generated::artifacts::mappers::Mapper;
 use crate::generated::artifacts::models::{
@@ -350,7 +349,7 @@ fn set_nested_value(
         }
         let entry = parameters
             .entry(first.clone())
-            .or_insert_with(|| GeneratedValue::Object(BTreeMap::new()));
+            .or_insert_with(|| GeneratedValue::Object(IndexMap::new()));
         if let GeneratedValue::Object(child) = entry {
             set_nested_value(child, rest, parameterValue);
         }
@@ -362,8 +361,11 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
         serde_json::Value::Object(object) => {
             if let Some(properties) = resolve_model_properties(mapper) {
                 let mut result = serde_json::Map::new();
-                for (key, value) in object {
-                    if let Some(property_mapper) = properties.get(key) {
+                for (key, property_mapper) in properties {
+                    if let Some(value) = object
+                        .get(key)
+                        .or_else(|| mapped_name(property_mapper).and_then(|name| object.get(name)))
+                    {
                         let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
                             && property_mapper.xmlElementName.is_some()
                             && !property_mapper.xmlIsWrapped;
@@ -377,8 +379,13 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                             let mapped_value = apply_model_mapping(value, property_mapper);
                             result.insert(mapped_key, mapped_value);
                         }
-                    } else if resolve_additional_properties(mapper).is_some() {
-                        result.insert(key.clone(), value.clone());
+                    }
+                }
+                if resolve_additional_properties(mapper).is_some() {
+                    for (key, value) in object {
+                        if !properties.contains_key(key) {
+                            result.insert(key.clone(), value.clone());
+                        }
                     }
                 }
                 serde_json::Value::Object(result)
@@ -429,7 +436,7 @@ fn map_sequence_elements(value: &serde_json::Value, mapper: &Mapper) -> serde_js
     }
 }
 
-fn resolve_model_properties(mapper: &Mapper) -> Option<&BTreeMap<String, Mapper>> {
+fn resolve_model_properties(mapper: &Mapper) -> Option<&IndexMap<String, Mapper>> {
     use crate::generated::artifacts::mappers::get_mapper;
     if !mapper.r#type.modelProperties.is_empty() {
         Some(&mapper.r#type.modelProperties)
@@ -473,4 +480,109 @@ fn ensure_rfc1123(value: &GeneratedValue) -> GeneratedValue {
         }
     }
     value.clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use azurite_common::logger::Logger;
+    use serde_json::json;
+
+    use crate::generated::artifacts::models::{GeneratedBody, GeneratedObject, GeneratedResponse};
+    use crate::generated::artifacts::operation::Operation;
+    use crate::generated::artifacts::specifications::specification;
+    use crate::generated::context::Context;
+    use crate::generated::i_response::GeneratedHttpResponse;
+
+    fn string_value(value: &str) -> GeneratedValue {
+        GeneratedValue::String(value.to_string())
+    }
+
+    fn assert_xml_order(body: &str, first: &str, second: &str) {
+        let first_index = body.find(first).unwrap();
+        let second_index = body.find(second).unwrap();
+        assert!(first_index < second_index, "{body}");
+    }
+
+    #[tokio::test]
+    async fn service_get_properties_xml_matches_typescript_order() {
+        let context = Context::default();
+        let mut response = GeneratedResponse::new(200);
+        response.insert_field("cors", GeneratedValue::Array(Vec::new()));
+        response.insert_field(
+            "minuteMetrics",
+            GeneratedValue::from(json!({
+                "Enabled": false,
+                "RetentionPolicy": { "Enabled": false },
+                "Version": "1.0"
+            })),
+        );
+        response.insert_field(
+            "logging",
+            GeneratedValue::from(json!({
+                "Delete": true,
+                "Read": true,
+                "RetentionPolicy": { "Enabled": false },
+                "Version": "1.0",
+                "Write": true
+            })),
+        );
+        response.insert_field(
+            "hourMetrics",
+            GeneratedValue::from(json!({
+                "Enabled": false,
+                "RetentionPolicy": { "Enabled": false },
+                "Version": "1.0"
+            })),
+        );
+        let spec = specification(Operation::Service_GetProperties).unwrap();
+        let mut http_response = GeneratedHttpResponse::default();
+        let logger = Logger::default();
+
+        serialize(&context, &mut http_response, spec, &response, &logger)
+            .await
+            .unwrap();
+
+        let body = http_response.bodyStream.text();
+        assert_xml_order(&body, "<Logging>", "<HourMetrics>");
+        assert_xml_order(&body, "<HourMetrics>", "<MinuteMetrics>");
+        assert_xml_order(&body, "<MinuteMetrics>", "<Cors");
+    }
+
+    #[tokio::test]
+    async fn table_get_access_policy_xml_matches_typescript_order() {
+        let context = Context::default();
+        let mut response = GeneratedResponse::new(200);
+        response.body = Some(GeneratedBody::Value(GeneratedValue::Array(vec![
+            GeneratedValue::Object(GeneratedObject::from([
+                (
+                    "accessPolicy".to_string(),
+                    GeneratedValue::Object(GeneratedObject::from([
+                        (
+                            "start".to_string(),
+                            string_value("2017-12-31T11:22:33.4560000Z"),
+                        ),
+                        (
+                            "expiry".to_string(),
+                            string_value("2018-12-31T11:22:33.4560000Z"),
+                        ),
+                        ("permission".to_string(), string_value("raup")),
+                    ])),
+                ),
+                ("id".to_string(), string_value("policy1")),
+            ])),
+        ])));
+        let spec = specification(Operation::Table_GetAccessPolicy).unwrap();
+        let mut http_response = GeneratedHttpResponse::default();
+        let logger = Logger::default();
+
+        serialize(&context, &mut http_response, spec, &response, &logger)
+            .await
+            .unwrap();
+
+        let body = http_response.bodyStream.text();
+        assert_xml_order(&body, "<Id>policy1</Id>", "<AccessPolicy>");
+        assert_xml_order(&body, "<Start>", "<Expiry>");
+        assert_xml_order(&body, "<Expiry>", "<Permission>");
+    }
 }

@@ -327,3 +327,27 @@ TypeScript has two error paths for 400-level errors:
 **Status:** COMPLETED - Traffic replay failures #5750 and #5862 should now match TS behavior
 
 **Last Updated:** 2026-03-17T18:00:00Z
+
+## Session: 2026-03-17 Cross-Service XML Ordering Parity
+
+**Task:** Restore TypeScript XML element ordering parity for Rust table/blob/queue serializers and match xml2js-style error body formatting.
+
+**Work Completed:**
+- Replaced order-destroying generated object maps with `IndexMap` in blob, queue, and table generated models.
+- Updated table XML serialization to walk mapper properties in mapper-definition order, then append extra properties.
+- Added fallback lookup so serializer accepts either model-property keys or already-mapped XML keys when nested service-property objects still arrive in PascalCase.
+- Filled the table nested mapper registry needed for `Logging`, `Metrics`, `RetentionPolicy`, `SignedIdentifier`, and related XML shapes.
+- Pretty-printed StorageError XML bodies in blob, queue, and table to match `xml2js.Builder()` output.
+- Added parity coverage for blob/table ACL ordering, table service-properties ordering, and error XML formatting.
+
+**Validation:**
+- `cd rust && cargo test -q` ✅
+- `cd rust && cargo clippy --all-targets` ✅
+- `cd rust && cargo fmt` ✅
+
+**Learning:**
+- **L-XML-Order-Comes-From-Two-Sources:** TS XML parity depends on both runtime object insertion order and mapper-definition order. Fixing only one still allows drift, and table additionally needed mapper-name fallback because some nested service-property objects are normalized with XML-facing PascalCase keys before serialization.
+
+**Status:** COMPLETED — cross-service XML ordering and error formatting now match TypeScript behavior more closely.
+
+**Last Updated:** 2026-03-17T22:30:47Z

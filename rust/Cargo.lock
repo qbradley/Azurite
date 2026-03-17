@@ -444,6 +444,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "indexmap",
  "pretty_assertions",
  "quick-xml 0.37.5",
  "regex",

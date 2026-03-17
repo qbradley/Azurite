@@ -108,8 +108,8 @@ impl IServiceHandler for ServiceHandler {
         if let Some(body) = context.request().and_then(|request| request.getBody()) {
             let parsed_body = parseXML(&body, false).unwrap_or(Value::Null);
             if parsed_body.get("cors").is_none() && parsed_body.get("Cors").is_none() {
-                storageServiceProperties.remove("cors");
-                storageServiceProperties.remove("Cors");
+                storageServiceProperties.shift_remove("cors");
+                storageServiceProperties.shift_remove("Cors");
             }
         }
 
@@ -384,7 +384,7 @@ fn normalize_cors_rule(rule: &mut GeneratedObject) {
 
 /// Unwrap the XML-deserialized CORS wrapper into a flat array.
 fn normalize_cors_property(properties: &mut GeneratedObject) {
-    let cors_val = match properties.remove("cors") {
+    let cors_val = match properties.shift_remove("cors") {
         Some(v) => v,
         None => return,
     };
@@ -393,8 +393,8 @@ fn normalize_cors_property(properties: &mut GeneratedObject) {
         GeneratedValue::Array(_) => cors_val,
         GeneratedValue::Object(mut obj) => {
             let inner = obj
-                .remove("CorsRule")
-                .or_else(|| obj.remove("corsRule"))
+                .shift_remove("CorsRule")
+                .or_else(|| obj.shift_remove("corsRule"))
                 .unwrap_or(GeneratedValue::Array(Vec::new()));
             match inner {
                 GeneratedValue::Array(arr) => GeneratedValue::Array(arr),
@@ -418,7 +418,7 @@ fn rename_key(object: &mut GeneratedObject, from: &str, to: &str) {
     if object.contains_key(to) {
         return;
     }
-    if let Some(value) = object.remove(from) {
+    if let Some(value) = object.shift_remove(from) {
         object.insert(to.to_string(), value);
     }
 }

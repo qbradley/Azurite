@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
-
 use azurite_blob::errors::StorageError;
-use azurite_blob::generated::artifacts::models::{GeneratedValue, LeaseAccessConditions};
+use azurite_blob::generated::artifacts::models::{
+    GeneratedObject, GeneratedValue, LeaseAccessConditions,
+};
 use azurite_blob::generated::context::Context;
 use azurite_blob::lease::i_lease_state::{LeaseDurationType, LeaseStateType, LeaseStatusType};
 use azurite_blob::lease::lease_available_state::LeaseAvailableState;
@@ -152,7 +152,7 @@ fn lease_access_conditions(lease_id: Option<&str>) -> LeaseAccessConditions {
     conditions
 }
 
-fn string_prop(properties: &BTreeMap<String, GeneratedValue>, key: &str) -> Option<String> {
+fn string_prop(properties: &GeneratedObject, key: &str) -> Option<String> {
     properties.get(key).and_then(GeneratedValue::as_string)
 }
 

@@ -204,7 +204,7 @@ impl IBlobHandler for BlobHandler {
             }
 
             // Remap properties keys to match response headersMapper field names
-            if let Some(v) = response.fields.remove("etag") {
+            if let Some(v) = response.fields.shift_remove("etag") {
                 response.insert_field("eTag", v);
             }
 
@@ -1351,7 +1351,7 @@ impl BlobHandler {
         }
 
         // Remap properties keys to match response headersMapper field names
-        if let Some(v) = response.fields.remove("etag") {
+        if let Some(v) = response.fields.shift_remove("etag") {
             response.insert_field("eTag", v);
         }
 
@@ -1373,7 +1373,7 @@ impl BlobHandler {
         }
         // Remove the contentMD5 that was spread from blob properties —
         // we only return it conditionally based on range/header logic above.
-        response.fields.remove("contentMD5");
+        response.fields.shift_remove("contentMD5");
         if let Some(md5) = response_content_md5 {
             response.insert_field("contentMD5", string_value(md5));
         }
@@ -1536,7 +1536,7 @@ impl BlobHandler {
         }
 
         // Remap properties keys to match response headersMapper field names
-        if let Some(v) = response.fields.remove("etag") {
+        if let Some(v) = response.fields.shift_remove("etag") {
             response.insert_field("eTag", v);
         }
 
@@ -1557,7 +1557,7 @@ impl BlobHandler {
         }
         // Remove the contentMD5 that was spread from blob properties —
         // we only return it conditionally based on range/header logic above.
-        response.fields.remove("contentMD5");
+        response.fields.shift_remove("contentMD5");
         if let Some(md5) = response_content_md5 {
             response.insert_field("contentMD5", string_value(md5));
         }
@@ -1872,7 +1872,7 @@ fn normalize_tags_to_model(tags: &GeneratedObject) -> GeneratedObject {
         return tags.clone();
     }
     let normalized = normalize_blob_tags_for_response(Some(tags));
-    let mut result = BTreeMap::new();
+    let mut result = GeneratedObject::new();
     result.insert("blobTagSet".to_string(), normalized);
     result
 }
@@ -1922,7 +1922,7 @@ fn normalize_blob_tags_for_response(tags: Option<&GeneratedObject>) -> Generated
             let key = extract_text_value(obj, "Key").or_else(|| extract_text_value(obj, "key"));
             let value =
                 extract_text_value(obj, "Value").or_else(|| extract_text_value(obj, "value"));
-            let mut tag = BTreeMap::new();
+            let mut tag = GeneratedObject::new();
             tag.insert("key".to_string(), GeneratedValue::String(key?));
             tag.insert(
                 "value".to_string(),

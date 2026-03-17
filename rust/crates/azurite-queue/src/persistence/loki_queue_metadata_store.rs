@@ -229,7 +229,7 @@ impl IQueueMetadataStore for LokiQueueMetadataStore {
             .entry(updateProperties.accountName.clone())
             .or_insert_with(|| ServicePropertiesModel {
                 accountName: updateProperties.accountName.clone(),
-                properties: BTreeMap::new(),
+                properties: Default::default(),
             });
 
         entry.properties.extend(updateProperties.properties);

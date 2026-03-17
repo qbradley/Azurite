@@ -1,8 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    path::Path,
-    sync::LazyLock,
-};
+use std::{collections::HashMap, path::Path, sync::LazyLock};
 
 use azurite_common::utils::utils::computeHMACSHA256;
 use regex::Regex;
@@ -276,7 +272,7 @@ fn containsInvalidTagCharacter(s: &str) -> bool {
 
 #[allow(non_snake_case)]
 fn createBlobTag(key: &str, value: &str) -> BlobTag {
-    BTreeMap::from([
+    BlobTag::from([
         ("key".to_string(), GeneratedValue::String(key.to_string())),
         (
             "value".to_string(),
@@ -287,7 +283,7 @@ fn createBlobTag(key: &str, value: &str) -> BlobTag {
 
 #[allow(non_snake_case)]
 fn createBlobTags(blobTagSet: Vec<BlobTag>) -> BlobTags {
-    BTreeMap::from([(
+    BlobTags::from([(
         "blobTagSet".to_string(),
         GeneratedValue::Array(blobTagSet.into_iter().map(GeneratedValue::Object).collect()),
     )])

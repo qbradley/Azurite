@@ -189,7 +189,7 @@ fn assert_storage_error_case(case: FactoryCase) {
     // L-XML2JS-Declaration-Parity: xml2js.Builder emits XML declaration
     assert!(
         body.starts_with(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Error><Code>"
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Error>\n  <Code>"
         ) && body.contains(&format!("<Code>{}</Code>", escape(case.code))),
         "{} body should start with XML declaration and contain code: {body}",
         case.name
@@ -462,7 +462,7 @@ async fn blob_query_defaults_to_bug_for_bug_compatibility_mode() {
     context.setContextId(Some(REQUEST_ID.to_string()));
 
     let err = handler
-        .query(BTreeMap::new(), context)
+        .query(Default::default(), context)
         .await
         .expect_err("Blob_Query should fail");
     let middleware_error = err
@@ -482,7 +482,7 @@ async fn blob_query_returns_not_implemented_when_bug_for_bug_compatibility_is_di
     context.insertExtra(BUG_FOR_BUG_COMPATIBILITY_KEY, GeneratedValue::Bool(false));
 
     let err = handler
-        .query(BTreeMap::new(), context)
+        .query(Default::default(), context)
         .await
         .expect_err("Blob_Query should fail");
     let not_implemented = err

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
@@ -856,7 +856,7 @@ fn assert_storage_error(error: &StorageError, status: u16, code: &str, message: 
 }
 
 fn access_policy(permission: &str, start: &str, expiry: &str) -> AccessPolicy {
-    BTreeMap::from([
+    AccessPolicy::from([
         (
             String::from("permission"),
             GeneratedValue::String(permission.to_owned()),
@@ -873,7 +873,7 @@ fn access_policy(permission: &str, start: &str, expiry: &str) -> AccessPolicy {
 }
 
 fn signed_identifier(id: &str, access_policy: AccessPolicy) -> SignedIdentifier {
-    BTreeMap::from([
+    SignedIdentifier::from([
         (String::from("id"), GeneratedValue::String(id.to_owned())),
         (
             String::from("accessPolicy"),
@@ -883,7 +883,7 @@ fn signed_identifier(id: &str, access_policy: AccessPolicy) -> SignedIdentifier 
 }
 
 fn public_access_response(public_access: &str) -> GetContainerAccessPolicyResponse {
-    let properties: ContainerProperties = BTreeMap::from([(
+    let properties: ContainerProperties = ContainerProperties::from([(
         String::from("publicAccess"),
         GeneratedValue::String(public_access.to_owned()),
     )]);
@@ -1460,7 +1460,7 @@ async fn blob_sas_authenticator_uses_saved_access_policy_identifier() {
             ACCOUNT,
             CONTAINER,
             Ok(Some(GetContainerAccessPolicyResponse {
-                properties: BTreeMap::new(),
+                properties: Default::default(),
                 containerAcl: Some(vec![signed_identifier(
                     "policy-id",
                     access_policy("r", far_past(), far_future()),

@@ -13,6 +13,7 @@ base64 = "0.22"
 bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
+indexmap.workspace = true
 regex = "1.10"
 quick-xml.workspace = true
 serde.workspace = true

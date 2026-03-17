@@ -35,21 +35,21 @@ impl<'a> ILeaseSyncer<BlobModel> for BlobWriteLeaseSyncer<'a> {
                 GeneratedValue::String(v.clone()),
             );
         } else {
-            self.blob.properties.remove("leaseDuration");
+            self.blob.properties.shift_remove("leaseDuration");
         }
         if let Some(v) = &lease.leaseState {
             self.blob
                 .properties
                 .insert("leaseState".to_string(), GeneratedValue::String(v.clone()));
         } else {
-            self.blob.properties.remove("leaseState");
+            self.blob.properties.shift_remove("leaseState");
         }
         if let Some(v) = &lease.leaseStatus {
             self.blob
                 .properties
                 .insert("leaseStatus".to_string(), GeneratedValue::String(v.clone()));
         } else {
-            self.blob.properties.remove("leaseStatus");
+            self.blob.properties.shift_remove("leaseStatus");
         }
 
         let is_expired_or_broken = lease.leaseState.as_deref() == Some(LeaseStateType::Expired)
@@ -64,7 +64,7 @@ impl<'a> ILeaseSyncer<BlobModel> for BlobWriteLeaseSyncer<'a> {
                 "leaseStatus".to_string(),
                 GeneratedValue::String(LeaseStatusType::Unlocked.to_string()),
             );
-            self.blob.properties.remove("leaseDuration");
+            self.blob.properties.shift_remove("leaseDuration");
             self.blob.leaseDurationSeconds = None;
             self.blob.leaseId = None;
             self.blob.leaseExpireTime = None;
@@ -82,21 +82,21 @@ impl<'a> ILeaseSyncer<BlobModel> for BlobWriteLeaseSyncer<'a> {
                     GeneratedValue::String(v.clone()),
                 );
             } else {
-                self.blob.properties.remove("leaseDuration");
+                self.blob.properties.shift_remove("leaseDuration");
             }
             if let Some(v) = &lease.leaseState {
                 self.blob
                     .properties
                     .insert("leaseState".to_string(), GeneratedValue::String(v.clone()));
             } else {
-                self.blob.properties.remove("leaseState");
+                self.blob.properties.shift_remove("leaseState");
             }
             if let Some(v) = &lease.leaseStatus {
                 self.blob
                     .properties
                     .insert("leaseStatus".to_string(), GeneratedValue::String(v.clone()));
             } else {
-                self.blob.properties.remove("leaseStatus");
+                self.blob.properties.shift_remove("leaseStatus");
             }
         }
 

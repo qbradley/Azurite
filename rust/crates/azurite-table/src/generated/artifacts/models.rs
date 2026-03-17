@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use indexmap::IndexMap;
+
 use crate::generated::i_request::GeneratedReadableStream;
 use crate::generated::i_response::ResponseHeaderValue;
 
@@ -14,7 +16,7 @@ pub enum GeneratedValue {
     Stream(GeneratedReadableStream),
 }
 
-pub type GeneratedObject = BTreeMap<String, GeneratedValue>;
+pub type GeneratedObject = IndexMap<String, GeneratedValue>;
 
 #[derive(Debug, Clone)]
 pub enum GeneratedBody {

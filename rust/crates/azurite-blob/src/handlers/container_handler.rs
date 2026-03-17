@@ -855,7 +855,7 @@ async fn list_blobs(
                 })
                 .unwrap_or(0);
             if !includeTags {
-                value.remove("blobTags");
+                value.shift_remove("blobTags");
             }
             if let Some(GeneratedValue::Object(properties)) = value.get_mut("properties") {
                 if let Some(etag) = properties.get("etag").and_then(GeneratedValue::as_string) {
@@ -869,15 +869,15 @@ async fn list_blobs(
                     .and_then(GeneratedValue::as_bool)
                     .unwrap_or(false);
                 if !access_tier_inferred {
-                    properties.remove("accessTierInferred");
+                    properties.shift_remove("accessTierInferred");
                 }
             }
             if !includeMetadata {
-                value.remove("metadata");
+                value.shift_remove("metadata");
             }
             if let Some(deleted) = value.get("deleted").and_then(GeneratedValue::as_bool) {
                 if !deleted {
-                    value.remove("deleted");
+                    value.shift_remove("deleted");
                 }
             }
             if value
@@ -886,7 +886,7 @@ async fn list_blobs(
                 .unwrap_or_default()
                 .is_empty()
             {
-                value.remove("snapshot");
+                value.shift_remove("snapshot");
             }
             GeneratedValue::Object(value)
         })

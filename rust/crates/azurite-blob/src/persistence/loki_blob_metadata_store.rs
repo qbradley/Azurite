@@ -95,7 +95,7 @@ fn set_value(map: &mut GeneratedObject, key: &str, value: Option<GeneratedValue>
             map.insert(key.to_string(), value);
         }
         None => {
-            map.remove(key);
+            map.shift_remove(key);
         }
     }
 }
@@ -1432,7 +1432,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
                     "leaseStatus".to_string(),
                     GeneratedValue::String("unlocked".to_string()),
                 );
-                blob.properties.remove("leaseDuration");
+                blob.properties.shift_remove("leaseDuration");
                 blob.leaseId = None;
                 blob.leaseExpireTime = None;
                 blob.leaseDurationSeconds = None;
@@ -1516,9 +1516,9 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         snapshot_blob.leaseExpireTime = None;
         snapshot_blob.leaseDurationSeconds = None;
         snapshot_blob.leaseBreakTime = None;
-        snapshot_blob.properties.remove("leaseDuration");
-        snapshot_blob.properties.remove("leaseState");
-        snapshot_blob.properties.remove("leaseStatus");
+        snapshot_blob.properties.shift_remove("leaseDuration");
+        snapshot_blob.properties.shift_remove("leaseState");
+        snapshot_blob.properties.shift_remove("leaseStatus");
 
         // Insert snapshot
         let mut blobs = self.blobs_collection.write().unwrap();
@@ -2406,7 +2406,7 @@ impl IBlobMetadataStore for LokiBlobMetadataStore {
         // Remap sourceIf* → if* but skip ifTags for copyFromURL (TS behavior)
         let remapped_source_conditions = source_modified_access_conditions.as_ref().map(|sc| {
             let mut remapped = remap_source_conditions(sc);
-            remapped.remove("ifTags"); // Storage service ignores x-ms-source-if-tags for copyFromUrl
+            remapped.shift_remove("ifTags"); // Storage service ignores x-ms-source-if-tags for copyFromUrl
             remapped
         });
         validate_read_conditions(

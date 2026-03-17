@@ -26,7 +26,7 @@ impl<'a> ILeaseSyncer<ContainerModel> for ContainerLeaseSyncer<'a> {
                 GeneratedValue::String(v.clone()),
             );
         } else {
-            self.container.properties.remove("leaseDuration");
+            self.container.properties.shift_remove("leaseDuration");
         }
 
         if let Some(v) = &lease.leaseState {
@@ -34,7 +34,7 @@ impl<'a> ILeaseSyncer<ContainerModel> for ContainerLeaseSyncer<'a> {
                 .properties
                 .insert("leaseState".to_string(), GeneratedValue::String(v.clone()));
         } else {
-            self.container.properties.remove("leaseState");
+            self.container.properties.shift_remove("leaseState");
         }
 
         if let Some(v) = &lease.leaseStatus {
@@ -42,7 +42,7 @@ impl<'a> ILeaseSyncer<ContainerModel> for ContainerLeaseSyncer<'a> {
                 .properties
                 .insert("leaseStatus".to_string(), GeneratedValue::String(v.clone()));
         } else {
-            self.container.properties.remove("leaseStatus");
+            self.container.properties.shift_remove("leaseStatus");
         }
 
         self.container.clone()

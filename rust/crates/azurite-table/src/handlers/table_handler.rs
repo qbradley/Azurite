@@ -198,7 +198,7 @@ impl TableHandler {
     }
 
     fn remove_etag_property(&self, properties: &mut GeneratedObject) {
-        properties.remove("odata.etag");
+        properties.shift_remove("odata.etag");
     }
 
     fn build_normalized_entity(

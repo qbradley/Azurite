@@ -929,7 +929,7 @@ impl ITableMetadataStore for LokiTableMetadataStore {
                             current.properties.insert(metadata_key, metadata.clone());
                         }
                         None => {
-                            current.properties.remove(&metadata_key);
+                            current.properties.shift_remove(&metadata_key);
                         }
                     }
                 }
@@ -1220,7 +1220,7 @@ impl LokiTableMetadataStore {
                         merged.properties.insert(metadata_key, metadata.clone());
                     }
                     None => {
-                        merged.properties.remove(&metadata_key);
+                        merged.properties.shift_remove(&metadata_key);
                     }
                 }
             }

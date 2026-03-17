@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use azurite_blob::errors::StorageErrorFactory;
 use azurite_blob::generated::artifacts::mappers::{Mapper, MapperType};
 use azurite_blob::generated::artifacts::models::{
-    self, GeneratedBody, GeneratedResponse, GeneratedValue,
+    self, GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
 };
 use azurite_blob::generated::artifacts::operation::{Operation, ALL_OPERATIONS};
 use azurite_blob::generated::artifacts::parameters::{OperationParameter, ParameterPath};
@@ -139,7 +139,7 @@ struct BlockBlobHandlerHarness {
 fn recorded_response(method: &str) -> GeneratedResponse {
     let mut response = GeneratedResponse::new(200);
     response.body = Some(GeneratedBody::Value(GeneratedValue::Object(
-        BTreeMap::from([(
+        GeneratedObject::from([(
             String::from("handlerMethod"),
             GeneratedValue::String(method.to_owned()),
         )]),
@@ -1112,7 +1112,7 @@ fn context_holder_shares_state_by_path_and_isolates_other_paths() {
     context_a.setDispatchPattern(Some(String::from("/demo")));
     context_a.setContextId(Some(String::from("ctx-1")));
     context_a.setStartTime(Some(Utc::now()));
-    context_a.setHandlerParameters(Some(BTreeMap::from([(
+    context_a.setHandlerParameters(Some(GeneratedObject::from([(
         String::from("flag"),
         GeneratedValue::Bool(true),
     )])));
@@ -1533,7 +1533,7 @@ async fn serializer_emits_json_headers_and_body_in_wire_format() {
     handler_response.insert_field("etag", GeneratedValue::String(String::from("\"etag-1\"")));
     handler_response.insert_field(
         "metadata",
-        GeneratedValue::Object(BTreeMap::from([
+        GeneratedValue::Object(GeneratedObject::from([
             (
                 String::from("owner"),
                 GeneratedValue::String(String::from("alice")),
@@ -1542,7 +1542,7 @@ async fn serializer_emits_json_headers_and_body_in_wire_format() {
         ])),
     );
     handler_response.body = Some(GeneratedBody::Value(GeneratedValue::Object(
-        BTreeMap::from([
+        GeneratedObject::from([
             (
                 String::from("name"),
                 GeneratedValue::String(String::from("demo")),
@@ -1808,7 +1808,7 @@ fn error_middleware_writes_structured_wire_errors_and_end_finishes_the_response(
         ResponseHeaderValue::from("BlobAlreadyExists"),
     )]));
     error.contentType = Some(String::from("application/json"));
-    error.body = Some(GeneratedValue::Object(BTreeMap::from([(
+    error.body = Some(GeneratedValue::Object(GeneratedObject::from([(
         String::from("code"),
         GeneratedValue::String(String::from("BlobAlreadyExists")),
     )])));

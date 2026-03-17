@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use indexmap::IndexMap;
 
 use chrono::DateTime;
@@ -320,7 +318,10 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                 // Iterate over mapper properties in definition order (from JSON metadata)
                 // to preserve Azure's required XML element ordering.
                 for (key, property_mapper) in properties {
-                    if let Some(value) = object.get(key) {
+                    if let Some(value) = object
+                        .get(key)
+                        .or_else(|| mapped_name(property_mapper).and_then(|name| object.get(name)))
+                    {
                         let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
                             && property_mapper.xmlElementName.is_some()
                             && !property_mapper.xmlIsWrapped;
@@ -466,7 +467,7 @@ fn set_nested_value(
         }
         let entry = parameters
             .entry(first.clone())
-            .or_insert_with(|| GeneratedValue::Object(BTreeMap::new()));
+            .or_insert_with(|| GeneratedValue::Object(IndexMap::new()));
         if let GeneratedValue::Object(child) = entry {
             set_nested_value(child, rest, parameterValue);
         }
@@ -500,7 +501,9 @@ fn ensure_rfc1123(value: &GeneratedValue) -> GeneratedValue {
 mod tests {
     use super::{apply_model_mapping, serialize};
     use crate::generated::artifacts::mappers::get_mapper;
-    use crate::generated::artifacts::models::{GeneratedResponse, GeneratedValue};
+    use crate::generated::artifacts::models::{
+        GeneratedBody, GeneratedObject, GeneratedResponse, GeneratedValue,
+    };
     use crate::generated::artifacts::operation::Operation;
     use crate::generated::artifacts::specifications::specification;
     use crate::generated::context::Context;
@@ -517,6 +520,16 @@ mod tests {
         fn info(&self, _message: &str, _context_id: Option<&str>) {}
         fn verbose(&self, _message: &str, _context_id: Option<&str>) {}
         fn debug(&self, _message: &str, _context_id: Option<&str>) {}
+    }
+
+    fn string_value(value: &str) -> GeneratedValue {
+        GeneratedValue::String(value.to_string())
+    }
+
+    fn assert_xml_order(body: &str, first: &str, second: &str) {
+        let first_index = body.find(first).unwrap();
+        let second_index = body.find(second).unwrap();
+        assert!(first_index < second_index, "{body}");
     }
 
     #[test]
@@ -610,6 +623,43 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[tokio::test]
+    async fn container_get_access_policy_xml_matches_typescript_order() {
+        let context = Context::from_holder(Context::new_holder(), "test", None, None);
+        let mut response = GeneratedResponse::new(200);
+        response.body = Some(GeneratedBody::Value(GeneratedValue::Array(vec![
+            GeneratedValue::Object(GeneratedObject::from([
+                (
+                    "accessPolicy".to_string(),
+                    GeneratedValue::Object(GeneratedObject::from([
+                        ("permission".to_string(), string_value("raup")),
+                        (
+                            "expiry".to_string(),
+                            string_value("2018-12-31T11:22:33.4560000Z"),
+                        ),
+                        (
+                            "start".to_string(),
+                            string_value("2017-12-31T11:22:33.4560000Z"),
+                        ),
+                    ])),
+                ),
+                ("id".to_string(), string_value("policy1")),
+            ])),
+        ])));
+        let spec = specification(Operation::Container_GetAccessPolicy).unwrap();
+        let mut http_response = GeneratedHttpResponse::default();
+        let logger = TestLogger;
+
+        serialize(&context, &mut http_response, spec, &response, &logger)
+            .await
+            .unwrap();
+
+        let body = http_response.getBodyStream().text();
+        assert_xml_order(&body, "<Id>policy1</Id>", "<AccessPolicy>");
+        assert_xml_order(&body, "<Start>", "<Expiry>");
+        assert_xml_order(&body, "<Expiry>", "<Permission>");
     }
 
     #[tokio::test]

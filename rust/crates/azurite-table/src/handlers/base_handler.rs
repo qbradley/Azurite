@@ -206,7 +206,7 @@ pub(crate) fn query_options_from_object(
 
 pub(crate) fn rename_key(object: &mut GeneratedObject, from: &str, to: &str) {
     if !object.contains_key(to) {
-        if let Some(value) = object.remove(from) {
+        if let Some(value) = object.shift_remove(from) {
             object.insert(to.to_string(), value);
         }
     }

@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use chrono::DateTime;
 use indexmap::IndexMap;
 
@@ -320,7 +318,10 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
             if let Some(properties) = resolve_model_properties(mapper) {
                 let mut result = serde_json::Map::new();
                 for (key, property_mapper) in properties {
-                    if let Some(value) = object.get(key) {
+                    if let Some(value) = object
+                        .get(key)
+                        .or_else(|| mapped_name(property_mapper).and_then(|name| object.get(name)))
+                    {
                         let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
                             && property_mapper.xmlElementName.is_some()
                             && !property_mapper.xmlIsWrapped;
@@ -450,7 +451,7 @@ fn set_nested_value(
         }
         let entry = parameters
             .entry(first.clone())
-            .or_insert_with(|| GeneratedValue::Object(BTreeMap::new()));
+            .or_insert_with(|| GeneratedValue::Object(IndexMap::new()));
         if let GeneratedValue::Object(child) = entry {
             set_nested_value(child, rest, parameterValue);
         }
@@ -481,7 +482,7 @@ mod tests {
     use super::*;
     use azurite_common::logger::Logger;
 
-    use crate::generated::artifacts::models::{GeneratedBody, GeneratedResponse};
+    use crate::generated::artifacts::models::{GeneratedBody, GeneratedObject, GeneratedResponse};
     use crate::generated::artifacts::operation::Operation;
     use crate::generated::artifacts::specifications::specification;
     use crate::generated::context::Context;
@@ -496,10 +497,10 @@ mod tests {
         let context = Context::default();
         let mut response = GeneratedResponse::new(200);
         response.body = Some(GeneratedBody::Value(GeneratedValue::Array(vec![
-            GeneratedValue::Object(BTreeMap::from([
+            GeneratedValue::Object(GeneratedObject::from([
                 (
                     "accessPolicy".to_string(),
-                    GeneratedValue::Object(BTreeMap::from([
+                    GeneratedValue::Object(GeneratedObject::from([
                         ("permission".to_string(), string_value("raup")),
                         (
                             "expiry".to_string(),
@@ -543,10 +544,10 @@ mod tests {
         response.insert_field("maxResults", GeneratedValue::Number(1.0));
         response.insert_field(
             "queueItems",
-            GeneratedValue::Array(vec![GeneratedValue::Object(BTreeMap::from([
+            GeneratedValue::Array(vec![GeneratedValue::Object(GeneratedObject::from([
                 (
                     "metadata".to_string(),
-                    GeneratedValue::Object(BTreeMap::from([(
+                    GeneratedValue::Object(GeneratedObject::from([(
                         "key".to_string(),
                         string_value("val"),
                     )])),
