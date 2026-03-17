@@ -321,3 +321,33 @@ Comprehensive validation sweep of the Azurite Rust port confirms all known race 
 5. ⚠️ Document 8 known SAS cross-account limitations for users (informational)
 
 **Verdict:** ✅ **APPROVED FOR PRODUCTION DEPLOYMENT** with high confidence.
+
+---
+
+## D-011: XML Ordering & Replay Analysis (Aragorn — Bug Fix Pass)
+**Status:** ACTIVE
+
+### XML Ordering Fix (commit eca23938)
+Fixed XML element ordering in conditional request response headers. Azure SDK validates the order of XML child elements in responses; out-of-order elements caused unexpected 400s or deserialization failures in SDK clients.
+
+**Root Cause:** Generated serialization code was not respecting element ordering constraints from the TypeScript implementation.
+
+**Solution:** Enforce element ordering rules at serialization time to match TS behavior.
+
+### Traffic Replay Validation
+Post-fix replay analysis shows 99.6% pass rate (11,173/11,217 successful replays).
+
+**Remaining Failures:** 44 exchanges across blob, queue, and table operations.
+
+**Failure Categories:**
+1. **7 conditional header evaluation bugs** — Status code mismatches on If-Match/If-Modified-Since
+2. **Lease operation parity issues** — State transition response codes not matching Azure SDK
+3. **Edge case header ordering** — Additional XML ordering edge cases in nested responses
+
+### Impact
+- XML fix improved from ~80% pass rate to 99.6%
+- Remaining 44 failures narrow to specific conditional/lease patterns
+- Estimated 2-3 more bug fixes to reach >99.9% (production-ready threshold)
+
+### Follow-up
+Aragorn assigned to fix 7 identified conditional header bugs. Expected outcome: move from 44 failures to <10 failures.
