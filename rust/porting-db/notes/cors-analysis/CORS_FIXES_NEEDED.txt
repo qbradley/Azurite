@@ -1,0 +1,270 @@
+═══════════════════════════════════════════════════════════════════════════════
+AZURITE CORS FIXES NEEDED - RUST IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════════════════
+
+CRITICAL ISSUE #1: Middleware Execution Order
+──────────────────────────────────────────────
+FILE: rust/crates/azurite-blob/src/blob_request_listener_factory.rs
+LOCATION: RequestListenerState::handle_request() lines 214-279
+
+CURRENT (WRONG) ORDER:
+  1. Handler execution (lines 214-220)
+  2. corsErrorRequestMiddleware (lines 222-232)
+  3. corsRequestMiddleware (lines 234-244)
+  4. serializer_middleware() (lines 246-252)
+  5. optionsHandlerMiddleware (lines 254-264)
+  6. error_middleware() (lines 266-274)
+
+REQUIRED (CORRECT) ORDER (per TypeScript):
+  1. Handler execution
+  2. corsErrorRequestMiddleware
+  3. corsRequestMiddleware
+  4. optionsHandlerMiddleware  ← MUST run BEFORE serialization
+  5. serializer_middleware()
+  6. error_middleware()
+
+IMPACT: OPTIONS requests get serialized before optionsHandlerMiddleware can 
+intercept them, making it impossible to set CORS headers properly.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CRITICAL ISSUE #2: blockErrorRequest Logic Bug
+───────────────────────────────────────────────
+FILE: rust/crates/azurite-blob/src/middlewares/preflight_middleware_factory.rs
+LOCATION: apply_cors_request() lines 235-237
+
+BUGGY CODE:
+  if blockErrorRequest && err.is_none() {
+      return None;  // ← WRONG: Drops None error! Should pass through
+  }
+
+ANALYSIS:
+The condition is backwards. When blockErrorRequest=true and err.is_none():
+- We return None (effectively dropping/consuming the error)
+- This means if first CORS middleware succeeds with no error...
+- The error state becomes None
+- Second CORS middleware at line 234 never runs (condition checks pending_error.is_none())
+
+EVIDENCE FROM blob_request_listener_factory.rs:
+  Line 234: if pending_error.is_none() {
+                pending_error = self.corsRequestMiddleware.apply(None, ...)
+  
+This second middleware only runs if no error exists from first one!
+
+COMPARE TO TYPESCRIPT (BlobRequestListenerFactory.ts):
+  app.use(preflightMiddlewareFactory.createCorsRequestMiddleware(
+      this.metadataStore,
+      true   ← blockErrorRequest=true
+  ));
+  app.use(preflightMiddlewareFactory.createCorsRequestMiddleware(
+      this.metadataStore,
+      false  ← blockErrorRequest=false
+  ));
+
+Both run ALWAYS, independently. TypeScript doesn't have this conditional logic.
+
+FIX: 
+Option A - Remove the check entirely:
+  if blockErrorRequest && err.is_none() {
+      return None;
+  }
+  Should be deleted - always return err
+
+Option B - Fix the logic:
+  The pattern seems to want: first pass handles errors, second handles success
+  But implement correctly in blob_request_listener_factory.rs instead
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CRITICAL ISSUE #3: OPTIONS Status Code Not Set in Error Path
+─────────────────────────────────────────────────────────────
+FILE: rust/crates/azurite-blob/src/middlewares/preflight_middleware_factory.rs
+LOCATION: apply_options() line 188 only sets status on success
+
+ISSUE:
+  Line 188: res.setStatusCode(200);  ← Only executed if OPTIONS matched
+  Line 216: Returns error with corsPreflightFailure() 
+           but status code was never set!
+
+Compare TypeScript (line 189):
+  res.setHeader(HeaderConstants.ACCESS_CONTROL_MAX_AGE, ...)
+  No explicit status code set - relies on Express error handling
+  But error is passed via next(error)
+
+EVIDENCE: When OPTIONS request has no matching CORS rules:
+  - apply_options() returns Box::new(corsPreflightFailure(...))
+  - This becomes pending_error in blob_request_listener_factory.rs
+  - Response status code is never explicitly set to 403 (from corsPreflightFailure)
+  - Options handler doesn't handle this path
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SECONDARY ISSUE #1: OPTIONS Request Dispatch
+──────────────────────────────────────────────
+FILE: rust/crates/azurite-blob/src/blob_request_listener_factory.rs
+LOCATION: RequestListenerState::handle_request() line 181
+
+ISSUE:
+  If dispatch_middleware() returns an error for OPTIONS (404 Not Found):
+  - Error flows through CORS middleware
+  - corsErrorRequestMiddleware skips OPTIONS (line 231)
+  - corsRequestMiddleware skips OPTIONS (line 231)
+  - Error is not resolved
+  - Flows to serializer which serializes the 404 error
+  - Only THEN does optionsHandlerMiddleware get a chance
+  - But response is already serialized!
+
+TYPESCRIPT:
+  Express middleware chain automatically continues even without explicit route
+  OPTIONS handler gets to run BEFORE serialization completes
+  Can set proper CORS headers on the error response
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SECONDARY ISSUE #2: OPTIONS Method Dispatch Should Succeed
+────────────────────────────────────────────────────────────
+LOCATION: dispatch_middleware() (generated code)
+
+ISSUE:
+  If there's no explicit handler for OPTIONS method, dispatch fails
+  But OPTIONS is a preflight request - it should always be handled
+  Either:
+  1. Make dispatch_middleware() return success for OPTIONS
+  2. Or make OPTIONS handler run before dispatch validation
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CODE COMPARISON: Wildcard Origin Matching
+──────────────────────────────────────────
+
+TYPESCRIPT (PreflightMiddlewareFactory.ts lines 246-249):
+  for (const corsOrigin of allowedOriginArray) {
+    if (corsOrigin.includes("*")) {
+      return glob(corsOrigin.trim().toLowerCase()).test(
+        origin.trim().toLowerCase()
+      );  ← glob-to-regexp library
+    }
+  }
+
+RUST (preflight_middleware_factory.rs lines 312-320):
+  for corsOrigin in allowedOrigin.split(',') {
+    let corsOrigin = corsOrigin.trim().to_ascii_lowercase();
+    if corsOrigin.contains('*') {
+      if wildcard_regex(&corsOrigin)
+        .map(|regex| regex.is_match(&origin.trim().to_ascii_lowercase()))
+        .unwrap_or(false)  ← regex crate with manual escape
+      {
+        return true;
+      }
+    }
+  }
+
+IMPLEMENTATION DIFFERENCES:
+- TypeScript uses glob-to-regexp npm package
+- Rust uses regex crate with manual: escape → replace(\*) → build regex
+- Should be functionally equivalent
+- Rust version is line-by-line correct
+
+═══════════════════════════════════════════════════════════════════════════════
+
+MISSING: Integration Tests for CORS in Rust
+────────────────────────────────────────────
+
+TypeScript has comprehensive CORS tests:
+  - tests/blob/blobCorsRequest.test.ts (857 lines)
+  - Covers: preflight, wildcard matching, multiple CORS rules, exposed headers
+  - Tests OPTIONS request flow, error cases, header validation
+
+Rust has ONLY:
+  - phase12_middleware_config.rs: test_preflight_middleware_factory_creation()
+    Just checks factory creation, no actual CORS logic testing
+  - No integration tests verifying OPTIONS request flow
+  - No tests for CORS header addition to normal requests
+
+SUGGESTION: Port the TypeScript integration tests to Rust
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SUMMARY OF CHANGES NEEDED
+──────────────────────────
+
+1. [CRITICAL] Move optionsHandlerMiddleware execution to BEFORE serializer
+   - File: blob_request_listener_factory.rs
+   - Change order: after corsRequestMiddleware, before serializer_middleware
+
+2. [CRITICAL] Fix or remove the blockErrorRequest logic in apply_cors_request()
+   - File: preflight_middleware_factory.rs  
+   - Lines 235-237: Remove or invert the condition
+   - Make sure both CORS middleware instances execute
+
+3. [IMPORTANT] Ensure OPTIONS requests get proper error status codes
+   - File: preflight_middleware_factory.rs
+   - apply_options() should set error status code before returning
+
+4. [IMPORTANT] Verify dispatch_middleware() behavior for OPTIONS
+   - Should either handle OPTIONS automatically
+   - Or failing that, OPTIONS handler should run before dispatch validation
+
+5. [NICE TO HAVE] Add comprehensive CORS integration tests in Rust
+   - Port tests from blobCorsRequest.test.ts
+   - Test OPTIONS preflight flow
+   - Test CORS headers on normal requests
+   - Test wildcard matching
+   - Test error cases
+
+═══════════════════════════════════════════════════════════════════════════════
+
+REFERENCE: Complete Call Chain for Successful OPTIONS Preflight Request
+───────────────────────────────────────────────────────────────────────
+
+TYPESCRIPT FLOW:
+  1. OPTIONS /container request arrives
+  2. express app processes middlewares in order
+  3. dispatch_middleware() - doesn't find explicit route, continues
+  4. authenticator - bypasses for OPTIONS
+  5. deserializer - skips for OPTIONS
+  6. handler - might not be called for OPTIONS
+  7. corsRequestMiddleware(true) - skips OPTIONS (line 153-154)
+  8. corsRequestMiddleware(false) - skips OPTIONS (line 153-154)
+  9. serializer - serializes any existing response
+  10. optionsHandlerMiddleware ERROR HANDLER:
+      - Called because no handler matched
+      - method == OPTIONS, so processes it
+      - Validates Origin, Access-Control-Request-Method headers
+      - Checks CORS rules from service properties
+      - Sets response headers and status 200
+      - Calls next() with no error
+  11. errorMiddleware - formats any remaining error
+  12. endMiddleware - finalizes response
+  ✓ Response has CORS headers + 200 status
+
+RUST FLOW (CURRENTLY BROKEN):
+  1. OPTIONS /container request arrives
+  2. internalBlobStorageContextMiddleware() - sets context
+  3. dispatch_middleware() - no route for OPTIONS → returns error
+  4. [error exists at this point]
+  5. strictModelMiddleware - skips (error exists)
+  6. authenticationMiddleware - skips (error exists)
+  7. deserializer - skips (error exists)
+  8. handler - skips (error exists)
+  9. corsErrorRequestMiddleware.apply_cors_request(Some(error), ...):
+     - Line 231: method == OPTIONS, returns Some(error)
+     - Error passes through unchanged
+  10. [error still exists]
+  11. [condition at line 234 is false because error exists]
+  12. corsRequestMiddleware never runs
+  13. serializer_middleware() - serializes the 404 error response
+  14. [response is now serialized with 404 body and error headers]
+  15. optionsHandlerMiddleware.apply_options(error, ...):
+     - Line 117: method == OPTIONS, so continues
+     - Tries to extract Origin, Access-Control-Request-Method
+     - Gets CORS rules from store
+     - Finds a matching rule
+     - Tries to set response headers... but response is already serialized!
+     - Line 213: returns None (success)
+  16. [but pending_error is now None even though response is wrong]
+  17. error_middleware() - doesn't run (no error)
+  18. end_middleware() - finalizes (but response was wrong from step 13)
+  ✗ Response has 404 status, 404 error body, missing CORS headers
+
+═══════════════════════════════════════════════════════════════════════════════

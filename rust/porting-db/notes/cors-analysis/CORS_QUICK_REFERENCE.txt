@@ -1,0 +1,279 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║           AZURITE CORS IMPLEMENTATION - QUICK REFERENCE GUIDE             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+TYPESCRIPT CORS (WORKING) - File Locations
+────────────────────────────────────────────
+1. src/blob/middlewares/PreflightMiddlewareFactory.ts (466 lines)
+   - createOptionsHandlerMiddleware() → handles OPTIONS preflight
+   - createCorsRequestMiddleware() → adds CORS headers to responses
+   - checkOrigin() → wildcard matching using glob-to-regexp
+   - checkMethod() → method matching
+   - checkHeaders() → header matching
+
+2. src/blob/BlobRequestListenerFactory.ts (227 lines)
+   - Line 122-123: Creates PreflightMiddlewareFactory
+   - Lines 192-203: Registers CORS middleware (2x with different blockErrorRequest)
+   - Line 209-212: Registers OPTIONS handler middleware
+   - Middleware order enforced via app.use() calls
+
+3. src/blob/handlers/ServiceHandler.ts
+   - setProperties() → saves CORS rules to store (lines 166-204)
+   - getProperties() → retrieves CORS rules from store (lines 206+)
+   - Default CORS rules: empty array (line 58)
+
+
+RUST CORS (BROKEN) - File Locations & Problems
+────────────────────────────────────────────────
+1. rust/crates/azurite-blob/src/middlewares/preflight_middleware_factory.rs (512 lines)
+   - apply_options() → handles OPTIONS (lines 109-220)
+     ISSUE: receives error as param, executes after serialization
+   
+   - apply_cors_request() → adds CORS headers (lines 222-302)
+     CRITICAL BUG: lines 235-237 drop error on success path!
+   
+   - checkOrigin() → wildcard matching (lines 304-326)
+     Uses regex crate with manual glob conversion
+   
+   - wildcard_regex() → creates regex from glob pattern (lines 500-507)
+
+2. rust/crates/azurite-blob/src/blob_request_listener_factory.rs (500+ lines)
+   - Lines 133-135: Stores middleware references
+   - Lines 222-244: corsErrorRequestMiddleware → corsRequestMiddleware
+     ISSUE #1: Wrong order relative to serializer
+     ISSUE #2: Second middleware conditional (line 234) never executes
+   
+   - Lines 246-252: serializer_middleware() runs
+     ISSUE: Runs BEFORE optionsHandlerMiddleware
+   
+   - Lines 254-264: optionsHandlerMiddleware.apply()
+     ISSUE: Runs AFTER serialization - too late!
+   
+   - Lines 444-449: Instantiates middleware
+
+3. rust/crates/azurite-blob/src/handlers/service_handler.rs
+   - setServiceProperties() → saves (lines 145-154)
+   - getProperties() → retrieves (lines 168-195)
+
+
+EXECUTION ORDER COMPARISON
+──────────────────────────
+
+TypeScript (CORRECT - from BlobRequestListenerFactory.ts):
+  ① Dispatch
+  ② Strict Model Validation
+  ③ Authentication
+  ④ Deserializer
+  ⑤ Handler
+  ⑥ corsRequestMiddleware (blockErrorRequest=true)
+  ⑦ corsRequestMiddleware (blockErrorRequest=false)
+  ⑧ Serializer
+  ⑨ createOptionsHandlerMiddleware ← LAST ERROR HANDLER
+  ⑩ Error Formatter
+  ⑪ End (finalize response)
+
+Rust (WRONG):
+  ① Dispatch
+  ② Strict Model (if present)
+  ③ Authentication
+  ④ Deserializer
+  ⑤ Handler
+  ⑥ corsErrorRequestMiddleware
+  ⑦ corsRequestMiddleware
+  ⑧ Serializer ← RUNS TOO EARLY
+  ⑨ optionsHandlerMiddleware ← RUNS TOO LATE
+  ⑩ Error Formatter
+  ⑪ End
+
+
+KEY DIFFERENCES IN LOGIC
+─────────────────────────
+
+1. CORS Middleware Instance Count:
+   TypeScript: 2 independent instances registered (both run always)
+   Rust: 2 instances, but second only runs if first doesn't error (line 234)
+
+2. OPTIONS Method Handling:
+   TypeScript: 
+     - corsRequestMiddleware skips OPTIONS (line 153-154)
+     - optionsHandlerMiddleware processes OPTIONS (line 37)
+   
+   Rust:
+     - corsErrorRequestMiddleware skips OPTIONS (line 231)
+     - corsRequestMiddleware skips OPTIONS (line 231)
+     - optionsHandlerMiddleware skips non-OPTIONS (line 117)
+     - But runs AFTER serialization
+
+3. Error Propagation:
+   TypeScript:
+     - Each middleware calls next(err) or next()
+     - Express continues pipeline regardless
+     - Error can be intercepted at any point
+   
+   Rust:
+     - Middleware returns Option<BoxedMiddlewareError>
+     - Caller (blob_request_listener_factory) decides whether to continue
+     - Conditional logic at line 234 can break the chain
+
+4. CORS Header Writing:
+   TypeScript:
+     - Sets headers before next() call
+     - Always in memory before serialization
+   
+   Rust:
+     - Sets headers on GeneratedHttpResponse
+     - But if serializer already ran, might be ignored
+
+
+CRITICAL CODE SECTIONS
+──────────────────────
+
+TS: PreflightMiddlewareFactory.ts lines 143-230
+    createCorsRequestMiddleware() - the main CORS logic
+    - Two callsites: blockErrorRequest=true, blockErrorRequest=false
+    - Both execute regardless of error state
+
+RS: preflight_middleware_factory.rs lines 235-237
+    if blockErrorRequest && err.is_none() {
+        return None;  // ← BUG: Drops error
+    }
+    Should not drop error on success path
+
+TS: BlobRequestListenerFactory.ts lines 192-212
+    app.use() chain determines execution order
+    CORS runs BEFORE serializer
+    OPTIONS handler runs AFTER serializer (as error handler)
+
+RS: blob_request_listener_factory.rs lines 222-264
+    Manual if-let chain determines execution order
+    CORS runs BEFORE serializer (correct location)
+    But line 234 condition prevents second CORS from running
+    Serializer (line 248) runs before OPTIONS handler (line 256)
+
+
+WILDCARD ORIGIN MATCHING
+─────────────────────────
+
+Both implementations match `*.contoso.com` against `foo.contoso.com`:
+
+TypeScript approach:
+  1. glob-to-regexp library: `*.contoso.com` → regex
+  2. Case-insensitive test()
+  3. Simple and reliable
+
+Rust approach:
+  1. regex::escape() to escape special chars
+  2. Replace escaped wildcards: `\*` → `.*`
+  3. regex::RegexBuilder with case_insensitive
+  4. Functionally equivalent, manual but correct
+
+
+DEFAULT SERVICE PROPERTIES
+──────────────────────────
+
+TS: ServiceHandler.ts line 58
+    cors: []
+
+RS: i_blob_metadata_store.rs line 42
+    properties: StorageServiceProperties { ... }
+    Where StorageServiceProperties.cors = []
+
+
+STORAGE SCHEMA
+───────────────
+
+Both store CORS rules in service properties with this structure:
+  {
+    cors: [
+      {
+        allowedOrigins: "http://example.com,*.contoso.com",
+        allowedMethods: "GET,POST",
+        allowedHeaders: "Content-Type,x-ms-*",
+        exposedHeaders: "x-ms-*",
+        maxAgeInSeconds: 3600
+      }
+    ]
+  }
+
+Access:
+  TS: Properties are typed as Models.StorageServiceProperties
+  RS: Stored as dynamic GeneratedObject, accessed via cors_rules() helper
+
+
+TESTS COVERAGE
+──────────────
+
+TypeScript (Comprehensive):
+  tests/blob/blobCorsRequest.test.ts - 857 lines
+  - 12+ test cases covering:
+    • OPTIONS preflight validation
+    • Origin matching (exact and wildcard)
+    • Method matching
+    • Header matching
+    • Exposed header filtering
+    • Max-Age caching
+    • Multiple CORS rules
+    • Error scenarios
+
+Rust (Minimal):
+  - Only test_preflight_middleware_factory_creation() in phase12
+  - Just verifies factory instantiation
+  - No actual CORS logic testing
+  - No integration tests
+
+
+WHAT NEEDS TO BE FIXED
+────────────────────────
+
+Priority 1 (Blocking):
+  1. Move optionsHandlerMiddleware to run BEFORE serializer
+  2. Remove or fix the blockErrorRequest && err.is_none() check
+
+Priority 2 (Important):
+  3. Ensure OPTIONS errors get proper status codes set
+  4. Verify dispatch_middleware handles OPTIONS correctly
+
+Priority 3 (Nice to have):
+  5. Port TypeScript integration tests to Rust
+  6. Add unit tests for checkOrigin, checkMethod, checkHeaders
+
+
+EXAMPLE: How an OPTIONS Preflight Should Work
+────────────────────────────────────────────────
+
+Client sends:
+  OPTIONS /container HTTP/1.1
+  Host: devstoreaccount1.blob.core.windows.net
+  Origin: http://example.com
+  Access-Control-Request-Method: PUT
+  Access-Control-Request-Headers: Content-Type
+
+Server logic flow:
+  1. Receive OPTIONS request
+  2. Extract Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+  3. Load service properties (CORS rules)
+  4. For each CORS rule in order:
+     - Check if Origin matches allowedOrigins (exact or wildcard)
+     - Check if requested method matches allowedMethods
+     - Check if requested headers match allowedHeaders
+     - If all match: ACCEPT and return response
+  5. If no rule matches: REJECT with 403
+
+On success (match found):
+  HTTP/1.1 200 OK
+  Access-Control-Allow-Origin: http://example.com
+  Access-Control-Allow-Methods: PUT
+  Access-Control-Allow-Headers: Content-Type
+  Access-Control-Max-Age: 3600
+  Access-Control-Allow-Credentials: true
+
+On failure (no match):
+  HTTP/1.1 403 Forbidden
+  Content-Type: application/xml
+  <?xml version="1.0"?>
+  <Error>
+    <Code>CorsPreflightFailure</Code>
+    <Message>CORS not enabled or no matching rule found for this request.</Message>
+  </Error>
+
+═══════════════════════════════════════════════════════════════════════════════

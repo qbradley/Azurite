@@ -183,3 +183,30 @@ Well-written documentation reduces support burden, improves developer experience
 
 **Impact:** Azurite Rust is now ready for end-user adoption with comprehensive, practical guidance covering all common use cases and client library integrations.
 
+## 2026-03-16: Blog Post: "Azurite Now Available in Rust"
+
+**Requested by:** Quetzal Bradley
+
+**Artifact:** `docs/blog-rust-azurite.md` (1,100 words, ~8,700 characters)
+
+**Content Strategy:**
+- **Audience:** Busy engineers (Rust + Azure SDK users)
+- **Opening:** Value-first (no Node.js dependency, native async, standalone binary)
+- **Body:** What was ported, how (AI-assisted faithful port), how validated (3-prong strategy)
+- **Numbers:** 431 Rust files, 77,886 LOC, 998 TS tests + 34 SDK tests + 24/24 differential scenarios all passing
+- **Bugs found:** 34+ across 5 categories, with concurrency races highlighted as the key porting hazard
+- **Architecture:** tokio async, `Arc<RwLock<>>` concurrency model, faithful layered design
+- **Getting started:** cargo build, CLI options, SDK connection examples (Python, JS, .NET)
+
+**Key Writing Decisions:**
+1. Lead with pain point (managing multiple processes) then solution (standalone Rust binary)
+2. Emphasize "faithful port, not rewrite" — explains why Rust version isn't perfectly idiomatic but also why it's correct
+3. Use architecture comparison (TS single-threaded → Rust explicit concurrency) to explain why porting hazards exist
+4. Highlight concurrency races as #1 learning — invisible in TS tests, required explicit Rust handling
+5. Validate using three complementary strategies (TS tests, SDK tests, differential harness) rather than claiming single "100% correct"
+6. Numbers speak louder than adjectives: 998 tests, 24/24 scenarios, 34+ bugs found and fixed
+7. Close with roadmap (differential harness expansion) and "real-world usage feedback" invitation
+
+**Why This Matters for Azurite:**
+End-user-facing announcement establishes credibility through specifics (test counts, bug categories, validation strategy) rather than marketing language. Rust developers reading this can assess whether the port is ready for their use case and understand the porting methodology (valuable if they're considering similar translations in their own codebase). The blog post positions Azurite Rust as a serious, validated alternative to the TS version, not a beta experiment.
+

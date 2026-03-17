@@ -1,0 +1,385 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    MIDDLEWARE EXECUTION FLOW DIAGRAMS                         ║
+║              TypeScript (Working) vs Rust (Broken) Comparison                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+SCENARIO: OPTIONS /container HTTP/1.1
+       Origin: http://example.com
+       Access-Control-Request-Method: PUT
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TYPESCRIPT FLOW (CORRECT):
+──────────────────────────
+
+OPTIONS request arrives
+    ↓
+Dispatch middleware
+    ├─ No explicit route for OPTIONS
+    ├─ Returns error (method not found)
+    ↓ (error flows down)
+Authentication middleware
+    ├─ Sees OPTIONS
+    ├─ Bypasses auth
+    ↓
+Deserializer middleware
+    ├─ Skips body parsing for OPTIONS
+    ↓
+Handler middleware
+    ├─ No handler registered
+    ├─ Error continues
+    ↓
+corsRequestMiddleware (blockErrorRequest=true)
+    ├─ Runs on error path
+    ├─ Checks: req.method === OPTIONS?
+    ├─ YES → skip and return error
+    ↓
+corsRequestMiddleware (blockErrorRequest=false)
+    ├─ Runs on non-error path
+    ├─ Checks: req.method === OPTIONS?
+    ├─ YES → skip and return error
+    ↓
+Serializer middleware
+    ├─ Serializes error response (404 or similar)
+    ├─ But CORS didn't touch it
+    ↓
+createOptionsHandlerMiddleware (ERROR HANDLER)
+    ├─ Receives accumulated error as first param
+    ├─ Checks: req.method === OPTIONS?
+    ├─ YES → Process OPTIONS preflight
+    ├─ 1. Get Origin from request
+    ├─ 2. Get Access-Control-Request-Method
+    ├─ 3. Load service properties (CORS rules)
+    ├─ 4. Match rules:
+    │   ├─ checkOrigin() → matches?
+    │   ├─ checkMethod() → matches?
+    │   └─ checkHeaders() → matches?
+    ├─ 5. Set response headers ✓
+    │   ├─ Access-Control-Allow-Origin: http://example.com
+    │   ├─ Access-Control-Allow-Methods: PUT
+    │   ├─ Access-Control-Max-Age: 3600
+    │   └─ Access-Control-Allow-Credentials: true
+    ├─ 6. Call next() with NO error
+    ↓
+Error middleware
+    ├─ No error to format
+    ↓
+End middleware
+    ├─ Finalize response
+    
+✓ RESULT: 200 OK with CORS headers
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+RUST FLOW (BROKEN):
+───────────────────
+
+OPTIONS request arrives
+    ↓
+internalBlobStorageContextMiddleware
+    ├─ Sets up context
+    ↓
+Dispatch middleware
+    ├─ No explicit route for OPTIONS?
+    ├─ Returns error (404 Not Found)
+    ↓ (pending_error = Some(error))
+strictModelMiddleware
+    ├─ Error exists, skips
+    ↓
+authenticationMiddleware
+    ├─ Error exists, skips
+    ↓
+Deserializer middleware
+    ├─ Error exists, skips
+    ↓
+Handler middleware
+    ├─ Error exists, skips
+    ↓
+corsErrorRequestMiddleware.apply_cors_request(Some(error), ...)
+    ├─ blockErrorRequest=true
+    ├─ Checks: method === OPTIONS?
+    ├─ YES → skip and return Some(error)
+    ├─ Error passes through unchanged
+    ↓ (pending_error = Some(error) still)
+Check: if pending_error.is_none() → FALSE
+    ├─ Condition at line 234: if pending_error.is_none()
+    ├─ pending_error still has error
+    ├─ Second middleware SKIPPED ✗
+    ↓
+Serializer middleware
+    ├─ pending_error exists
+    ├─ Serializes 404 error response ✗ TOO EARLY
+    ├─ Response now has:
+    │   ├─ Status: 404
+    │   ├─ Body: XML error
+    │   └─ NO CORS headers
+    ↓ (pending_error = Some(error) still)
+optionsHandlerMiddleware.apply_options(error, ...)
+    ├─ Receives error from serializer
+    ├─ Checks: method === OPTIONS?
+    ├─ YES → Process OPTIONS preflight
+    ├─ 1. Get Origin from request
+    ├─ 2. Get Access-Control-Request-Method
+    ├─ 3. Load service properties (CORS rules)
+    ├─ 4. Match rules:
+    │   ├─ checkOrigin() → matches?
+    │   ├─ checkMethod() → matches?
+    │   └─ checkHeaders() → matches?
+    ├─ 5. Tries to set response headers
+    │   ├─ Access-Control-Allow-Origin: http://example.com ✗ IGNORED
+    │   ├─ Access-Control-Allow-Methods: PUT ✗ IGNORED
+    │   ├─ Access-Control-Max-Age: 3600 ✗ IGNORED
+    │   └─ Access-Control-Allow-Credentials: true ✗ IGNORED
+    ├─ 6. Calls return None (success)
+    ↓ (pending_error = None)
+Check: if error is None → TRUE
+    ├─ Error is gone, but response was already serialized!
+    ↓
+Error middleware
+    ├─ No error (was set to None by OPTIONS handler)
+    ├─ But response still has 404 status
+    ↓
+End middleware
+    ├─ Finalize response
+
+✗ RESULT: 200 OK (set by OPTIONS handler) BUT
+         ├─ Response body still has original 404 error
+         ├─ Headers may be overwritten
+         └─ Inconsistent state
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+COMPARISON TABLE:
+─────────────────
+
+Step │ TypeScript              │ Rust                    │ Issue
+─────┼─────────────────────────┼─────────────────────────┼──────────────────
+  1  │ Dispatch (error)        │ Dispatch (error)        │ Both fail on OPTIONS
+  2  │ Auth (skip)             │ Auth (skip)             │ Both skip
+  3  │ Deserialize (skip)      │ Deserialize (skip)      │ Both skip
+  4  │ Handler (skip)          │ Handler (skip)          │ Both skip
+  5  │ CORS#1 (skip)           │ CORS#1 error            │ Both skip/pass
+  6  │ CORS#2 (skip)           │ [MISSING - line 234]    │ ✗ Rust: condition
+  7  │ Serializer              │ Serializer ← TOO EARLY  │ ✗ Rust: wrong order
+  8  │ OPTIONS handler         │ OPTIONS handler ← LATE  │ ✗ Rust: too late
+  9  │ Error format            │ Error format            │ Different states
+ 10  │ End                     │ End                     │ Different results
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+WHAT HAPPENS WITH SUCCESSFUL HANDLER:
+──────────────────────────────────────
+
+GET /blob HTTP/1.1
+Origin: http://example.com
+
+TYPESCRIPT:
+    Dispatch (success)
+    ↓
+    Auth (success)
+    ↓
+    Deserialize (success)
+    ↓
+    Handler (executes)
+    ├─ pending_error = None
+    ├─ response.statusCode = 200
+    ├─ response.body = "blob content"
+    ↓
+    corsRequestMiddleware (blockErrorRequest=true)
+    ├─ err parameter = undefined (first call, no error)
+    ├─ Processes CORS:
+    │   ├─ Checks origin against rules
+    │   ├─ Adds Access-Control-Allow-Origin
+    │   └─ Adds Access-Control-Expose-Headers
+    ├─ Calls next(undefined)
+    ↓
+    corsRequestMiddleware (blockErrorRequest=false)
+    ├─ req.method !== OPTIONS
+    ├─ Has Origin header
+    ├─ Processes CORS again (as success path)
+    ├─ Calls next(undefined)
+    ↓
+    Serializer
+    ├─ Serializes response (with CORS headers)
+    ↓
+    OPTIONS handler (but method is GET, so skips)
+    ↓
+    Error formatter (no error)
+    ↓
+    End
+    
+✓ Result: 200 OK with content and CORS headers
+
+
+RUST:
+    Dispatch (success)
+    ↓
+    Auth (success)
+    ↓
+    Deserialize (success)
+    ↓
+    Handler (executes)
+    ├─ pending_error = None
+    ├─ response.statusCode = 200
+    ├─ response.body = "blob content"
+    ↓
+    if pending_error.is_some() { corsErrorRequestMiddleware } → skipped
+    ├─ pending_error is still None
+    ↓
+    if pending_error.is_none() { corsRequestMiddleware }
+    ├─ blockErrorRequest=false
+    ├─ Processes CORS:
+    │   ├─ Checks: method === OPTIONS? → NO
+    │   ├─ Gets origin from request
+    │   ├─ Processes CORS headers
+    │   └─ Returns None
+    ↓
+    Serializer
+    ├─ Serializes response (with CORS headers)
+    ↓
+    if pending_error.is_some() { optionsHandlerMiddleware } → skipped
+    ├─ pending_error is None
+    ↓
+    Error formatter (no error)
+    ↓
+    End
+
+✓ Result: 200 OK with content and CORS headers
+         (But only on success path - OPTIONS failed above)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ROOT CAUSE ANALYSIS:
+────────────────────
+
+PROBLEM #1: Middleware Execution Order
+Location: blob_request_listener_factory.rs lines 222-264
+
+The issue:
+  ① corsErrorRequestMiddleware at line 222-232
+  ② corsRequestMiddleware at line 234-244
+  ③ serializer_middleware at line 246-252
+  ④ optionsHandlerMiddleware at line 254-264
+
+Should be:
+  ① corsErrorRequestMiddleware
+  ② corsRequestMiddleware
+  ③ optionsHandlerMiddleware ← MUST be before serializer
+  ④ serializer_middleware
+
+Why it matters:
+  - Serializer converts response objects to wire format
+  - After serialization, response is locked (can't change status codes, add headers)
+  - OPTIONS handler needs to run BEFORE serialization to set headers/status
+  - Currently tries to set headers AFTER serialization (too late)
+
+
+PROBLEM #2: blockErrorRequest Logic
+Location: preflight_middleware_factory.rs lines 235-237
+
+The condition:
+  if blockErrorRequest && err.is_none() {
+      return None;  // Drops error
+  }
+
+Is wrong because:
+  - blockErrorRequest=true means "only handle errors"
+  - err.is_none() means "no error"
+  - So condition is: if (only_handle_errors) AND (no_error) → drop it
+  - This drops the error for successful requests!
+  - Breaks the error chain
+
+Used in blob_request_listener_factory.rs:
+  Line 234: if pending_error.is_none() {
+                corsRequestMiddleware.apply(...)
+
+  If first middleware (blockErrorRequest=true) returns None due to the bug:
+  - pending_error becomes None
+  - Line 234 executes second middleware
+  - But second middleware might also be affected by same bug
+
+The fix:
+  - Remove the check entirely
+  - Let both middleware instances run
+  - Each handles their own logic based on method and error state
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+EXPECTED CHANGES:
+─────────────────
+
+File: rust/crates/azurite-blob/src/blob_request_listener_factory.rs
+
+BEFORE (lines 214-279):
+  Line 214-220:  Handler execution
+  Line 222-232:  corsErrorRequestMiddleware.apply()
+  Line 234-244:  corsRequestMiddleware.apply()
+  Line 246-252:  serializer_middleware()
+  Line 254-264:  optionsHandlerMiddleware.apply()
+  Line 266-274:  error_middleware()
+
+AFTER:
+  Line 214-220:  Handler execution
+  Line 222-232:  corsErrorRequestMiddleware.apply()
+  Line 234-244:  corsRequestMiddleware.apply()
+  Line 246-252:  optionsHandlerMiddleware.apply() ← MOVED UP
+  Line 254-264:  serializer_middleware()
+  Line 266-276:  error_middleware()
+
+
+File: rust/crates/azurite-blob/src/middlewares/preflight_middleware_factory.rs
+
+BEFORE (lines 235-237):
+  if blockErrorRequest && err.is_none() {
+      return None;
+  }
+
+AFTER:
+  // Remove these lines entirely
+  // OR if blockErrorRequest=true means "only handle on error path":
+  // if blockErrorRequest && err.is_some() {
+  //     return err;
+  // }
+  // if !blockErrorRequest && err.is_none() {
+  //     // Only process success path
+  // }
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VERIFICATION CHECKLIST:
+───────────────────────
+
+After fixes, verify:
+
+[ ] OPTIONS request with no CORS rules returns 403
+    └─ Status code from corsPreflightFailure error
+    
+[ ] OPTIONS request matching CORS rules returns 200
+    └─ With proper CORS headers
+    └─ With correct status code (not 404)
+    
+[ ] Normal GET/PUT requests get CORS headers when applicable
+    └─ Access-Control-Allow-Origin set
+    └─ Access-Control-Expose-Headers set
+    └─ Vary: Origin set for non-wildcard origins
+    
+[ ] Wildcard origin matching works
+    └─ *.contoso.com matches foo.contoso.com
+    └─ Case-insensitive matching works
+    
+[ ] Multiple CORS rules work (first match wins)
+    └─ Rules evaluated in order
+    
+[ ] Access-Control-Allow-Credentials set correctly
+    └─ Only for non-wildcard origins
+    └─ Set to "true"
+
+═══════════════════════════════════════════════════════════════════════════════

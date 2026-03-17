@@ -1,0 +1,471 @@
+═══════════════════════════════════════════════════════════════════════════════
+EXACT CODE CHANGES REQUIRED TO FIX RUST CORS
+═══════════════════════════════════════════════════════════════════════════════
+
+CHANGE #1: Reorder Middleware Execution
+────────────────────────────────────────
+
+FILE: rust/crates/azurite-blob/src/blob_request_listener_factory.rs
+LOCATION: RequestListenerState::handle_request() method
+
+CURRENT CODE (lines 214-279):
+
+    // Lines 214-220: Handler execution
+    if pending_error.is_none() {
+        let handlerMiddlewareFactory =
+            HandlerMiddlewareFactory::new(Arc::clone(&self.handlers), Arc::clone(&self.logger));
+        if let Err(error) = handlerMiddlewareFactory.call(&context).await {
+            pending_error = Some(error);
+        }
+    }
+
+    // Lines 222-232: corsErrorRequestMiddleware
+    if let Some(error) = pending_error.take() {
+        pending_error = self
+            .corsErrorRequestMiddleware
+            .apply(
+                Some(error),
+                &blob_context,
+                &generated_request,
+                &mut generated_response,
+            )
+            .await;
+    }
+
+    // Lines 234-244: corsRequestMiddleware
+    if pending_error.is_none() {
+        pending_error = self
+            .corsRequestMiddleware
+            .apply(
+                None,
+                &blob_context,
+                &generated_request,
+                &mut generated_response,
+            )
+            .await;
+    }
+
+    // Lines 246-252: Serializer (TOO EARLY)
+    if pending_error.is_none() {
+        if let Err(error) =
+            serializer_middleware(&context, &mut generated_response, self.logger.as_ref()).await
+        {
+            pending_error = Some(error);
+        }
+    }
+
+    // Lines 254-264: optionsHandlerMiddleware (TOO LATE)
+    if let Some(error) = pending_error.take() {
+        pending_error = self
+            .optionsHandlerMiddleware
+            .apply(
+                error,
+                &blob_context,
+                &generated_request,
+                &mut generated_response,
+            )
+            .await;
+    }
+
+    // Lines 266-274: Error middleware
+    if let Some(error) = pending_error.as_ref() {
+        let _ = error_middleware(
+            &context,
+            error.as_ref(),
+            &generated_request,
+            &mut generated_response,
+            self.logger.as_ref(),
+        );
+    }
+
+
+CORRECTED CODE:
+
+    // Lines 214-220: Handler execution (UNCHANGED)
+    if pending_error.is_none() {
+        let handlerMiddlewareFactory =
+            HandlerMiddlewareFactory::new(Arc::clone(&self.handlers), Arc::clone(&self.logger));
+        if let Err(error) = handlerMiddlewareFactory.call(&context).await {
+            pending_error = Some(error);
+        }
+    }
+
+    // Lines 222-232: corsErrorRequestMiddleware (UNCHANGED)
+    if let Some(error) = pending_error.take() {
+        pending_error = self
+            .corsErrorRequestMiddleware
+            .apply(
+                Some(error),
+                &blob_context,
+                &generated_request,
+                &mut generated_response,
+            )
+            .await;
+    }
+
+    // Lines 234-244: corsRequestMiddleware (UNCHANGED)
+    if pending_error.is_none() {
+        pending_error = self
+            .corsRequestMiddleware
+            .apply(
+                None,
+                &blob_context,
+                &generated_request,
+                &mut generated_response,
+            )
+            .await;
+    }
+
+    // *** MOVED EARLIER: optionsHandlerMiddleware (BEFORE Serializer) ***
+    if let Some(error) = pending_error.take() {
+        pending_error = self
+            .optionsHandlerMiddleware
+            .apply(
+                error,
+                &blob_context,
+                &generated_request,
+                &mut generated_response,
+            )
+            .await;
+    }
+
+    // Lines 246-252: Serializer (NOW AFTER OPTIONS HANDLER)
+    if pending_error.is_none() {
+        if let Err(error) =
+            serializer_middleware(&context, &mut generated_response, self.logger.as_ref()).await
+        {
+            pending_error = Some(error);
+        }
+    }
+
+    // Lines 266-274: Error middleware (UNCHANGED)
+    if let Some(error) = pending_error.as_ref() {
+        let _ = error_middleware(
+            &context,
+            error.as_ref(),
+            &generated_request,
+            &mut generated_response,
+            self.logger.as_ref(),
+        );
+    }
+
+
+SUMMARY:
+  - Move optionsHandlerMiddleware execution to BEFORE serializer_middleware
+  - This is approximately 11 lines of code (the entire if block)
+  - Relocate to execute between corsRequestMiddleware and serializer
+  - No changes to the actual middleware execution logic
+  - Just a reordering of when it runs in the pipeline
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CHANGE #2: Fix blockErrorRequest Logic Bug
+────────────────────────────────────────────
+
+FILE: rust/crates/azurite-blob/src/middlewares/preflight_middleware_factory.rs
+LOCATION: apply_cors_request() method
+
+CURRENT CODE (lines 230-240):
+
+    async fn apply_cors_request(
+        &self,
+        err: Option<BoxedMiddlewareError>,
+        metadataStore: SharedBlobMetadataStore,
+        context: &BlobStorageContext,
+        req: &GeneratedHttpRequest,
+        res: &mut GeneratedHttpResponse,
+        blockErrorRequest: bool,
+    ) -> Option<BoxedMiddlewareError> {
+        if req.getMethod().to_string() == MethodConstants::OPTIONS {
+            return err;
+        }
+
+        // PROBLEMATIC CODE (lines 235-237):
+        if blockErrorRequest && err.is_none() {
+            return None;  // BUG: Drops the error!
+        }
+
+        let account = match context.account().filter(|value| !value.is_empty()) {
+            Some(account) => account,
+            None => return err,
+        };
+        let Some(origin) = req.getHeader(HeaderConstants::ORIGIN) else {
+            return err;
+        };
+        // ... rest of method
+
+
+OPTION A - REMOVE THE CHECK ENTIRELY:
+
+    async fn apply_cors_request(
+        &self,
+        err: Option<BoxedMiddlewareError>,
+        metadataStore: SharedBlobMetadataStore,
+        context: &BlobStorageContext,
+        req: &GeneratedHttpRequest,
+        res: &mut GeneratedHttpResponse,
+        blockErrorRequest: bool,  // Still parameter but unused
+    ) -> Option<BoxedMiddlewareError> {
+        if req.getMethod().to_string() == MethodConstants::OPTIONS {
+            return err;
+        }
+
+        // DELETE LINES 235-237
+        // if blockErrorRequest && err.is_none() {
+        //     return None;
+        // }
+
+        let account = match context.account().filter(|value| !value.is_empty()) {
+            Some(account) => account,
+            None => return err,
+        };
+        let Some(origin) = req.getHeader(HeaderConstants::ORIGIN) else {
+            return err;
+        };
+        // ... rest remains the same
+
+
+OPTION B - FIX THE LOGIC (if blockErrorRequest semantic is important):
+
+    async fn apply_cors_request(
+        &self,
+        err: Option<BoxedMiddlewareError>,
+        metadataStore: SharedBlobMetadataStore,
+        context: &BlobStorageContext,
+        req: &GeneratedHttpRequest,
+        res: &mut GeneratedHttpResponse,
+        blockErrorRequest: bool,
+    ) -> Option<BoxedMiddlewareError> {
+        if req.getMethod().to_string() == MethodConstants::OPTIONS {
+            return err;
+        }
+
+        // If blockErrorRequest=true, only process when error exists
+        if blockErrorRequest && err.is_none() {
+            return None;  // Don't process success path on error-only middleware
+        }
+        // If blockErrorRequest=false, only process when no error
+        if !blockErrorRequest && err.is_some() {
+            return err;   // Don't process success path if error exists
+        }
+
+        let account = match context.account().filter(|value| !value.is_empty()) {
+            Some(account) => account,
+            None => return err,
+        };
+        let Some(origin) = req.getHeader(HeaderConstants::ORIGIN) else {
+            return err;
+        };
+        // ... rest remains the same
+
+
+RECOMMENDATION:
+  Option A is simpler and more correct.
+  The blockErrorRequest parameter doesn't affect CORS logic meaningfully.
+  Remove the check entirely (3 lines deleted).
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CHANGE #3: Ensure OPTIONS Error Status Codes
+─────────────────────────────────────────────
+
+FILE: rust/crates/azurite-blob/src/middlewares/preflight_middleware_factory.rs
+LOCATION: apply_options() method
+
+CURRENT CODE (lines 109-220):
+
+    async fn apply_options(
+        &self,
+        err: BoxedMiddlewareError,
+        metadataStore: SharedBlobMetadataStore,
+        context: &BlobStorageContext,
+        req: &GeneratedHttpRequest,
+        res: &mut GeneratedHttpResponse,
+    ) -> Option<BoxedMiddlewareError> {
+        if req.getMethod().to_string() != MethodConstants::OPTIONS {
+            return Some(err);
+        }
+
+        // ... validation code ...
+
+        for cors in cors_rules(&properties) {
+            // ... matching code ...
+            res.setStatusCode(200);  // Line 188: Only for success path
+            res.setHeader(...);
+            // ...
+            return None;  // Success path
+        }
+
+        // Lines 216-219: Error path - no status code set!
+        Some(Box::new(StorageErrorFactory::corsPreflightFailure(
+            Some(&requestId),
+            Some(message_details("No CORS rules matches this request")),
+        )))
+    }
+
+
+CORRECTED CODE:
+
+    async fn apply_options(
+        &self,
+        err: BoxedMiddlewareError,
+        metadataStore: SharedBlobMetadataStore,
+        context: &BlobStorageContext,
+        req: &GeneratedHttpRequest,
+        res: &mut GeneratedHttpResponse,
+    ) -> Option<BoxedMiddlewareError> {
+        if req.getMethod().to_string() != MethodConstants::OPTIONS {
+            return Some(err);
+        }
+
+        // ... validation code ...
+
+        for cors in cors_rules(&properties) {
+            // ... matching code ...
+            res.setStatusCode(200);
+            res.setHeader(...);
+            // ...
+            return None;
+        }
+
+        // *** ADD STATUS CODE FOR ERROR PATH ***
+        res.setStatusCode(403);  // Preflight failure status
+        
+        Some(Box::new(StorageErrorFactory::corsPreflightFailure(
+            Some(&requestId),
+            Some(message_details("No CORS rules matches this request")),
+        )))
+    }
+
+
+SUMMARY:
+  - Add `res.setStatusCode(403);` before returning error from apply_options()
+  - This ensures error responses have correct status code
+  - Only 1 line added
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+OPTIONAL CHANGE #4: Add Comprehensive CORS Integration Tests
+──────────────────────────────────────────────────────────────
+
+FILE: rust/crates/azurite-blob/tests/blob/cors_preflight_requests.rs (NEW)
+
+Create new test file porting tests from:
+  tests/blob/blobCorsRequest.test.ts (TypeScript)
+
+Test cases to include:
+
+1. OPTIONS request without CORS rules should fail (403)
+2. OPTIONS request with CORS rules but no match should fail (403)
+3. OPTIONS request with matching CORS rules should succeed (200)
+4. OPTIONS request without Origin header should fail (400)
+5. OPTIONS request without Access-Control-Request-Method should fail (400)
+6. Wildcard origin matching (*.contoso.com)
+7. Multiple CORS rules (first match wins)
+8. GET request gets CORS headers when applicable
+9. Exposed headers filtering
+10. Max-Age caching
+11. Credentials flag handling
+12. Non-wildcard origins get Vary: Origin header
+
+Example test structure (pseudo-code):
+
+#[tokio::test]
+async fn test_options_without_cors_rules_should_fail() {
+    // Set service properties with empty CORS
+    // Send OPTIONS request
+    // Assert: 403 status code
+    // Assert: CorsPreflightFailure error message
+}
+
+#[tokio::test]
+async fn test_options_with_matching_rules_should_succeed() {
+    // Set service properties with matching CORS rule
+    // Send OPTIONS request
+    // Assert: 200 status code
+    // Assert: Access-Control-Allow-Origin header present
+    // Assert: Access-Control-Allow-Methods header present
+}
+
+#[tokio::test]
+async fn test_wildcard_origin_matching() {
+    // Set service properties with *.contoso.com rule
+    // Send OPTIONS request from foo.contoso.com
+    // Assert: 200 status code (match)
+    // Send OPTIONS request from bar.example.com
+    // Assert: 403 status code (no match)
+}
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+IMPLEMENTATION CHECKLIST:
+─────────────────────────
+
+Priority 1 (Must Fix):
+  [ ] Change #1: Reorder middleware (blob_request_listener_factory.rs)
+      └─ Move optionsHandlerMiddleware before serializer
+      └─ Estimated effort: 5 minutes
+      
+  [ ] Change #2: Fix blockErrorRequest (preflight_middleware_factory.rs)
+      └─ Remove the problematic condition
+      └─ Estimated effort: 2 minutes
+
+Priority 2 (Should Fix):
+  [ ] Change #3: Add status code to error path (preflight_middleware_factory.rs)
+      └─ Add res.setStatusCode(403)
+      └─ Estimated effort: 1 minute
+
+Priority 3 (Nice to Have):
+  [ ] Change #4: Add CORS integration tests
+      └─ Create cors_preflight_requests.rs test file
+      └─ Estimated effort: 2-3 hours (porting from TypeScript)
+      
+Total estimated effort (Priority 1+2+3): ~3-4 hours
+
+
+TESTING AFTER FIXES:
+────────────────────
+
+Run these commands to verify:
+
+  # Unit tests
+  cargo test --test blob_parity
+
+  # If CORS integration tests added:
+  cargo test cors_preflight
+  
+  # Full blob test suite (after porting tests):
+  cargo test --test blob_parity
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VERIFICATION STEPS:
+───────────────────
+
+After implementing changes:
+
+1. Compile without errors:
+   $ cd rust && cargo build
+
+2. Run existing tests:
+   $ cargo test --test blob_parity -- --nocapture
+
+3. Manual testing (requires running server):
+   - Start azurite-blob server
+   - Set CORS rules via SetServiceProperties
+   - Send OPTIONS request with matching origin
+   - Verify: 200 status, CORS headers present
+   - Send OPTIONS with non-matching origin
+   - Verify: 403 status, error message
+
+4. Cross-reference with TypeScript:
+   - Run TypeScript tests: npm test -- --grep blobCorsRequest
+   - Ensure Rust behavior matches
+
+
+═══════════════════════════════════════════════════════════════════════════════

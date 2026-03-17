@@ -1,0 +1,312 @@
+================================================================================
+AZURITE TS-vs-RUST PARITY GAP ANALYSIS - 9 FAILURES
+================================================================================
+
+ISSUE #1: Create Container ETag Differs
+────────────────────────────────────────
+Status:         ❌ FAIL
+Test Output:    TS=['"0x2617CE0B8607660"'] Rust=['"0x1BC2B675F878C4D"']
+
+Root Cause:     ETag randomness source mismatch
+   • TS uses:    Math.random() × timestamp
+   • Rust uses:  subsec_nanos() × timestamp (wrong distribution)
+
+TS Code:        /home/azureuser/Azurite/src/common/utils/utils.ts:55-66
+   function newEtag(): string {
+     return '"0x' + (new Date().getTime() * Math.round(Math.random() * 30000 + 70000))
+       .toString(16).toUpperCase() + '"';
+   }
+
+Rust Code:      /home/azureuser/Azurite/rust/crates/azurite-common/src/utils/utils.rs:84-92
+   fn newEtag() -> String {
+       let now = Utc::now().timestamp_millis() as u64;
+       let random = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos() as u64;
+       let multiplier = random % 30001 + 70000;  // WRONG: subsec_nanos != Math.random()
+       format!("\"0x{:X}\"", now.saturating_mul(multiplier))
+   }
+
+Minimal Fix:    Replace subsec_nanos() with proper RNG (use `rand` crate with Math.random() behavior)
+Affected Ops:   Container creation
+Impact:         All subsequent operations on container inherit mismatched ETag
+
+
+ISSUE #2-4: Upload/Download/Get-Properties/Lease/Page-Blob/Share Blob ETag Mismatch
+──────────────────────────────────────────────────────────────────────────────────────
+Status:         ❌ FAIL (multiple related failures)
+Test Output:    Upload blob: TS=['"0x235FD2D13591220"'] Rust=['"0x2719B5CD8F0CF50"']
+                Download blob: Same mismatch
+                Get blob properties: Same mismatch
+                Page blob: TS=['"0x25BE4625DC4A2A0"'] Rust=['"0x1DDFA0D6F81D6FC"']
+                Lease: TS=['"0x1E140E66B154ED0"'] Rust=['"0x1DFA727C0FA28CA"']
+
+Root Cause:     Cascading from Issue #1 (newEtag() randomness)
+   When blob is created with mismatched ETag, all subsequent operations return same ETag
+
+TS Metadata Store:  /home/azureuser/Azurite/src/blob/persistence/LokiBlobMetadataStore.ts
+   Lines: 1460, 1512, 1957, 2146, 2334, 2466, 2783, 2848, 2970, 3071, 3560
+   Pattern: doc.properties.etag = newEtag();
+
+Rust Metadata Store: /home/azureuser/Azurite/rust/crates/azurite-blob/src/persistence/loki_blob_metadata_store.rs
+   Lines: 187, 1769, 1824, 2774, 2818, 3024, 3454, 3536, 3667, 3770
+   Pattern: set_string(&mut properties, "etag", Some(new_etag()));
+
+TS Handlers:    BlockBlobHandler.ts, PageBlobHandler.ts
+Rust Handlers:  block_blob_handler.rs, page_blob_handler.rs
+
+Minimal Fix:    Fix newEtag() randomness (Issue #1)
+Affected Ops:   Upload blob, download blob, get properties, acquire/renew/release/break lease
+Impact:         Pervasive - affects almost all blob operations
+
+
+ISSUE #5: Create Snapshot Adds Rust-Only x-ms-request-server-encrypted Header
+──────────────────────────────────────────────────────────────────────────────
+Status:         ❌ FAIL
+Test Output:    ETag mismatch (inherits from Issue #2)
+                x-ms-request-server-encrypted: TS=[] Rust=['true']
+
+Root Cause:     TWO separate issues:
+   1. ETag mismatch (cascaded from Issue #1)
+   2. Rust adds isServerEncrypted field that TS doesn't include
+
+TS Code:        /home/azureuser/Azurite/src/blob/handlers/BlobHandler.ts:576-627
+   const response: Models.BlobCreateSnapshotResponse = {
+     statusCode: 201,
+     eTag: res.properties.etag,
+     lastModified: res.properties.lastModified,
+     requestId: context.contextId,
+     date: context.startTime!,
+     version: BLOB_API_VERSION,
+     snapshot: res.snapshot,
+     clientRequestId: options.requestId
+     // NOTE: NO isServerEncrypted field
+   };
+
+Rust Code:      /home/azureuser/Azurite/rust/crates/azurite-blob/src/handlers/blob_handler.rs:720-754
+   response.insert_field("snapshot", string_value(&res.snapshot));
+   response.insert_field("isServerEncrypted", GeneratedValue::Bool(true));  // EXTRA!
+   Ok(response)
+
+Minimal Fix:    (A) Fix newEtag() for ETag mismatch
+                (B) Delete line 752: response.insert_field("isServerEncrypted", ...)
+
+Affected Ops:   Snapshot creation
+
+
+ISSUE #6: Copy Blob Returns TS 501 APINotImplemented vs Rust 500 Empty Body
+──────────────────────────────────────────────────────────────────────────
+Status:         ❌ FAIL
+Test Output:    Status: 501 vs 500
+                TS Headers: content-type=[application/xml], x-ms-error-code=[APINotImplemented]
+                Rust: (empty headers and body)
+
+Root Cause:     Copy blob (putBlobFromUrl) is unimplemented in both versions
+                TS correctly raises NotImplementedError
+                Rust raises NotImplementedError but HTTP response has wrong status/headers
+
+TS Code:        /home/azureuser/Azurite/src/blob/handlers/BlockBlobHandler.ts:164-167
+   public async putBlobFromUrl(...): Promise<...> {
+     throw new NotImplementedError(context.contextId);
+   }
+
+Rust Code:      /home/azureuser/Azurite/rust/crates/azurite-blob/src/handlers/block_blob_handler.rs:470-480
+   async fn putBlobFromUrl(...) -> crate::generated::GeneratedResult<...> {
+     Err(Box::new(NotImplementedError::new(context.contextId().as_deref())))
+   }
+
+NotImplementedError: /home/azureuser/Azurite/rust/crates/azurite-blob/src/errors/not_implemented_error.rs:11-20
+   impl NotImplementedError {
+     pub fn new(requestID: Option<&str>) -> Self {
+       Self(StorageError::new(
+         501,  // ← Correct status code
+         "APINotImplemented",  // ← Correct error code
+         ...
+       ))
+     }
+   }
+
+Minimal Fix:    Root cause is in middleware/error serialization, NOT the handler
+                • Handler correctly returns NotImplementedError with 501 status
+                • Trace how GeneratedResult errors → HTTP responses
+                • Verify content-type and x-ms-error-code headers are added
+                • Likely issue: Error serialization middleware
+
+Investigation:  Check error handler in generated middleware or error response builder
+
+
+ISSUE #7: Set/Get Blob Metadata ETag Mismatch
+──────────────────────────────────────────────
+Status:         ❌ FAIL
+Test Output:    TS=['"0x1FC2DF8044F4D40"'] Rust=['"0x1F3CAD774951A80"']
+
+Root Cause:     When metadata is set, a new ETag is generated using newEtag()
+                Due to Issue #1 randomness mismatch
+
+TS Code:        /home/azureuser/Azurite/src/blob/handlers/BlobHandler.ts:1312-1330
+   const res = await this.metadataStore.setBlobMetadata(...);
+   const response: Models.BlobSetMetadataResponse = {
+     statusCode: 200,
+     eTag: res.etag,  // Uses ETag from setBlobMetadata
+     ...
+   };
+
+Rust Code:      /home/azureuser/Azurite/rust/crates/azurite-blob/src/handlers/blob_handler.rs:364-380
+   let res = self.base.metadataStore.setBlobMetadata(...).await?;
+   copy_prop_field(&res, &mut response, "etag", "eTag");
+
+Metadata Store: Both call new_etag() which has Issue #1 randomness problem
+
+Minimal Fix:    Fix newEtag() randomness (Issue #1)
+Affected Ops:   Set blob metadata
+
+
+ISSUE #8: Create Table Body Includes Rust-Only preferenceApplied and version
+────────────────────────────────────────────────────────────────────────────
+Status:         ❌ FAIL
+Test Output:    TS Body:   {"TableName": "DiffTablefa7404ec05"}
+                Rust Body: {"TableName": "DiffTablefa7404ec05", "preferenceApplied": "return-content", "version": "2025-11-05"}
+
+Root Cause:     Rust table handler adds extra fields to response body that TS doesn't include
+
+TS Code:        /home/azureuser/Azurite/src/table/handlers/TableHandler.ts:58-100
+   const response: Models.TableCreateResponse = {
+     clientRequestId: options.requestId,
+     requestId: tableContext.contextID,
+     version: TABLE_API_VERSION,  // ← Part of response object
+     date: context.startTime,
+     statusCode: 201
+   };
+   response.tableName = table;
+   // ... does NOT add preferenceApplied or version to serialized body
+
+Rust Code:      /home/azureuser/Azurite/rust/crates/azurite-table/src/handlers/table_handler.rs:85-109
+   let mut response = GeneratedResponse::new(201);
+   self.base.add_response_metadata(&mut response, &options, &context, true);  // ADDS EXTRA!
+   response.fields.extend(self.table_response_value(...));
+   self.base.update_response_prefer(&mut response, &context);  // ADDS EXTRA!
+   self.base.set_response_content_type(&mut response, Some(&accept));
+
+Minimal Fix:    Audit base_handler.rs functions:
+                • add_response_metadata() - should only add headers, not body fields
+                • update_response_prefer() - should NOT add preferenceApplied to body
+                Remove fields from response body that TS doesn't include
+
+Affected Ops:   Create table
+
+
+ISSUE #9: Insert Entity ETag Differs by Timestamp (Subsecond Precision)
+────────────────────────────────────────────────────────────────────
+Status:         ❌ FAIL
+Test Output:    TS:   W/"datetime'2026-03-16T21%3A44%3A17.0175310Z'"
+                Rust: W/"datetime'2026-03-16T21%3A44%3A17.0212155Z'"
+                Difference: 370 microseconds
+
+Root Cause:     Different high-precision timestamp implementations
+                TS uses process.hrtime()[1] sampled at request time
+                Rust uses SystemTime::now().subsec_nanos() sampled in function call
+                These are sampled at different times → different nanosecond values
+
+TS Code:        /home/azureuser/Azurite/src/common/utils/utils.ts:175-195
+   export function truncatedISO8061Date(date: Date, ..., hrtimePrecision: boolean = false): string {
+     const dateString = date.toISOString();
+     if (hrtimePrecision) {
+       return (
+         dateString.substring(0, dateString.length - 1) +
+         process.hrtime()[1].toString().padStart(4, "0").slice(0, 4) +  // Samples at call time
+         "Z"
+       );
+     }
+     ...
+   }
+
+   private createPersistedEntity(...) {
+     const modTime = truncatedISO8061Date(context.startTime!, true, true);  // hrtimePrecision=true
+     const eTag = newTableEntityEtag(modTime);
+   }
+
+Rust Code:      /home/azureuser/Azurite/rust/crates/azurite-common/src/utils/utils.rs:108-130
+   pub fn truncatedISO8061Date(date: DateTime<Utc>, ..., hrtimePrecision: bool) -> String {
+     let dateString = date.to_rfc3339_opts(SecondsFormat::Millis, true);
+     if hrtimePrecision {
+       let hrtime = SystemTime::now()  // ← Samples NOW (not at context creation time!)
+         .duration_since(UNIX_EPOCH)
+         .unwrap_or_default()
+         .subsec_nanos();
+       let padded = format!("{:0>4}", hrtime);
+       return format!("{}{}Z", &dateString[..dateString.len() - 1], &padded[..4]);
+     }
+     ...
+   }
+
+   fn create_persisted_entity(...) {
+     let mod_time = newHighPrecisionTimeStamp(BaseHandler::start_time(context));
+     let e_tag = newTableEntityEtag(&mod_time);
+   }
+
+Entity ETag:    /home/azureuser/Azurite/rust/crates/azurite-table/src/utils/utils.rs:308-310
+   pub fn new_table_entity_etag(high_pres_mod_time: &str) -> String {
+     format!("W/\"datetime'{}'\"", high_pres_mod_time.replace(':', "%3A"))
+   }
+
+Minimal Fix:    Don't call SystemTime::now() inside truncatedISO8061Date()
+                • Extract nanosecond value from input date parameter once
+                • OR: Accept nanos parameter from caller
+                • Ensures deterministic behavior: same modTime used throughout entity creation
+
+Affected Ops:   Insert entity
+
+
+================================================================================
+SUMMARY TABLE
+================================================================================
+
+│ Issue │ Type          │ Failure                      │ Root Cause           │ Fix File Location                      │ Priority │
+├───────┼───────────────┼──────────────────────────────┼──────────────────────┼────────────────────────────────────────┼──────────┤
+│ 1     │ ETag RNG      │ Create container ETag        │ newEtag() RNG        │ azurite-common/src/utils/utils.rs:84  │ HIGH     │
+│ 2-4   │ ETag RNG      │ Upload/DL/Props/Lease/Page   │ newEtag() RNG        │ (cascade from #1)                      │ HIGH     │
+│ 5     │ Header + ETag │ Snapshot has extra header    │ isServerEncrypted    │ blob_handler.rs:752                    │ MEDIUM   │
+│       │               │ + ETag mismatch             │ + newEtag() RNG      │ + azurite-common/src/utils/utils.rs   │          │
+│ 6     │ Error Status  │ Copy blob 500 vs 501         │ Middleware serial.   │ Generated error handlers (TBD)        │ LOW      │
+│ 7     │ ETag RNG      │ Set metadata ETag            │ newEtag() RNG        │ (cascade from #1)                      │ HIGH     │
+│ 8     │ Body Fields   │ Create table has extra body  │ add_response_meta()  │ table/src/handlers/base_handler.rs    │ MEDIUM   │
+│       │               │ fields (preferenceApplied)   │ update_response_pref │                                        │          │
+│ 9     │ Timestamp     │ Insert entity ETag subsec    │ truncatedISO8061Date │ azurite-common/src/utils/utils.rs:116 │ HIGH     │
+
+================================================================================
+IMPLEMENTATION ORDER (by impact)
+================================================================================
+
+1. FIX NEWETAG() RNG               [CRITICAL - fixes 6 failures including cascade]
+   File: /home/azureuser/Azurite/rust/crates/azurite-common/src/utils/utils.rs:84-92
+   Effort: Medium (need proper RNG crate)
+   Fixes: Issues 1, 2-4, 7
+
+2. FIX TIMESTAMP PRECISION        [HIGH - fixes 1 failure + edge case handling]
+   File: /home/azureuser/Azurite/rust/crates/azurite-common/src/utils/utils.rs:108-130
+   Effort: Low (change sampling point)
+   Fixes: Issue 9
+
+3. REMOVE ISSERVERENCRYPTED       [MEDIUM - fixes header mismatch]
+   File: /home/azureuser/Azurite/rust/crates/azurite-blob/src/handlers/blob_handler.rs:752
+   Effort: Trivial (delete 1 line)
+   Fixes: Issue 5 (partially; ETag still needs #1)
+
+4. FIX TABLE RESPONSE BODY        [MEDIUM - fixes body field mismatch]
+   File: /home/azureuser/Azurite/rust/crates/azurite-table/src/handlers/base_handler.rs
+   Effort: Medium (audit + modify multiple functions)
+   Fixes: Issue 8
+
+5. INVESTIGATE ERROR SERIALIZATION [LOW - likely edge case, less impact]
+   Files: Generated error handlers (middleware)
+   Effort: Medium-High (needs deep tracing)
+   Fixes: Issue 6
+
+================================================================================
+QUICK TEST COMMAND
+================================================================================
+
+After fixes, run:
+  cd /home/azureuser/Azurite/rust && python scripts/differential_test.py
+
+Expected: All 16 scenarios pass (5 existing + 11 fixed)
+
+================================================================================
