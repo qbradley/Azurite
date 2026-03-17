@@ -1,4 +1,3 @@
-use crate::generated::artifacts::models::GeneratedValue;
 use crate::generated::errors::middleware_error::MiddlewareError;
 
 pub struct DeserializationError;
@@ -6,9 +5,8 @@ pub struct DeserializationError;
 impl DeserializationError {
     pub fn new(message: impl Into<String>) -> MiddlewareError {
         let message = message.into();
-        let mut error = MiddlewareError::new(400, message.clone());
-        error.body = Some(GeneratedValue::String(message));
-        error.contentType = Some(String::from("text/plain"));
-        error
+        // TypeScript DeserializationError returns empty body (no body, contentType, or headers)
+        // Only statusCode and message are set - matching TS line 3-7 in DeserializationError.ts
+        MiddlewareError::new(400, message)
     }
 }
