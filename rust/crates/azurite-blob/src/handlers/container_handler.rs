@@ -495,9 +495,7 @@ impl IContainerHandler for ContainerHandler {
             response.insert_field("date", string_value(formatRfc1123(start_time)));
         }
         response.insert_field("serviceEndpoint", string_value(serviceEndpoint));
-        if let Some(where_clause) = where_clause {
-            response.insert_field("where", string_value(where_clause));
-        }
+        response.insert_field("where", string_value(where_clause.unwrap_or_default()));
         response.insert_field(
             "blobs",
             GeneratedValue::Array(
