@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use indexmap::IndexMap;
+
 use chrono::DateTime;
 
 use crate::generated::artifacts::mappers::{get_mapper, Mapper};
@@ -296,14 +298,14 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
         serde_json::Value::Object(object) => {
             if let Some(properties) = resolve_model_properties(mapper) {
                 let mut result = serde_json::Map::new();
-                for (key, value) in object {
-                    if let Some(property_mapper) = properties.get(key) {
+                // Iterate over mapper properties in definition order (from JSON metadata)
+                // to preserve Azure's required XML element ordering.
+                for (key, property_mapper) in properties {
+                    if let Some(value) = object.get(key) {
                         let is_unwrapped_sequence = property_mapper.r#type.name == "Sequence"
                             && property_mapper.xmlElementName.is_some()
                             && !property_mapper.xmlIsWrapped;
                         if is_unwrapped_sequence {
-                            // Unwrapped sequence: place array elements directly in parent
-                            // using xmlElementName as key (no wrapper element)
                             let element_name =
                                 property_mapper.xmlElementName.as_ref().unwrap().clone();
                             let mapped_array = map_sequence_elements(value, property_mapper);
@@ -317,9 +319,14 @@ fn apply_model_mapping(value: &serde_json::Value, mapper: &Mapper) -> serde_json
                             let mapped_value = apply_model_mapping(value, property_mapper);
                             result.insert(mapped_key, mapped_value);
                         }
-                    } else if resolve_additional_properties(mapper).is_some() {
-                        // additionalProperties: pass through extra keys as-is
-                        result.insert(key.clone(), value.clone());
+                    }
+                }
+                // Handle additional properties not in the mapper
+                if resolve_additional_properties(mapper).is_some() {
+                    for (key, value) in object {
+                        if !properties.contains_key(key) {
+                            result.insert(key.clone(), value.clone());
+                        }
                     }
                 }
                 serde_json::Value::Object(result)
@@ -371,7 +378,7 @@ fn map_sequence_elements(value: &serde_json::Value, mapper: &Mapper) -> serde_js
     }
 }
 
-fn resolve_model_properties(mapper: &Mapper) -> Option<&BTreeMap<String, Mapper>> {
+fn resolve_model_properties(mapper: &Mapper) -> Option<&IndexMap<String, Mapper>> {
     if !mapper.r#type.modelProperties.is_empty() {
         Some(&mapper.r#type.modelProperties)
     } else {

@@ -6,7 +6,7 @@ We've completed a faithful, AI-assisted port of Azurite—Azure Storage Emulator
 
 Azurite is the most widely-deployed Azure Storage emulator in the ecosystem. Developers run it in CI/CD pipelines, test environments, and local development—where performance and resource utilization directly impact iteration speed and infrastructure costs.
 
-The Rust port delivers measurable improvements across both dimensions:
+The Rust port delivers measurable improvements across both dimensions (as measured running azurite integration tests):
 
 - **Up to 1.84x throughput improvement** — Blob operations in in-memory mode run 84% faster than TypeScript
 - **50-57% lower p99 tail latencies** — Reduced slowdowns that block test suites (p99 improvements across all three services)

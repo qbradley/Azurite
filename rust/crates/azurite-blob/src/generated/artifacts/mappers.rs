@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
+use indexmap::IndexMap;
+
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct MapperType {
@@ -15,7 +17,7 @@ pub struct MapperType {
     #[serde(default)]
     pub value: Option<Box<Mapper>>,
     #[serde(default)]
-    pub modelProperties: BTreeMap<String, Mapper>,
+    pub modelProperties: IndexMap<String, Mapper>,
     #[serde(default)]
     pub additionalProperties: Option<Box<Mapper>>,
 }

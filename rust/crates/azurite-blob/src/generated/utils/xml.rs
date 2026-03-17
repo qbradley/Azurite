@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn json_to_xml_includes_xml2js_declaration() {
-        let xml = jsonToXML(&serde_json::json!({ "Root": { "Item": "hello" } })).unwrap();
+        let xml = stringifyXML(&serde_json::json!({ "Item": "hello" }), Some("Root")).unwrap();
         assert_eq!(
             xml,
             r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Root><Item>hello</Item></Root>"#

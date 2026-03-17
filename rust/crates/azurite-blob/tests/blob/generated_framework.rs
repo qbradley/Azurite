@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use indexmap::IndexMap;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
@@ -1490,7 +1491,7 @@ async fn serializer_emits_json_headers_and_body_in_wire_format() {
     let header_mapper = Mapper {
         r#type: MapperType {
             name: String::from("Composite"),
-            modelProperties: BTreeMap::from([
+            modelProperties: IndexMap::from([
                 (String::from("etag"), mapper("etag", "String")),
                 (
                     String::from("metadata"),
