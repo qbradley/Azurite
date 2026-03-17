@@ -436,6 +436,10 @@ impl LokiBlobMetadataStore {
         context: &Context,
         force_committed: bool,
     ) -> Result<Option<BlobModel>, StorageError> {
+        // TS line 3346: Check container exists BEFORE checking blob
+        self.checkContainerExist(context, account, container)
+            .await?;
+
         let blobs = self.blobs_collection.read().unwrap();
         let key = (
             account.to_string(),

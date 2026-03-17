@@ -181,7 +181,9 @@ fn build_body_xml(
     message: &str,
     storageAdditionalErrorMessages: &BTreeMap<String, String>,
 ) -> String {
-    let mut bodyInXML = String::from("<Error>");
+    // L-XML2JS-Declaration-Parity: xml2js.Builder emits XML declaration by default
+    let mut bodyInXML =
+        String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Error>");
     bodyInXML.push_str("<Code>");
     bodyInXML.push_str(&escape(storageErrorCode));
     bodyInXML.push_str("</Code>");

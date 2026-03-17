@@ -138,9 +138,12 @@ fn assert_storage_error_case(case: FactoryCase) {
     ))
     .expect("message regex should compile");
 
+    // L-XML2JS-Declaration-Parity: xml2js.Builder emits XML declaration
     assert!(
-        body.starts_with(&format!("<Error><Code>{}</Code>", escape(case.code))),
-        "{} body should start with code: {body}",
+        body.starts_with(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Error><Code>"
+        ) && body.contains(&format!("<Code>{}</Code>", escape(case.code))),
+        "{} body should start with XML declaration and contain code: {body}",
         case.name
     );
     assert!(
