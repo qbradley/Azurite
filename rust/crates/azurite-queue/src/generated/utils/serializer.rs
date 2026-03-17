@@ -101,8 +101,24 @@ pub async fn deserialize<R: IRequest, L: ILogger + ?Sized>(
                 .to_ascii_lowercase();
             let mut parsed = if contentType.contains("json") {
                 serde_json::from_str::<serde_json::Value>(&body).unwrap_or(serde_json::Value::Null)
+            } else if body.trim().is_empty() {
+                serde_json::Value::Null
             } else {
-                parseXML(&body, false).unwrap_or(serde_json::Value::Null)
+                let result = parseXML(&body, false).map_err(
+                    |e| -> Box<dyn std::error::Error + Send + Sync> {
+                        Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            e.to_string(),
+                        ))
+                    },
+                )?;
+                if result.is_null() {
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "XML body contains no root element",
+                    )));
+                }
+                result
             };
             if spec.isXML && bodyParameter.mapper.r#type.name == "Sequence" {
                 if let Some(element_name) = &bodyParameter.mapper.xmlElementName {

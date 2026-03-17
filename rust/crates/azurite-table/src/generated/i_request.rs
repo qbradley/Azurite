@@ -103,7 +103,9 @@ impl GeneratedReadableStream {
     }
 
     pub fn read_to_string(&self) -> String {
-        String::from_utf8(self.read_to_vec()).unwrap_or_default()
+        // Use lossy conversion to match Node.js Buffer.toString('utf-8') behavior:
+        // invalid bytes become U+FFFD replacement characters instead of failing.
+        String::from_utf8_lossy(&self.read_to_vec()).into_owned()
     }
 }
 

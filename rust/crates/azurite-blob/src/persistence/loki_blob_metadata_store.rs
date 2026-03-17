@@ -224,7 +224,8 @@ fn apply_copy_properties(
 
 fn invalid_header_value(context_id: Option<&str>, header: &str, value: &str) -> StorageError {
     let mut extra = BTreeMap::new();
-    extra.insert(header.to_string(), value.to_string());
+    extra.insert("HeaderName".to_string(), header.to_string());
+    extra.insert("HeaderValue".to_string(), value.to_string());
     StorageErrorFactory::get_invalid_header_value(context_id, Some(extra))
 }
 

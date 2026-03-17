@@ -1969,7 +1969,15 @@ pub(crate) fn validate_blob_tags(
         };
 
         if key.is_empty() {
-            return Err(Box::new(StorageErrorFactory::getEmptyTagName(context_id)));
+            // TS xml2js fails to deserialize <Key/> (empty self-closing tag),
+            // producing a bare 400 with no body (DeserializationError).
+            // Match that behavior instead of returning StorageError with XML body.
+            return Err(Box::new(
+                crate::generated::errors::middleware_error::MiddlewareError::new(
+                    400,
+                    "Empty tag key",
+                ),
+            ));
         }
         if key.len() > 128 || value.len() > 256 {
             return Err(Box::new(StorageErrorFactory::getTagsTooLarge(context_id)));

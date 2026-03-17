@@ -103,8 +103,27 @@ pub async fn deserialize<R: IRequest, L: ILogger + ?Sized>(
                 .to_ascii_lowercase();
             let parsed = if contentType.contains("json") {
                 serde_json::from_str::<serde_json::Value>(&body).unwrap_or(serde_json::Value::Null)
+            } else if body.trim().is_empty() {
+                serde_json::Value::Null
             } else {
-                parseXML(&body, false).unwrap_or(serde_json::Value::Null)
+                // Propagate XML parse failures as errors (matches TS xml2js behavior).
+                // The deserializer_middleware wraps these in DeserializationError → empty 400.
+                let result = parseXML(&body, false).map_err(
+                    |e| -> Box<dyn std::error::Error + Send + Sync> {
+                        Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            e.to_string(),
+                        ))
+                    },
+                )?;
+                // If body is non-empty but no XML root element was found, treat as parse error
+                if result.is_null() {
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "XML body contains no root element",
+                    )));
+                }
+                result
             };
             let generated = GeneratedValue::from(parsed);
             setParametersValue(&mut parameters, &bodyParameter.parameterPath, generated);
