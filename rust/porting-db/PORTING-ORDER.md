@@ -41,21 +41,21 @@ Foundation types and traits that everything depends on.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 1.1 | `src/common/IDataStore.ts` | `azurite-common/src/i_data_store.rs` | ~15 | L | — | ⬜ |
-| 1.2 | `src/common/ICleaner.ts` | `azurite-common/src/i_cleaner.rs` | ~5 | L | — | ⬜ |
-| 1.3 | `src/common/ILogger.ts` | `azurite-common/src/i_logger.rs` | ~15 | L | — | ⬜ |
-| 1.4 | `src/common/ILoggerStrategy.ts` | `azurite-common/src/i_logger_strategy.rs` | ~10 | L | 1.3 | ⬜ |
-| 1.5 | `src/common/models.ts` | `azurite-common/src/models.rs` | ~20 | L | — | ⬜ |
-| 1.6 | `src/common/IAccountDataStore.ts` | `azurite-common/src/i_account_data_store.rs` | ~30 | L | 1.1 | ⬜ |
-| 1.7 | `src/common/IRequestListenerFactory.ts` | `azurite-common/src/i_request_listener_factory.rs` | ~10 | L | — | ⬜ |
-| 1.8 | `src/common/IServerFactory.ts` | `azurite-common/src/i_server_factory.rs` | ~10 | L | — | ⬜ |
-| 1.9 | `src/common/IGCExtentProvider.ts` | `azurite-common/src/i_gc_extent_provider.rs` | ~15 | L | — | ⬜ |
-| 1.10 | `src/common/IGCManager.ts` | `azurite-common/src/i_gc_manager.rs` | ~10 | L | — | ⬜ |
-| 1.11 | `src/common/IEnvironment.ts` | `azurite-common/src/i_environment.rs` | ~50 | M | 1.5 | ⬜ |
-| 1.12 | `src/common/persistence/IExtentMetadata.ts` | `azurite-common/src/persistence/i_extent_metadata.rs` | ~10 | L | — | ⬜ |
-| 1.13 | `src/common/persistence/IExtentStore.ts` | `azurite-common/src/persistence/i_extent_store.rs` | ~40 | M | 1.1, 1.12 | ⬜ |
-| 1.14 | `src/common/persistence/IExtentMetadataStore.ts` | `azurite-common/src/persistence/i_extent_metadata_store.rs` | ~30 | M | 1.1, 1.9, 1.12 | ⬜ |
-| 1.15 | `src/common/persistence/IOperationQueue.ts` | `azurite-common/src/persistence/i_operation_queue.rs` | ~10 | L | — | ⬜ |
+| 1.1 | `src/common/IDataStore.ts` | `azurite-common/src/i_data_store.rs` | ~15 | L | — | ✅ |
+| 1.2 | `src/common/ICleaner.ts` | `azurite-common/src/i_cleaner.rs` | ~5 | L | — | ✅ |
+| 1.3 | `src/common/ILogger.ts` | `azurite-common/src/i_logger.rs` | ~15 | L | — | ✅ |
+| 1.4 | `src/common/ILoggerStrategy.ts` | `azurite-common/src/i_logger_strategy.rs` | ~10 | L | 1.3 | ✅ |
+| 1.5 | `src/common/models.ts` | `azurite-common/src/models.rs` | ~20 | L | — | ✅ |
+| 1.6 | `src/common/IAccountDataStore.ts` | `azurite-common/src/i_account_data_store.rs` | ~30 | L | 1.1 | ✅ |
+| 1.7 | `src/common/IRequestListenerFactory.ts` | `azurite-common/src/i_request_listener_factory.rs` | ~10 | L | — | ✅ |
+| 1.8 | `src/common/IServerFactory.ts` | `azurite-common/src/i_server_factory.rs` | ~10 | L | — | ✅ |
+| 1.9 | `src/common/IGCExtentProvider.ts` | `azurite-common/src/i_gc_extent_provider.rs` | ~15 | L | — | ✅ |
+| 1.10 | `src/common/IGCManager.ts` | `azurite-common/src/i_gc_manager.rs` | ~10 | L | — | ✅ |
+| 1.11 | `src/common/IEnvironment.ts` | `azurite-common/src/i_environment.rs` | ~50 | M | 1.5 | ✅ |
+| 1.12 | `src/common/persistence/IExtentMetadata.ts` | `azurite-common/src/persistence/i_extent_metadata.rs` | ~10 | L | — | ✅ |
+| 1.13 | `src/common/persistence/IExtentStore.ts` | `azurite-common/src/persistence/i_extent_store.rs` | ~40 | M | 1.1, 1.12 | ✅ |
+| 1.14 | `src/common/persistence/IExtentMetadataStore.ts` | `azurite-common/src/persistence/i_extent_metadata_store.rs` | ~30 | M | 1.1, 1.9, 1.12 | ✅ |
+| 1.15 | `src/common/persistence/IOperationQueue.ts` | `azurite-common/src/persistence/i_operation_queue.rs` | ~10 | L | — | ✅ |
 
 ---
 
@@ -229,7 +229,7 @@ The metadata store and query interpreter — the heart of blob storage logic.
 | 10.4 | `src/blob/persistence/QueryInterpreter/QueryNodes/*.ts` (12 files) | `azurite-blob/src/persistence/query_interpreter/query_nodes/` | ~300 | M | 10.3 | ✅ |
 | 10.5 | `src/blob/persistence/QueryInterpreter/QueryParser.ts` | `azurite-blob/src/persistence/query_interpreter/query_parser.rs` | ~605 | H | 10.3, 10.4 | ✅ |
 | 10.6 | `src/blob/persistence/QueryInterpreter/QueryInterpreter.ts` | `azurite-blob/src/persistence/query_interpreter/query_interpreter.rs` | ~100 | M | 10.4 | ✅ |
-| 10.7 | `src/blob/persistence/LokiBlobMetadataStore.ts` | `azurite-blob/src/persistence/loki_blob_metadata_store.rs` | ~3565 | H | 10.1 | ⬜ |
+| 10.7 | `src/blob/persistence/LokiBlobMetadataStore.ts` | `azurite-blob/src/persistence/loki_blob_metadata_store.rs` | ~3565 | H | 10.1 | ✅ |
 | 10.8 | `src/blob/persistence/BlobReferredExtentsAsyncIterator.ts` | `azurite-blob/src/persistence/blob_referred_extents_async_iterator.rs` | ~80 | M | 10.1 | ✅ |
 | 10.9 | `src/blob/persistence/FilterBlobPage.ts` | `azurite-blob/src/persistence/filter_blob_page.rs` | ~60 | M | 10.1 | ✅ |
 | 10.10 | `src/blob/persistence/PageWithDelimiter.ts` | `azurite-blob/src/persistence/page_with_delimiter.rs` | ~80 | M | 10.1 | ✅ |
@@ -242,19 +242,19 @@ All API operation implementations.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 11.1 | `src/blob/handlers/BaseHandler.ts` | `azurite-blob/src/handlers/base_handler.rs` | ~30 | L | 10.1 | ⬜ |
-| 11.2 | `src/blob/handlers/ServiceHandler.ts` | `azurite-blob/src/handlers/service_handler.rs` | ~416 | H | 11.1 | ⬜ |
-| 11.3 | `src/blob/handlers/ContainerHandler.ts` | `azurite-blob/src/handlers/container_handler.rs` | ~865 | H | 11.1, Phase 8 | ⬜ |
-| 11.4 | `src/blob/handlers/BlobHandler.ts` | `azurite-blob/src/handlers/blob_handler.rs` | ~1350 | H | 11.1, Phase 8, 9 | ⬜ |
-| 11.5 | `src/blob/handlers/BlockBlobHandler.ts` | `azurite-blob/src/handlers/block_blob_handler.rs` | ~507 | H | 11.1 | ⬜ |
-| 11.6 | `src/blob/handlers/PageBlobHandler.ts` | `azurite-blob/src/handlers/page_blob_handler.rs` | ~495 | H | 11.1 | ⬜ |
-| 11.7 | `src/blob/handlers/AppendBlobHandler.ts` | `azurite-blob/src/handlers/append_blob_handler.rs` | ~200 | M | 11.1 | ⬜ |
-| 11.8 | `src/blob/handlers/IPageBlobRangesManager.ts` | `azurite-blob/src/handlers/i_page_blob_ranges_manager.rs` | ~15 | L | — | ⬜ |
-| 11.9 | `src/blob/handlers/PageBlobRangesManager.ts` | `azurite-blob/src/handlers/page_blob_ranges_manager.rs` | ~481 | H | 11.8 | ⬜ |
-| 11.10 | `src/blob/handlers/BlobBatchHandler.ts` | `azurite-blob/src/handlers/blob_batch_handler.rs` | ~576 | H | 11.1 | ⬜ |
-| 11.11 | `src/blob/handlers/BlobBatchSubRequest.ts` | `azurite-blob/src/handlers/blob_batch_sub_request.rs` | ~80 | M | — | ⬜ |
-| 11.12 | `src/blob/handlers/BlobBatchSubResponse.ts` | `azurite-blob/src/handlers/blob_batch_sub_response.rs` | ~50 | L | — | ⬜ |
-| 11.13 | `src/blob/handlers/SubResponseTextBodyStream.ts` | `azurite-blob/src/handlers/sub_response_text_body_stream.rs` | ~40 | L | — | ⬜ |
+| 11.1 | `src/blob/handlers/BaseHandler.ts` | `azurite-blob/src/handlers/base_handler.rs` | ~30 | L | 10.1 | ✅ |
+| 11.2 | `src/blob/handlers/ServiceHandler.ts` | `azurite-blob/src/handlers/service_handler.rs` | ~416 | H | 11.1 | ✅ |
+| 11.3 | `src/blob/handlers/ContainerHandler.ts` | `azurite-blob/src/handlers/container_handler.rs` | ~865 | H | 11.1, Phase 8 | ✅ |
+| 11.4 | `src/blob/handlers/BlobHandler.ts` | `azurite-blob/src/handlers/blob_handler.rs` | ~1350 | H | 11.1, Phase 8, 9 | ✅ |
+| 11.5 | `src/blob/handlers/BlockBlobHandler.ts` | `azurite-blob/src/handlers/block_blob_handler.rs` | ~507 | H | 11.1 | ✅ |
+| 11.6 | `src/blob/handlers/PageBlobHandler.ts` | `azurite-blob/src/handlers/page_blob_handler.rs` | ~495 | H | 11.1 | ✅ |
+| 11.7 | `src/blob/handlers/AppendBlobHandler.ts` | `azurite-blob/src/handlers/append_blob_handler.rs` | ~200 | M | 11.1 | ✅ |
+| 11.8 | `src/blob/handlers/IPageBlobRangesManager.ts` | `azurite-blob/src/handlers/i_page_blob_ranges_manager.rs` | ~15 | L | — | ✅ |
+| 11.9 | `src/blob/handlers/PageBlobRangesManager.ts` | `azurite-blob/src/handlers/page_blob_ranges_manager.rs` | ~481 | H | 11.8 | ✅ |
+| 11.10 | `src/blob/handlers/BlobBatchHandler.ts` | `azurite-blob/src/handlers/blob_batch_handler.rs` | ~576 | H | 11.1 | ✅ |
+| 11.11 | `src/blob/handlers/BlobBatchSubRequest.ts` | `azurite-blob/src/handlers/blob_batch_sub_request.rs` | ~80 | M | — | ✅ |
+| 11.12 | `src/blob/handlers/BlobBatchSubResponse.ts` | `azurite-blob/src/handlers/blob_batch_sub_response.rs` | ~50 | L | — | ✅ |
+| 11.13 | `src/blob/handlers/SubResponseTextBodyStream.ts` | `azurite-blob/src/handlers/sub_response_text_body_stream.rs` | ~40 | L | — | ✅ |
 
 ---
 
@@ -297,30 +297,30 @@ Follows identical patterns to blob. Smaller and simpler.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 14.1 | `src/queue/generated/` (32 files) | `azurite-queue/src/generated/` | ~4000 | H | Phase 5 patterns | ⬜ |
-| 14.2 | `src/queue/errors/StorageError.ts` | `azurite-queue/src/errors/storage_error.rs` | ~67 | M | — | ⬜ |
-| 14.3 | `src/queue/errors/StorageErrorFactory.ts` | `azurite-queue/src/errors/storage_error_factory.rs` | ~300 | M | 14.2 | ⬜ |
-| 14.4 | `src/queue/errors/NotImplementedError.ts` | `azurite-queue/src/errors/not_implemented_error.rs` | ~15 | L | — | ⬜ |
-| 14.5 | `src/queue/context/QueueStorageContext.ts` | `azurite-queue/src/context/queue_storage_context.rs` | ~60 | M | 14.1 | ⬜ |
-| 14.6 | `src/queue/authentication/*.ts` (10 files) | `azurite-queue/src/authentication/` | ~800 | M | Phase 3 | ⬜ |
-| 14.7 | `src/queue/persistence/IQueueMetadataStore.ts` | `azurite-queue/src/persistence/i_queue_metadata_store.rs` | ~200 | M | Phase 1 | ⬜ |
-| 14.8 | `src/queue/persistence/LokiQueueMetadataStore.ts` | `azurite-queue/src/persistence/loki_queue_metadata_store.rs` | ~881 | H | 14.7 | ⬜ |
-| 14.9 | `src/queue/persistence/QueueReferredExtentsAsyncIterator.ts` | `azurite-queue/src/persistence/queue_referred_extents_async_iterator.rs` | ~50 | M | 14.7 | ⬜ |
-| 14.10 | `src/queue/handlers/BaseHandler.ts` | `azurite-queue/src/handlers/base_handler.rs` | ~30 | L | 14.7 | ⬜ |
-| 14.11 | `src/queue/handlers/ServiceHandler.ts` | `azurite-queue/src/handlers/service_handler.rs` | ~150 | M | 14.10 | ⬜ |
-| 14.12 | `src/queue/handlers/QueueHandler.ts` | `azurite-queue/src/handlers/queue_handler.rs` | ~300 | M | 14.10 | ⬜ |
-| 14.13 | `src/queue/handlers/MessagesHandler.ts` | `azurite-queue/src/handlers/messages_handler.rs` | ~200 | M | 14.10 | ⬜ |
-| 14.14 | `src/queue/handlers/MessageIdHandler.ts` | `azurite-queue/src/handlers/message_id_handler.rs` | ~150 | M | 14.10 | ⬜ |
-| 14.15 | `src/queue/middlewares/*.ts` (4 files) | `azurite-queue/src/middlewares/` | ~600 | M | — | ⬜ |
-| 14.16 | `src/queue/IQueueEnvironment.ts` | `azurite-queue/src/i_queue_environment.rs` | ~30 | L | 1.11 | ⬜ |
-| 14.17 | `src/queue/QueueEnvironment.ts` | `azurite-queue/src/queue_environment.rs` | ~80 | M | 14.16 | ⬜ |
-| 14.18 | `src/queue/QueueConfiguration.ts` | `azurite-queue/src/queue_configuration.rs` | ~40 | L | 4.7 | ⬜ |
-| 14.19 | `src/queue/QueueRequestListenerFactory.ts` | `azurite-queue/src/queue_request_listener_factory.rs` | ~150 | M | 14.1 | ⬜ |
-| 14.20 | `src/queue/QueueServer.ts` | `azurite-queue/src/queue_server.rs` | ~200 | M | 4.8, 14.18 | ⬜ |
-| 14.21 | `src/queue/main.ts` | `azurite-queue/src/main.rs` | ~60 | L | 14.20 | ⬜ |
-| 14.22 | `src/queue/gc/QueueGCManager.ts` | `azurite-queue/src/gc/queue_gc_manager.rs` | ~200 | M | 1.10 | ⬜ |
-| 14.23 | `src/queue/utils/constants.ts` | `azurite-queue/src/utils/constants.rs` | ~30 | L | — | ⬜ |
-| 14.24 | `src/queue/utils/utils.ts` | `azurite-queue/src/utils/utils.rs` | ~50 | L | — | ⬜ |
+| 14.1 | `src/queue/generated/` (32 files) | `azurite-queue/src/generated/` | ~4000 | H | Phase 5 patterns | ✅ |
+| 14.2 | `src/queue/errors/StorageError.ts` | `azurite-queue/src/errors/storage_error.rs` | ~67 | M | — | ✅ |
+| 14.3 | `src/queue/errors/StorageErrorFactory.ts` | `azurite-queue/src/errors/storage_error_factory.rs` | ~300 | M | 14.2 | ✅ |
+| 14.4 | `src/queue/errors/NotImplementedError.ts` | `azurite-queue/src/errors/not_implemented_error.rs` | ~15 | L | — | ✅ |
+| 14.5 | `src/queue/context/QueueStorageContext.ts` | `azurite-queue/src/context/queue_storage_context.rs` | ~60 | M | 14.1 | ✅ |
+| 14.6 | `src/queue/authentication/*.ts` (10 files) | `azurite-queue/src/authentication/` | ~800 | M | Phase 3 | ✅ |
+| 14.7 | `src/queue/persistence/IQueueMetadataStore.ts` | `azurite-queue/src/persistence/i_queue_metadata_store.rs` | ~200 | M | Phase 1 | ✅ |
+| 14.8 | `src/queue/persistence/LokiQueueMetadataStore.ts` | `azurite-queue/src/persistence/loki_queue_metadata_store.rs` | ~881 | H | 14.7 | ✅ |
+| 14.9 | `src/queue/persistence/QueueReferredExtentsAsyncIterator.ts` | `azurite-queue/src/persistence/queue_referred_extents_async_iterator.rs` | ~50 | M | 14.7 | ✅ |
+| 14.10 | `src/queue/handlers/BaseHandler.ts` | `azurite-queue/src/handlers/base_handler.rs` | ~30 | L | 14.7 | ✅ |
+| 14.11 | `src/queue/handlers/ServiceHandler.ts` | `azurite-queue/src/handlers/service_handler.rs` | ~150 | M | 14.10 | ✅ |
+| 14.12 | `src/queue/handlers/QueueHandler.ts` | `azurite-queue/src/handlers/queue_handler.rs` | ~300 | M | 14.10 | ✅ |
+| 14.13 | `src/queue/handlers/MessagesHandler.ts` | `azurite-queue/src/handlers/messages_handler.rs` | ~200 | M | 14.10 | ✅ |
+| 14.14 | `src/queue/handlers/MessageIdHandler.ts` | `azurite-queue/src/handlers/message_id_handler.rs` | ~150 | M | 14.10 | ✅ |
+| 14.15 | `src/queue/middlewares/*.ts` (4 files) | `azurite-queue/src/middlewares/` | ~600 | M | — | ✅ |
+| 14.16 | `src/queue/IQueueEnvironment.ts` | `azurite-queue/src/i_queue_environment.rs` | ~30 | L | 1.11 | ✅ |
+| 14.17 | `src/queue/QueueEnvironment.ts` | `azurite-queue/src/queue_environment.rs` | ~80 | M | 14.16 | ✅ |
+| 14.18 | `src/queue/QueueConfiguration.ts` | `azurite-queue/src/queue_configuration.rs` | ~40 | L | 4.7 | ✅ |
+| 14.19 | `src/queue/QueueRequestListenerFactory.ts` | `azurite-queue/src/queue_request_listener_factory.rs` | ~150 | M | 14.1 | ✅ |
+| 14.20 | `src/queue/QueueServer.ts` | `azurite-queue/src/queue_server.rs` | ~200 | M | 4.8, 14.18 | ✅ |
+| 14.21 | `src/queue/main.ts` | `azurite-queue/src/main.rs` | ~60 | L | 14.20 | ✅ |
+| 14.22 | `src/queue/gc/QueueGCManager.ts` | `azurite-queue/src/gc/queue_gc_manager.rs` | ~200 | M | 1.10 | ✅ |
+| 14.23 | `src/queue/utils/constants.ts` | `azurite-queue/src/utils/constants.rs` | ~30 | L | — | ✅ |
+| 14.24 | `src/queue/utils/utils.ts` | `azurite-queue/src/utils/utils.rs` | ~50 | L | — | ✅ |
 
 **🏁 MILESTONE: Queue service fully ported.**
 
@@ -332,37 +332,37 @@ Most complex service due to batch processing and EDM type system.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 15.1 | `src/table/generated/` (30 files) | `azurite-table/src/generated/` | ~3500 | H | Phase 5 patterns | ⬜ |
-| 15.2 | `src/table/errors/*.ts` (3 files) | `azurite-table/src/errors/` | ~500 | M | — | ⬜ |
-| 15.3 | `src/table/context/TableStorageContext.ts` | `azurite-table/src/context/table_storage_context.rs` | ~80 | M | 15.1 | ⬜ |
-| 15.4 | `src/table/entity/IEdmType.ts` | `azurite-table/src/entity/i_edm_type.rs` | ~20 | L | — | ⬜ |
-| 15.5 | `src/table/entity/Edm*.ts` (9 files) | `azurite-table/src/entity/` | ~300 | M | 15.4 | ⬜ |
-| 15.6 | `src/table/entity/EntityProperty.ts` | `azurite-table/src/entity/entity_property.rs` | ~50 | M | 15.4 | ⬜ |
-| 15.7 | `src/table/entity/NormalizedEntity.ts` | `azurite-table/src/entity/normalized_entity.rs` | ~60 | M | 15.6 | ⬜ |
-| 15.8 | `src/table/authentication/*.ts` (11 files) | `azurite-table/src/authentication/` | ~900 | M | Phase 3 | ⬜ |
-| 15.9 | `src/table/persistence/ITableMetadataStore.ts` | `azurite-table/src/persistence/i_table_metadata_store.rs` | ~200 | M | Phase 1 | ⬜ |
-| 15.10 | `src/table/persistence/LokiTableMetadataStore.ts` | `azurite-table/src/persistence/loki_table_metadata_store.rs` | ~1088 | H | 15.9 | ⬜ |
-| 15.11 | `src/table/persistence/LokiTableStoreQueryGenerator.ts` | `azurite-table/src/persistence/loki_table_store_query_generator.rs` | ~100 | M | 15.9 | ⬜ |
-| 15.12 | `src/table/persistence/QueryInterpreter/` (18 files) | `azurite-table/src/persistence/query_interpreter/` | ~800 | H | — | ⬜ |
-| 15.13 | `src/table/batch/BatchOperation.ts` | `azurite-table/src/batch/batch_operation.rs` | ~30 | L | — | ⬜ |
-| 15.14 | `src/table/batch/BatchRequest.ts` | `azurite-table/src/batch/batch_request.rs` | ~80 | M | — | ⬜ |
-| 15.15 | `src/table/batch/BatchSerialization.ts` | `azurite-table/src/batch/batch_serialization.rs` | ~100 | M | — | ⬜ |
-| 15.16 | `src/table/batch/TableBatchOrchestrator.ts` | `azurite-table/src/batch/table_batch_orchestrator.rs` | ~755 | H | 15.13-15.15 | ⬜ |
-| 15.17 | `src/table/batch/TableBatchSerialization.ts` | `azurite-table/src/batch/table_batch_serialization.rs` | ~656 | H | — | ⬜ |
-| 15.18 | `src/table/batch/TableBatchRepository.ts` | `azurite-table/src/batch/table_batch_repository.rs` | ~100 | M | 15.9 | ⬜ |
-| 15.19 | `src/table/batch/*.ts` (remaining) | `azurite-table/src/batch/` | ~300 | M | — | ⬜ |
-| 15.20 | `src/table/handlers/BaseHandler.ts` | `azurite-table/src/handlers/base_handler.rs` | ~30 | L | 15.9 | ⬜ |
-| 15.21 | `src/table/handlers/ServiceHandler.ts` | `azurite-table/src/handlers/service_handler.rs` | ~150 | M | 15.20 | ⬜ |
-| 15.22 | `src/table/handlers/TableHandler.ts` | `azurite-table/src/handlers/table_handler.rs` | ~1188 | H | 15.20, 15.16 | ⬜ |
-| 15.23 | `src/table/middleware/*.ts` (4 files) | `azurite-table/src/middleware/` | ~600 | M | — | ⬜ |
-| 15.24 | `src/table/ITableEnvironment.ts` | `azurite-table/src/i_table_environment.rs` | ~30 | L | 1.11 | ⬜ |
-| 15.25 | `src/table/TableEnvironment.ts` | `azurite-table/src/table_environment.rs` | ~80 | M | 15.24 | ⬜ |
-| 15.26 | `src/table/TableConfiguration.ts` | `azurite-table/src/table_configuration.rs` | ~40 | L | 4.7 | ⬜ |
-| 15.27 | `src/table/TableRequestListenerFactory.ts` | `azurite-table/src/table_request_listener_factory.rs` | ~200 | M | 15.1 | ⬜ |
-| 15.28 | `src/table/TableServer.ts` | `azurite-table/src/table_server.rs` | ~200 | M | 4.8, 15.26 | ⬜ |
-| 15.29 | `src/table/main.ts` | `azurite-table/src/main.rs` | ~60 | L | 15.28 | ⬜ |
-| 15.30 | `src/table/utils/constants.ts` | `azurite-table/src/utils/constants.rs` | ~30 | L | — | ⬜ |
-| 15.31 | `src/table/utils/utils.ts` | `azurite-table/src/utils/utils.rs` | ~50 | L | — | ⬜ |
+| 15.1 | `src/table/generated/` (30 files) | `azurite-table/src/generated/` | ~3500 | H | Phase 5 patterns | ✅ |
+| 15.2 | `src/table/errors/*.ts` (3 files) | `azurite-table/src/errors/` | ~500 | M | — | ✅ |
+| 15.3 | `src/table/context/TableStorageContext.ts` | `azurite-table/src/context/table_storage_context.rs` | ~80 | M | 15.1 | ✅ |
+| 15.4 | `src/table/entity/IEdmType.ts` | `azurite-table/src/entity/i_edm_type.rs` | ~20 | L | — | ✅ |
+| 15.5 | `src/table/entity/Edm*.ts` (9 files) | `azurite-table/src/entity/` | ~300 | M | 15.4 | ✅ |
+| 15.6 | `src/table/entity/EntityProperty.ts` | `azurite-table/src/entity/entity_property.rs` | ~50 | M | 15.4 | ✅ |
+| 15.7 | `src/table/entity/NormalizedEntity.ts` | `azurite-table/src/entity/normalized_entity.rs` | ~60 | M | 15.6 | ✅ |
+| 15.8 | `src/table/authentication/*.ts` (11 files) | `azurite-table/src/authentication/` | ~900 | M | Phase 3 | ✅ |
+| 15.9 | `src/table/persistence/ITableMetadataStore.ts` | `azurite-table/src/persistence/i_table_metadata_store.rs` | ~200 | M | Phase 1 | ✅ |
+| 15.10 | `src/table/persistence/LokiTableMetadataStore.ts` | `azurite-table/src/persistence/loki_table_metadata_store.rs` | ~1088 | H | 15.9 | ✅ |
+| 15.11 | `src/table/persistence/LokiTableStoreQueryGenerator.ts` | `azurite-table/src/persistence/loki_table_store_query_generator.rs` | ~100 | M | 15.9 | ✅ |
+| 15.12 | `src/table/persistence/QueryInterpreter/` (18 files) | `azurite-table/src/persistence/query_interpreter/` | ~800 | H | — | ✅ |
+| 15.13 | `src/table/batch/BatchOperation.ts` | `azurite-table/src/batch/batch_operation.rs` | ~30 | L | — | ✅ |
+| 15.14 | `src/table/batch/BatchRequest.ts` | `azurite-table/src/batch/batch_request.rs` | ~80 | M | — | ✅ |
+| 15.15 | `src/table/batch/BatchSerialization.ts` | `azurite-table/src/batch/batch_serialization.rs` | ~100 | M | — | ✅ |
+| 15.16 | `src/table/batch/TableBatchOrchestrator.ts` | `azurite-table/src/batch/table_batch_orchestrator.rs` | ~755 | H | 15.13-15.15 | ✅ |
+| 15.17 | `src/table/batch/TableBatchSerialization.ts` | `azurite-table/src/batch/table_batch_serialization.rs` | ~656 | H | — | ✅ |
+| 15.18 | `src/table/batch/TableBatchRepository.ts` | `azurite-table/src/batch/table_batch_repository.rs` | ~100 | M | 15.9 | ✅ |
+| 15.19 | `src/table/batch/*.ts` (remaining) | `azurite-table/src/batch/` | ~300 | M | — | ✅ |
+| 15.20 | `src/table/handlers/BaseHandler.ts` | `azurite-table/src/handlers/base_handler.rs` | ~30 | L | 15.9 | ✅ |
+| 15.21 | `src/table/handlers/ServiceHandler.ts` | `azurite-table/src/handlers/service_handler.rs` | ~150 | M | 15.20 | ✅ |
+| 15.22 | `src/table/handlers/TableHandler.ts` | `azurite-table/src/handlers/table_handler.rs` | ~1188 | H | 15.20, 15.16 | ✅ |
+| 15.23 | `src/table/middleware/*.ts` (4 files) | `azurite-table/src/middleware/` | ~600 | M | — | ✅ |
+| 15.24 | `src/table/ITableEnvironment.ts` | `azurite-table/src/i_table_environment.rs` | ~30 | L | 1.11 | ✅ |
+| 15.25 | `src/table/TableEnvironment.ts` | `azurite-table/src/table_environment.rs` | ~80 | M | 15.24 | ✅ |
+| 15.26 | `src/table/TableConfiguration.ts` | `azurite-table/src/table_configuration.rs` | ~40 | L | 4.7 | ✅ |
+| 15.27 | `src/table/TableRequestListenerFactory.ts` | `azurite-table/src/table_request_listener_factory.rs` | ~200 | M | 15.1 | ✅ |
+| 15.28 | `src/table/TableServer.ts` | `azurite-table/src/table_server.rs` | ~200 | M | 4.8, 15.26 | ✅ |
+| 15.29 | `src/table/main.ts` | `azurite-table/src/main.rs` | ~60 | L | 15.28 | ✅ |
+| 15.30 | `src/table/utils/constants.ts` | `azurite-table/src/utils/constants.rs` | ~30 | L | — | ✅ |
+| 15.31 | `src/table/utils/utils.ts` | `azurite-table/src/utils/utils.rs` | ~50 | L | — | ✅ |
 
 **🏁 MILESTONE: Table service fully ported.**
 
@@ -372,7 +372,7 @@ Most complex service due to batch processing and EDM type system.
 
 | # | Source File | Rust Target | LOC | Complexity | Depends On | Status |
 |---|-----------|------------|-----|------------|------------|--------|
-| 16.1 | `src/azurite.ts` | `azurite/src/main.rs` | ~150 | M | Phases 12-15 | ⬜ |
+| 16.1 | `src/azurite.ts` | `azurite/src/main.rs` | ~150 | M | Phases 12-15 | ✅ |
 
 **🏁 MILESTONE: Full Azurite emulator running in Rust.**
 

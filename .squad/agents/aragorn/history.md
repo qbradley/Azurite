@@ -351,3 +351,34 @@ TypeScript has two error paths for 400-level errors:
 **Status:** COMPLETED — cross-service XML ordering and error formatting now match TypeScript behavior more closely.
 
 **Last Updated:** 2026-03-17T22:30:47Z
+
+---
+
+## Learnings
+
+### PORTING-ORDER.md Audit (2026-07-16)
+
+**Task:** Comprehensive audit of PORTING-ORDER.md vs actual Rust source files.
+
+**Finding:** 86 items were marked ⬜ (not_started) despite having fully translated Rust files on disk. This was a bookkeeping gap — the code was written across Phases 1-16 but the tracking document was never updated past Phase 4.
+
+**Items updated ⬜ → ✅:**
+- Phase 1: Items 1.1-1.15 (15 common core interfaces)
+- Phase 10: Item 10.7 (LokiBlobMetadataStore)
+- Phase 11: Items 11.1-11.13 (13 blob handlers)
+- Phase 14: Items 14.1-14.24 (24 queue service files)
+- Phase 15: Items 15.1-15.31 (31 table service files)
+- Phase 16: Item 16.1 (combined binary)
+- **Total: 85 items corrected**
+
+**Legitimately remaining ⬜:**
+- Phase 0.7/0.8: CI and rustfmt config (infrastructure, not code translation)
+- Phase 17.1-17.4: SQL persistence (explicitly deferred/optional)
+
+**Genuine gaps found:** NONE. All in-scope TypeScript source files have corresponding Rust translations. The port is structurally complete.
+
+**Architecture note:** Table batch logic (15.13-15.19) was consolidated into `batch/mod.rs` (437 lines) plus handler-side files rather than split into 7 separate files as originally planned. This is a valid translation decision documented in prior phases.
+
+**Verification:** cargo check ✅, cargo test --workspace ✅ (366 tests pass, 0 failures)
+
+- **L-Bookkeeping-Drift:** When porting work spans many sessions, tracking documents can fall behind. Periodic reconciliation of PORTING-ORDER.md against the actual file tree catches these bookkeeping gaps.
