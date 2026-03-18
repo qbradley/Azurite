@@ -256,7 +256,18 @@ impl Environment {
         let normalized = Self::normalize_args(args);
         let matches = Self::command()
             .try_get_matches_from(normalized)
-            .unwrap_or_else(|error| panic!("{error}"));
+            .unwrap_or_else(|error| {
+                // --help and --version should exit cleanly, not via panic
+                if matches!(
+                    error.kind(),
+                    clap::error::ErrorKind::DisplayHelp
+                        | clap::error::ErrorKind::DisplayVersion
+                ) {
+                    let _ = error.print();
+                    std::process::exit(0);
+                }
+                panic!("{error}")
+            });
 
         let location = matches.get_one::<String>("location").and_then(|value| {
             if value == "<cwd>" {
