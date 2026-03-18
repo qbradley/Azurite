@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `queue_configuration`
 - Phase: `14.18`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `QueueConfiguration`

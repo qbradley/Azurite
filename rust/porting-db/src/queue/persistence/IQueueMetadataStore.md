@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `persistence::i_queue_metadata_store`
 - Phase: `14.7`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Type Definitions (10)

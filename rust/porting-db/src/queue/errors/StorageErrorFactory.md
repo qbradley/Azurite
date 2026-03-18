@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `errors::storage_error_factory`
 - Phase: `14.3`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `StorageErrorFactory`

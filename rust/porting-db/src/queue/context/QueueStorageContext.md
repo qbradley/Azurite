@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `context::queue_storage_context`
 - Phase: `14.5`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `QueueStorageContext`

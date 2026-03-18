@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `errors::storage_error`
 - Phase: `14.2`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default class `StorageError`

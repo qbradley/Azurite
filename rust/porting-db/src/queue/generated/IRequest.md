@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `generated::request`
 - Phase: `14.1`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Type `HttpMethod`

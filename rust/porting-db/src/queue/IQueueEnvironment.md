@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `i_queue_environment`
 - Phase: `14.16`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IQueueEnvironment`

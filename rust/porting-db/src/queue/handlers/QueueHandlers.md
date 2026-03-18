@@ -6,7 +6,7 @@
 - **Type:** Handler implementations
 - **Phase:** 14.10-14.14
 - **Complexity:** M (medium)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Exports
 

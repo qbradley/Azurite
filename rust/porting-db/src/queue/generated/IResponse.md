@@ -8,7 +8,7 @@
 - Crate: `azurite-queue`
 - Module: `generated::response`
 - Phase: `14.1`
-- Status: `not_started`
+- Status: `ported`
 
 ## Exported API
 ### Default interface `IResponse`

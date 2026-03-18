@@ -6,7 +6,7 @@
 - **Type:** Generated framework (autorest + custom template)
 - **Phase:** 15.1
 - **Complexity:** H (high)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Structure Overview
 

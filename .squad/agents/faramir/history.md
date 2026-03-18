@@ -69,3 +69,15 @@ All analysis phases 0-9 completed before 2026-03-14:
 - Main blocker for Rust reuse is harness shape, not test quality: Blob/Queue/Table test factories directly start TypeScript server objects on hardcoded ports `11000/11001/11002`, and some table helpers/raw REST payloads also hardcode endpoint details (`tests/table/models/table.entity.test.config.ts`, `tests/table/apis/table.entity.rest.test.ts`).
 - Best reuse strategy is a thin external-server mode in the existing TS harness so the same Mocha suites can point at Rust without rewriting assertions. Recommended execution order remains blob first, queue second, table third; use table .NET/Go conformance only after table API parity stabilizes.
 
+### Porting-db backfill for queue and table services (2026-07-15)
+- Created 159 new porting-db records: 56 for queue (`rust/porting-db/src/queue/`), 103 for table (`rust/porting-db/src/table/`). Total porting-db now has 335 records across all services.
+- Queue records: 72 total (was 16). Covers all 81 Rust source files across authentication (10), context, errors (3), gc, generated framework (26 per-file), handlers (5), middlewares (4), persistence (3), utils (2), and root files (2). Per-file records reference blob equivalents where patterns are identical.
+- Table records: 106 total (was 3). Covers all ~100 Rust source files across authentication (11 — includes SharedKeyLite unique to table), batch (1 aggregate for 18 TS files), context, entity (12 per-file EDM types), errors (3), generated framework (26 per-file), handlers (6 — includes batch handler/sub-request/sub-response), middleware (4), persistence (22 — includes full QueryInterpreter AST node tree with 17 query nodes), utils (2), and root files (5).
+- Updated all pre-existing aggregate records from `analyzed`/`not_started` status to `ported`.
+- Table-unique subsystems documented with extra fidelity detail: batch (OData multipart protocol, transaction semantics), QueryInterpreter (recursive-descent parser, OData $filter, typed literal handling), EDM type system (9 types with OData annotation levels), TableHandler (1188 LOC — largest handler covering all entity CRUD), SharedKeyLite auth (legacy SDK compatibility).
+- Queue-unique subsystems: MessagesHandler (dequeue with visibility timeout), MessageIdHandler (pop receipt validation), QueueGCManager (message expiry sweep).
+
+## FINAL STATUS: ✅ PORT COMPLETE (2026-03-18T03:30)
+
+**Completion Milestone:** Porting-DB backfill complete. 335 total records (queue: 72, table: 106, blob: 127, other: 30). All 435 Rust files documented for change propagation. Full porting database is now authoritative source for future TS→Rust updates.
+

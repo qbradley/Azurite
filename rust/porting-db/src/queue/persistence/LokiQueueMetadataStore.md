@@ -6,7 +6,7 @@
 - **Type:** Loki-backed metadata persistence
 - **Phase:** 14.8
 - **Complexity:** H (high)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Exports
 

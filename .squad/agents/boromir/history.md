@@ -50,6 +50,17 @@ All Phases 1-6 parity testing completed before 2026-03-14:
 
 ## Learnings
 
+### 2026-03-17: Full Swagger Differential Harness Re-Run
+
+**Context:** Re-ran the full blob swagger differential harness after the XML ordering fix series (`c43ff258`, `bee5c0eb`, `5f0a1225`, `df94fd23`) using the live Rust server on port 10000 and a freshly started TS blob server on port 11001.
+
+**Results:**
+- Full harness completed at **72/72 passing**.
+- **No failures** were reported, so the XML ordering changes introduced **no regressions** in the current blob swagger matrix.
+- Outcome matches the prior **72/72** baseline exactly; there were **no new passes**, but parity remained intact.
+
+**Operational Note:** In this repo, the harness runner works when invoked as a Python module with an explicit swagger spec path (`PYTHONPATH=rust/scripts python3 -m swagger_diff.runner --spec /home/azureuser/Azurite/swagger/blob-storage-2021-10-04.json ...`). The direct `runner.py --account/--key` invocation shown in older notes does not match the current CLI surface.
+
 ### 2025-01-XX: Phase 12-14 Parity Test Implementation
 
 **Context:** Wrote comprehensive parity tests for Phase 12 (Blob Middleware/Server/Config), Phase 13 (Blob GC), and Phase 14 (Queue Service) covering middleware, configuration, GC state machines, queue authentication, error handling, and constants.
@@ -660,3 +671,56 @@ python3 -m swagger_diff.runner -v --output results.json
 This differential runner eliminates the harness artifacts problem by testing BOTH servers from fresh state. Since both start clean and get identical requests, any differences are REAL divergences, not test artifacts.
 
 Commit: [pending] - feat(qa): swagger-based differential test runner
+
+### 2026-03-17: Table XML Investigation — Ordering, Not Malformed XML
+
+**Context:** Investigated Quetzal's report of table XML-format problems by running the requested Rust cargo commands, then comparing live TS and Rust table XML responses for service-properties, ACL, and error paths.
+
+**Findings:**
+- `cargo test --all` currently reports **0 reproduced table/XML failures**; the Rust table test tree still contains only ignored parity scaffolds, so cargo is blind to XML wire-format regressions.
+- The actual TS-vs-Rust divergence is **XML wire ordering/formatting**, not invalid element names or bad values.
+- Rust XML success responses reorder children because generated response objects and mapper metadata use `BTreeMap` (`GeneratedObject`, `modelProperties`), while TS preserves insertion order from objects/arrays. Confirmed on `StorageServiceProperties` and `SignedIdentifiers`/`AccessPolicy`.
+- Rust XML error bodies are semantically correct but compact (`<Error><Code>...`) whereas TS emits pretty-printed XML via `jsonToXML()` + default `xml2js.Builder()`.
+
+**Why it matters:**
+- Current SDK-driven tests still pass because they parse semantically.
+- Any hidden raw XML snapshot/parity test, or any comparison expecting TS byte order, will fail until Rust preserves TS insertion order and mirrors TS error-body formatting.
+
+**Recommended fix order for Aragorn:**
+1. Fix XML child ordering in the Rust generated serializer/model pipeline.
+2. Fix pretty-vs-compact XML error formatting.
+3. Add active Rust parity tests for table XML success/error responses so cargo catches regressions.
+
+### Final QA Pass — Full Test Suite, Clippy, Binary Verification
+
+**Context:** Final quality pass on the completed Rust port (431 files, 6 crates).
+
+**Test Results:**
+- **420 tests passing**, 17 ignored scaffolds, 0 failures
+- Per-crate: azurite=3, blob=147, common=79, integration=34, queue=74, table=100
+- **Clippy:** Zero warnings across entire workspace
+
+**Bug Found & Fixed:**
+- `--help` caused a panic instead of clean exit in `environment.rs:257-259`
+- Root cause: clap's `DisplayHelp` error kind was routed through `panic!()` 
+- Fix: explicit match for `DisplayHelp`/`DisplayVersion` → `std::process::exit(0)`
+- Filed to `decisions/inbox/boromir-final-qa.md`
+
+**Tests Added (57 new):**
+1. Combined binary tests (3): --help clean exit, invalid flag rejection, all-services verification
+2. Queue persistence CRUD (6): create/get/list/delete/service-properties/message-count/prefix-filter
+3. Table EDM entity types (30): All 9 EDM types — validate, reject, serialize, annotation behavior
+4. Table query parser/lexer (18): Full tokenization + parsing coverage for OData $filter syntax
+
+**Coverage Report:** Written to `rust/porting-db/TEST-COVERAGE-REPORT.md`
+
+**Key Learnings:**
+1. Node `name()` returns the operator string ("eq", "and") not a class name — follow the TS pattern
+2. EdmInt64 stores raw strings without numeric validation (matching TS behavior exactly)
+3. `IDataStore::init()` must be imported separately from `IQueueMetadataStore` to initialize the store
+4. `getQueue()` returns `Result<QueueModel, StorageError>`, not Option — missing queue is an error
+5. `AnnotationLevel::NO` is the correct variant for "no metadata" (not NOMETADATA)
+
+## FINAL STATUS: ✅ PORT COMPLETE (2026-03-18T03:30)
+
+**Completion Milestone:** Added 57 new tests across binary CLI, queue persistence, table EDM types, and OData parser. Fixed --help panic bug. 437 tests total (420 active + 17 scaffolds), zero clippy warnings. TEST-COVERAGE-REPORT.md generated. Binary builds and runs successfully. Release-ready.

@@ -6,7 +6,7 @@
 - **Type:** Metadata persistence + OData query interpreter
 - **Phase:** 15.9-15.12
 - **Complexity:** H (high)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Part 1: ITableMetadataStore & Implementations (15.9-15.11)
 

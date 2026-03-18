@@ -6,7 +6,7 @@
 - **Type:** Server bootstrap, GC, utilities
 - **Phase:** 14.16-14.24
 - **Complexity:** M (medium)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Exports
 

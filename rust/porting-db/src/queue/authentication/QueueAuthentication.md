@@ -6,7 +6,7 @@
 - **Type:** Authentication implementations
 - **Phase:** 14.6
 - **Complexity:** M (medium)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Exports
 

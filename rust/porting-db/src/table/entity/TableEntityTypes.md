@@ -6,7 +6,7 @@
 - **Type:** EDM type system for Azure Table Storage
 - **Phase:** 15.4-15.7
 - **Complexity:** M (medium)
-- **Status:** analyzed
+- **Status:** ported
 
 ## Exports
 
