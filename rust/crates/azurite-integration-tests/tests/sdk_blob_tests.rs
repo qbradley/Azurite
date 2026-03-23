@@ -48,13 +48,13 @@ fn azurite_binary_path() -> String {
     let workspace_root =
         env!("CARGO_MANIFEST_DIR").trim_end_matches("/crates/azurite-integration-tests");
     let release_path = format!(
-        "{}/target/x86_64-unknown-linux-gnu/release/azurite",
+        "{}/target/x86_64-unknown-linux-gnu/release/azurite-rust",
         workspace_root
     );
     if std::path::Path::new(&release_path).exists() {
         return release_path;
     }
-    format!("{}/target/debug/azurite", workspace_root)
+    format!("{}/target/debug/azurite-rust", workspace_root)
 }
 
 fn ensure_server() -> &'static TestServer {

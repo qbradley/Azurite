@@ -154,8 +154,8 @@ class ProcessMetrics {
 function findRustBinary() {
   const repoRoot = path.resolve(__dirname, "../..");
   const candidates = [
-    path.join(repoRoot, "rust/target/release/azurite"),
-    path.join(repoRoot, "rust/target/x86_64-unknown-linux-gnu/release/azurite"),
+    path.join(repoRoot, "rust/target/release/azurite-rust"),
+    path.join(repoRoot, "rust/target/x86_64-unknown-linux-gnu/release/azurite-rust"),
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;

@@ -65,7 +65,7 @@ require_command() {
 }
 
 find_azurite_binary() {
-  local direct_path="${RUST_ROOT}/target/release/azurite"
+  local direct_path="${RUST_ROOT}/target/release/azurite-rust"
   local discovered_path=""
 
   if [[ -x "${direct_path}" ]]; then
@@ -73,7 +73,7 @@ find_azurite_binary() {
     return 0
   fi
 
-  discovered_path="$(find "${RUST_ROOT}/target" -path '*/release/azurite' -type f 2>/dev/null | head -n 1 || true)"
+  discovered_path="$(find "${RUST_ROOT}/target" -path '*/release/azurite-rust' -type f 2>/dev/null | head -n 1 || true)"
   if [[ -n "${discovered_path}" && -x "${discovered_path}" ]]; then
     printf '%s\n' "${discovered_path}"
     return 0

@@ -174,9 +174,9 @@ npx mocha --require ts-node/register --grep @loki --recursive --exit 'tests/**/*
 
 ```bash
 # Start Rust Azurite on :10000/:10001/:10002
-cargo run --release --bin azurite-blob -- --blobHost 127.0.0.1 --blobPort 10000 &
-cargo run --release --bin azurite-queue -- --queueHost 127.0.0.1 --queuePort 10001 &
-cargo run --release --bin azurite-table -- --tableHost 127.0.0.1 --tablePort 10002 &
+cargo run --release --bin azurite-blob-rust -- --blobHost 127.0.0.1 --blobPort 10000 &
+cargo run --release --bin azurite-queue-rust -- --queueHost 127.0.0.1 --queuePort 10001 &
+cargo run --release --bin azurite-table-rust -- --tableHost 127.0.0.1 --tablePort 10002 &
 
 # Run replay
 python3 rust/scripts/traffic_replay.py --corpus-dir rust/scripts/traffic_corpus
@@ -258,7 +258,7 @@ ls -lh rust/scripts/traffic_corpus/*.json
 ```bash
 # Build manually with more detail
 cd rust
-cargo build --release --bin azurite-blob --bin azurite-queue --bin azurite-table
+cargo build --release --bin azurite-blob-rust --bin azurite-queue-rust --bin azurite-table-rust
 ```
 
 ### Test timeouts

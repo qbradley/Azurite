@@ -574,3 +574,49 @@ Five high-confidence bugs identified through traffic replay failure analysis, pr
 - Document findings in implementation logs
 
 **Cross-Reference:** D-011 (ETag/Snapshot Substitution), D-012 (Skip Logic)
+
+---
+
+## D-013: Rename Rust binary targets with `-rust` suffix
+
+**Date:** 2025-03-23  
+**Author:** Aragorn (Rust Expert) — implementation of user directive  
+**Requested by:** Quetzal Bradley
+
+### Context
+
+The Rust and TypeScript builds both produce binaries named `azurite`, `azurite-blob`, `azurite-queue`, and `azurite-table`. During testing, this creates confusion about which implementation is actually running.
+
+### Decision
+
+Append `-rust` to all Rust executable binary output names:
+
+| Crate package name | Old binary name   | New binary name        |
+|--------------------|-------------------|------------------------|
+| `azurite`          | `azurite`         | `azurite-rust`         |
+| `azurite-blob`     | `azurite-blob`    | `azurite-blob-rust`    |
+| `azurite-queue`    | `azurite-queue`   | `azurite-queue-rust`   |
+| `azurite-table`    | `azurite-table`   | `azurite-table-rust`   |
+
+**Package names (`[package] name`) are unchanged** — only the `[[bin]] name` field was updated. This means `cargo run -p azurite-blob` still works, but you must specify `--bin azurite-blob-rust` if the crate has multiple binaries.
+
+### What changed
+
+- **Cargo.toml** files for all 4 crates: added or updated `[[bin]]` sections
+- **Tests:** Updated `sdk_blob_tests.rs` binary path references
+- **Scripts:** `run-integration-tests.sh`, `capture-and-replay.sh`, `differential_test.py`
+- **Benchmarks:** `benchmark.js`, `run-benchmarks.sh`
+- **Docs:** `README.md`, `QUICKSTART.md`, `TRAFFIC_HARNESS.md`, `scripts/README.md`
+
+### What did NOT change
+
+- Test files using `"azurite-blob".to_string()` as argv[0] for clap parsing — these are program-name hints and don't need to match the binary filename
+- Package names in `[package]` sections — crate identity is unchanged
+- `cargo run -p <package>` commands — these use package names, not binary names
+
+### Verification
+
+- `cargo build --workspace` ✅
+- `cargo run -p azurite --bin azurite-rust -- --help` prints `Usage: azurite-rust [OPTIONS]` ✅
+- All 403 unit/lib tests pass ✅
+- Clean build produces exactly 4 binaries: `azurite-rust`, `azurite-blob-rust`, `azurite-queue-rust`, `azurite-table-rust` ✅

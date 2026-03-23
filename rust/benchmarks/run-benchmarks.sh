@@ -88,7 +88,7 @@ if [[ ! -f "${REPO_ROOT}/dist/src/azurite.js" ]]; then
 fi
 
 RUST_BIN=""
-for candidate in "${RUST_ROOT}/target/release/azurite" "${RUST_ROOT}/target/x86_64-unknown-linux-gnu/release/azurite"; do
+for candidate in "${RUST_ROOT}/target/release/azurite-rust" "${RUST_ROOT}/target/x86_64-unknown-linux-gnu/release/azurite-rust"; do
   if [[ -x "${candidate}" ]]; then
     RUST_BIN="${candidate}"
     break

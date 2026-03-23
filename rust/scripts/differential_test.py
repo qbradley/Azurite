@@ -237,9 +237,9 @@ class DifferentialHarness:
 
     def ensure_rust_binaries(self) -> dict[str, pathlib.Path]:
         binaries = {
-            "blob": self._find_binary("azurite-blob"),
-            "queue": self._find_binary("azurite-queue"),
-            "table": self._find_binary("azurite-table"),
+            "blob": self._find_binary("azurite-blob-rust"),
+            "queue": self._find_binary("azurite-queue-rust"),
+            "table": self._find_binary("azurite-table-rust"),
         }
         if all(path is not None for path in binaries.values()):
             return {name: path for name, path in binaries.items() if path is not None}
@@ -250,19 +250,19 @@ class DifferentialHarness:
                 "build",
                 "--release",
                 "--bin",
-                "azurite-blob",
+                "azurite-blob-rust",
                 "--bin",
-                "azurite-queue",
+                "azurite-queue-rust",
                 "--bin",
-                "azurite-table",
+                "azurite-table-rust",
             ],
             cwd=str(RUST_ROOT),
             check=True,
         )
         rebuilt = {
-            "blob": self._find_binary("azurite-blob"),
-            "queue": self._find_binary("azurite-queue"),
-            "table": self._find_binary("azurite-table"),
+            "blob": self._find_binary("azurite-blob-rust"),
+            "queue": self._find_binary("azurite-queue-rust"),
+            "table": self._find_binary("azurite-table-rust"),
         }
         missing = [name for name, path in rebuilt.items() if path is None]
         if missing:

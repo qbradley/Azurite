@@ -41,7 +41,7 @@ Run a specific binary with Cargo package selection, for example:
 
 ```bash
 cargo run -p azurite
-cargo run -p azurite-blob --bin azurite-blob
+cargo run -p azurite-blob --bin azurite-blob-rust
 ```
 
 ## Porting Records

@@ -2,7 +2,7 @@
 
 ## What this script does
 
-`run-integration-tests.sh` builds the Rust `azurite` binary, starts it in the background, waits for selected services to respond on the TypeScript test ports, runs the existing Mocha integration suites against that external server, then stops the Rust server and returns the test exit code.
+`run-integration-tests.sh` builds the Rust `azurite-rust` binary, starts it in the background, waits for selected services to respond on the TypeScript test ports, runs the existing Mocha integration suites against that external server, then stops the Rust server and returns the test exit code.
 
 The script is intended to validate the Rust port with the existing TypeScript black-box suites once the external-server harness patch is present.
 
@@ -27,7 +27,7 @@ You can also run it from another directory; it resolves the repo root automatica
 
 - `AZURITE_TEST_SERVICES` — which Mocha suites to run: `blob`, `queue`, `table`, or `all` (default: `all`)
 - `RUST_LOG` — Rust log filter for the server process (default: `info`)
-- `SKIP_BUILD` — if set, skip `cargo build --release` and reuse the existing built `azurite` binary under `rust/target/`
+- `SKIP_BUILD` — if set, skip `cargo build --release` and reuse the existing built `azurite-rust` binary under `rust/target/`
 
 The script also exports the external-server settings expected by the companion TypeScript harness work:
 

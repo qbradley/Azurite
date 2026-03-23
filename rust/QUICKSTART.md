@@ -35,7 +35,7 @@ cargo build --release
 
 The compiled binary will be available at:
 ```
-rust/target/release/azurite
+rust/target/release/azurite-rust
 ```
 
 > **Tip:** Building in release mode optimizes performance. Use `cargo build` (without `--release`) for faster builds during development.
@@ -53,7 +53,7 @@ cargo run --release
 Or use the compiled binary directly:
 
 ```bash
-./target/release/azurite
+./target/release/azurite-rust
 ```
 
 Both commands will:
@@ -69,19 +69,19 @@ You can run a single service independently:
 **Blob service only:**
 ```bash
 cargo run --release -p azurite-blob
-# or: ./target/release/azurite-blob
+# or: ./target/release/azurite-blob-rust
 ```
 
 **Queue service only:**
 ```bash
 cargo run --release -p azurite-queue
-# or: ./target/release/azurite-queue
+# or: ./target/release/azurite-queue-rust
 ```
 
 **Table service only:**
 ```bash
 cargo run --release -p azurite-table
-# or: ./target/release/azurite-table
+# or: ./target/release/azurite-table-rust
 ```
 
 ## Common Options
@@ -96,7 +96,7 @@ cargo run --release -- --location /data/azurite
 
 Or with the binary:
 ```bash
-./target/release/azurite -l /data/azurite
+./target/release/azurite-rust -l /data/azurite
 ```
 
 The directory will be created if it doesn't exist.
@@ -111,7 +111,7 @@ cargo run --release -- --blobHost 0.0.0.0 --blobPort 9000
 
 Individual service ports:
 ```bash
-./target/release/azurite \
+./target/release/azurite-rust \
   --blobHost 0.0.0.0 --blobPort 10000 \
   --queueHost 0.0.0.0 --queuePort 10001 \
   --tableHost 0.0.0.0 --tablePort 10002
@@ -122,12 +122,12 @@ Individual service ports:
 Disable disk persistence — all data is lost when the process stops:
 
 ```bash
-./target/release/azurite --inMemoryPersistence
+./target/release/azurite-rust --inMemoryPersistence
 ```
 
 Optionally set a memory limit (in megabytes):
 ```bash
-./target/release/azurite --inMemoryPersistence --extentMemoryLimit 1024
+./target/release/azurite-rust --inMemoryPersistence --extentMemoryLimit 1024
 ```
 
 ### Silent Mode
@@ -135,12 +135,12 @@ Optionally set a memory limit (in megabytes):
 Suppress access logs in the console:
 
 ```bash
-./target/release/azurite -s
+./target/release/azurite-rust -s
 ```
 
 Or:
 ```bash
-./target/release/azurite --silent
+./target/release/azurite-rust --silent
 ```
 
 ### Debug Logging
@@ -148,7 +148,7 @@ Or:
 Enable detailed debug logs to a file:
 
 ```bash
-./target/release/azurite --debug /var/log/azurite/debug.log
+./target/release/azurite-rust --debug /var/log/azurite/debug.log
 ```
 
 The log file will help diagnose issues.
@@ -158,9 +158,9 @@ The log file will help diagnose issues.
 Enable loose validation mode (useful for compatibility with some test tools):
 
 ```bash
-./target/release/azurite -L
+./target/release/azurite-rust -L
 # or:
-./target/release/azurite --loose
+./target/release/azurite-rust --loose
 ```
 
 ### Skip API Version Check
@@ -168,7 +168,7 @@ Enable loose validation mode (useful for compatibility with some test tools):
 Allow requests with any API version:
 
 ```bash
-./target/release/azurite --skipApiVersionCheck
+./target/release/azurite-rust --skipApiVersionCheck
 ```
 
 ### Blob Query Compatibility Mode
@@ -176,7 +176,7 @@ Allow requests with any API version:
 Blob Query defaults to TypeScript-compatible behavior and returns HTTP 400 for empty `comp=query` requests. Disable that bug-for-bug mode to get the semantically correct 501 response instead:
 
 ```bash
-./target/release/azurite --disableBugForBugCompatibility
+./target/release/azurite-rust --disableBugForBugCompatibility
 ```
 
 ## Connecting from Client Applications
@@ -311,14 +311,14 @@ curl http://127.0.0.1:10001/devstoreaccount1/myqueue/messages
 You can enable HTTPS with a certificate:
 
 ```bash
-./target/release/azurite \
+./target/release/azurite-rust \
   --cert /path/to/cert.pem \
   --key /path/to/key.pem
 ```
 
 For `.pfx` certificates:
 ```bash
-./target/release/azurite \
+./target/release/azurite-rust \
   --cert /path/to/cert.pfx \
   --pwd your-password
 ```
@@ -328,7 +328,7 @@ For `.pfx` certificates:
 Enable basic OAuth support:
 
 ```bash
-./target/release/azurite --oauth basic
+./target/release/azurite-rust --oauth basic
 ```
 
 ### Disable Product-Style URLs
@@ -336,7 +336,7 @@ Enable basic OAuth support:
 By default, Azurite accepts both styles of storage URLs. To enforce path-style only:
 
 ```bash
-./target/release/azurite --disableProductStyleUrl
+./target/release/azurite-rust --disableProductStyleUrl
 ```
 
 ## Implementation Status
@@ -378,7 +378,7 @@ For detailed API coverage, refer to the main [README.md](../README.md).
 If a port is in use, specify a different one:
 
 ```bash
-./target/release/azurite --blobPort 9000 --queuePort 9001 --tablePort 9002
+./target/release/azurite-rust --blobPort 9000 --queuePort 9001 --tablePort 9002
 ```
 
 ### Workspace Errors
@@ -386,13 +386,13 @@ If a port is in use, specify a different one:
 Ensure the workspace directory is writable:
 
 ```bash
-./target/release/azurite --location ./my-workspace
+./target/release/azurite-rust --location ./my-workspace
 ```
 
 Check the debug log for details:
 
 ```bash
-./target/release/azurite --debug ./debug.log
+./target/release/azurite-rust --debug ./debug.log
 ```
 
 ### Connection Failures
@@ -406,7 +406,7 @@ curl http://127.0.0.1:10000
 If needed, bind to all interfaces:
 
 ```bash
-./target/release/azurite --blobHost 0.0.0.0
+./target/release/azurite-rust --blobHost 0.0.0.0
 ```
 
 ## Docker
@@ -421,9 +421,9 @@ RUN cd rust && cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /azurite/rust/target/release/azurite /usr/local/bin/
+COPY --from=builder /azurite/rust/target/release/azurite-rust /usr/local/bin/
 EXPOSE 10000 10001 10002
-CMD ["azurite"]
+CMD ["azurite-rust"]
 ```
 
 Build and run:

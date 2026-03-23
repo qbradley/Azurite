@@ -11,3 +11,7 @@ azurite-queue = { path = "../azurite-queue" }
 azurite-table = { path = "../azurite-table" }
 azurite-common = { path = "../azurite-common" }
 tokio.workspace = true
+
+[[bin]]
+name = "azurite-rust"
+path = "src/main.rs"

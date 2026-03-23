@@ -235,9 +235,9 @@ replay_traffic() {
     
     cd "$RUST_ROOT"
     cargo build --release \
-        --bin azurite-blob \
-        --bin azurite-queue \
-        --bin azurite-table
+        --bin azurite-blob-rust \
+        --bin azurite-queue-rust \
+        --bin azurite-table-rust
     
     echo ""
     echo "=== Starting Rust Azurite servers ==="
@@ -253,7 +253,7 @@ replay_traffic() {
     fi
     
     echo "Starting Rust blob server on port $RUST_BLOB_PORT..."
-    "$RUST_BIN_DIR/azurite-blob" \
+    "$RUST_BIN_DIR/azurite-blob-rust" \
         --blobHost 127.0.0.1 \
         --blobPort $RUST_BLOB_PORT \
         --location "$CORPUS_DIR/rust-state/blob" \
@@ -262,7 +262,7 @@ replay_traffic() {
     RUST_BLOB_PID=$!
     
     echo "Starting Rust queue server on port $RUST_QUEUE_PORT..."
-    "$RUST_BIN_DIR/azurite-queue" \
+    "$RUST_BIN_DIR/azurite-queue-rust" \
         --queueHost 127.0.0.1 \
         --queuePort $RUST_QUEUE_PORT \
         --location "$CORPUS_DIR/rust-state/queue" \
@@ -271,7 +271,7 @@ replay_traffic() {
     RUST_QUEUE_PID=$!
     
     echo "Starting Rust table server on port $RUST_TABLE_PORT..."
-    "$RUST_BIN_DIR/azurite-table" \
+    "$RUST_BIN_DIR/azurite-table-rust" \
         --tableHost 127.0.0.1 \
         --tablePort $RUST_TABLE_PORT \
         --location "$CORPUS_DIR/rust-state/table" \
